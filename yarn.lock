@@ -1183,6 +1183,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"brickchain@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "brickchain@workspace:."
+  dependencies:
+    "@radix-ui/react-dialog": "npm:^1.1.15"
+    "@radix-ui/react-dropdown-menu": "npm:^2.1.16"
+    "@radix-ui/react-select": "npm:^2.2.6"
+    "@types/node": "npm:^24.7.2"
+    "@types/react": "npm:^19.2.2"
+    "@types/react-dom": "npm:^19.2.1"
+    autoprefixer: "npm:^10.4.21"
+    class-variance-authority: "npm:^0.7.1"
+    clsx: "npm:^2.1.1"
+    framer-motion: "npm:^12.23.24"
+    lucide-react: "npm:^0.545.0"
+    next: "npm:^15.5.4"
+    next-themes: "npm:^0.4.6"
+    postcss: "npm:^8.5.6"
+    react: "npm:^19.2.0"
+    react-dom: "npm:^19.2.0"
+    tailwind-merge: "npm:^3.3.1"
+    tailwindcss: "npm:^3.4.1"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
 "browserslist@npm:^4.24.4":
   version: 4.26.3
   resolution: "browserslist@npm:4.26.3"
@@ -1645,32 +1671,6 @@ __metadata:
   checksum: 10c0/98102bc66b33fcf5ac044099d1257ba0b7ad5e3ccd3221f34dd508ab4070edff183276221684e1e0555b145fce0850c9f7d2b60a9fcac50fbb4ea0d6e845a3b1
   languageName: node
   linkType: hard
-
-"immo@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "immo@workspace:."
-  dependencies:
-    "@radix-ui/react-dialog": "npm:^1.1.15"
-    "@radix-ui/react-dropdown-menu": "npm:^2.1.16"
-    "@radix-ui/react-select": "npm:^2.2.6"
-    "@types/node": "npm:^24.7.2"
-    "@types/react": "npm:^19.2.2"
-    "@types/react-dom": "npm:^19.2.1"
-    autoprefixer: "npm:^10.4.21"
-    class-variance-authority: "npm:^0.7.1"
-    clsx: "npm:^2.1.1"
-    framer-motion: "npm:^12.23.24"
-    lucide-react: "npm:^0.545.0"
-    next: "npm:^15.5.4"
-    next-themes: "npm:^0.4.6"
-    postcss: "npm:^8.5.6"
-    react: "npm:^19.2.0"
-    react-dom: "npm:^19.2.0"
-    tailwind-merge: "npm:^3.3.1"
-    tailwindcss: "npm:^3.4.1"
-    typescript: "npm:^5.9.3"
-  languageName: unknown
-  linkType: soft
 
 "imurmurhash@npm:^0.1.4":
   version: 0.1.4
