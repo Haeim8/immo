@@ -10,9 +10,18 @@ const nextConfig: NextConfig = {
     ],
   },
   typescript: {
-    // ⚠️ Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
+    // Temporary workaround for Next.js 15 metadata-interface bug
     ignoreBuildErrors: true,
+  },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      buffer: require.resolve('buffer/'),
+      crypto: false,
+      stream: false,
+      process: false,
+    };
+    return config;
   },
 };
 

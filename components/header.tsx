@@ -11,18 +11,15 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Wallet, Menu, Settings } from "lucide-react";
+import { Menu, Settings } from "lucide-react";
 import PortfolioSidebar from "@/components/portfolio-sidebar";
 import Link from "next/link";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 export default function Header() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [selectedNetwork, setSelectedNetwork] = useState("ethereum");
   const [selectedLanguage, setSelectedLanguage] = useState("fr");
-
-  const handleConnectWallet = () => {
-    setIsConnected(!isConnected);
-  };
+  const { publicKey, connected } = useWallet();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -50,18 +47,10 @@ export default function Header() {
               </SelectContent>
             </Select>
 
-            {/* Network Selector */}
-            <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ethereum">Ethereum</SelectItem>
-                <SelectItem value="polygon">Polygon</SelectItem>
-                <SelectItem value="bsc">BSC</SelectItem>
-                <SelectItem value="arbitrum">Arbitrum</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Network Display - Solana Devnet */}
+            <div className="px-3 py-2 text-sm font-medium border rounded-md">
+              Solana Devnet
+            </div>
 
             {/* Theme Toggle */}
             <ThemeToggle />
@@ -73,15 +62,8 @@ export default function Header() {
               </Button>
             </Link>
 
-            {/* Connect Wallet Button */}
-            <Button
-              onClick={handleConnectWallet}
-              className="gap-2"
-              variant={isConnected ? "outline" : "default"}
-            >
-              <Wallet className="h-4 w-4" />
-              {isConnected ? "0x742d...f0bEb" : "Connect Wallet"}
-            </Button>
+            {/* Solana Wallet Connect Button */}
+            <WalletMultiButton className="!bg-cyan-500 hover:!bg-cyan-600" />
 
             {/* Portfolio Sidebar Trigger */}
             <Sheet>

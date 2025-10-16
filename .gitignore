@@ -21,6 +21,7 @@ node_modules/
 out/
 build/
 dist/
+dist-anchor-tests/
 
 # Logs
 *.log
@@ -31,6 +32,20 @@ yarn-error.log*
 # Environment
 .env
 .env*.local
+!.env.local.example
+
+# Solana / Anchor - SENSITIVE FILES
+*.json.keypair
+.walletkeypair*.json
+target/
+.anchor/
+Anchor.toml
+test-ledger/
+
+# Solana keypairs - NEVER COMMIT THESE
+*-keypair.json
+*.keypair
+id.json
 
 # Misc
 .DS_Store
@@ -39,3 +54,6 @@ yarn-error.log*
 # Debug
 .vscode/
 .idea/
+
+# Build artifacts
+tsconfig.tsbuildinfo

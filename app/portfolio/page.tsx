@@ -1,20 +1,40 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Wallet, TrendingUp, Calendar, Gift } from "lucide-react";
+import { Wallet, TrendingUp, Calendar, Gift, Loader2 } from "lucide-react";
 import Navbar from "@/components/organisms/Navbar";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import BlurBackground from "@/components/atoms/BlurBackground";
-import { mockPortfolio, mockInvestments } from "@/lib/mock-data";
+import { useUserShareNFTs } from "@/lib/solana/hooks";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useSolPrice, lamportsToUsd } from "@/lib/solana/useSolPrice";
 
 export default function PortfolioPage() {
-  const totalPendingDividends = mockPortfolio.investments.reduce(
-    (sum, inv) => sum + inv.pendingDividends,
-    0
-  );
+  const { connected } = useWallet();
+  const { shareNFTs, loading, error } = useUserShareNFTs();
+  const { price: solPrice } = useSolPrice();
+
+  // Calculate totals from real blockchain data
+  const totalInvested = shareNFTs.reduce((sum, nft) => {
+    const priceInUSD = lamportsToUsd(nft.account.property.sharePrice?.toNumber() || 0, solPrice.usd);
+    return sum + priceInUSD;
+  }, 0);
+
+  const totalPendingDividends = shareNFTs.reduce((sum, nft) => {
+    // Calculate unclaimed dividends
+    const property = nft.account.property;
+    if (!property) return sum;
+    const dividendsPerShare = property.totalDividendsDeposited.toNumber() / property.sharesSold.toNumber();
+    const unclaimed = dividendsPerShare - nft.account.dividendsClaimed.toNumber();
+    return sum + lamportsToUsd(unclaimed, solPrice.usd);
+  }, 0);
+
+  const totalDividendsEarned = shareNFTs.reduce((sum, nft) => {
+    return sum + lamportsToUsd(nft.account.dividendsClaimed.toNumber(), solPrice.usd);
+  }, 0);
 
   return (
     <div className="min-h-screen">
@@ -38,34 +58,50 @@ export default function PortfolioPage() {
           </motion.div>
 
           {/* Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <GlassCard hover glow>
-              <MetricDisplay
-                icon={Wallet}
-                label="Total Invested"
-                value={`$${mockPortfolio.totalInvested.toLocaleString()}`}
-                iconColor="text-cyan-400"
-              />
+          {!connected ? (
+            <GlassCard className="text-center py-12">
+              <p className="text-muted-foreground mb-4">Connect your wallet to view your portfolio</p>
+              <p className="text-sm text-muted-foreground">Click "Connect Wallet" in the header to get started</p>
             </GlassCard>
-            <GlassCard hover glow>
-              <MetricDisplay
-                icon={TrendingUp}
-                label="Total Dividends Earned"
-                value={`$${mockPortfolio.totalDividends.toLocaleString()}`}
-                iconColor="text-green-400"
-                delay={0.1}
-              />
+          ) : loading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+              <p className="text-muted-foreground">Loading your portfolio from blockchain...</p>
+            </div>
+          ) : error ? (
+            <GlassCard className="text-center py-12">
+              <p className="text-red-400">Error: {error}</p>
             </GlassCard>
-            <GlassCard hover glow>
-              <MetricDisplay
-                icon={Gift}
-                label="Pending Dividends"
-                value={`$${totalPendingDividends.toFixed(2)}`}
-                iconColor="text-blue-400"
-                delay={0.2}
-              />
-            </GlassCard>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <GlassCard hover glow>
+                  <MetricDisplay
+                    icon={Wallet}
+                    label="Total Invested"
+                    value={`$${totalInvested.toLocaleString()}`}
+                    iconColor="text-cyan-400"
+                  />
+                </GlassCard>
+                <GlassCard hover glow>
+                  <MetricDisplay
+                    icon={TrendingUp}
+                    label="Total Dividends Earned"
+                    value={`$${totalDividendsEarned.toLocaleString()}`}
+                    iconColor="text-green-400"
+                    delay={0.1}
+                  />
+                </GlassCard>
+                <GlassCard hover glow>
+                  <MetricDisplay
+                    icon={Gift}
+                    label="Pending Dividends"
+                    value={`$${totalPendingDividends.toFixed(2)}`}
+                    iconColor="text-blue-400"
+                    delay={0.2}
+                  />
+                </GlassCard>
+              </div>
 
           {/* Claim Dividends Section */}
           <motion.div
@@ -105,82 +141,93 @@ export default function PortfolioPage() {
               <GradientText>My Investments</GradientText>
             </h2>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {mockPortfolio.investments.map((investment, index) => {
-                const projectDetails = mockInvestments.find(
-                  (inv) => inv.id === investment.investmentId
-                );
-                if (!projectDetails) return null;
+            {shareNFTs.length === 0 ? (
+              <GlassCard className="text-center py-12">
+                <p className="text-muted-foreground mb-4">You don't have any investments yet</p>
+                <p className="text-sm text-muted-foreground">Browse properties to start investing</p>
+              </GlassCard>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {shareNFTs.map((nft, index) => {
+                  const priceInUSD = lamportsToUsd(nft.account.property?.sharePrice?.toNumber() || 0, solPrice.usd);
+                  const earnedInUSD = lamportsToUsd(nft.account.dividendsClaimed.toNumber(), solPrice.usd);
+                  const property = nft.account.property;
 
-                return (
-                  <motion.div
-                    key={investment.investmentId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 + index * 0.1 }}
-                  >
-                    <GlassCard hover glow>
-                      <div className="space-y-4">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="text-xl font-bold mb-1 text-cyan-400">
-                              {projectDetails.name}
-                            </h3>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Calendar className="h-4 w-4" />
-                              Invested since {new Date(investment.purchaseDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric"
-                              })}
+                  let pendingUSD = 0;
+                  if (property) {
+                    const dividendsPerShare = property.totalDividendsDeposited.toNumber() / property.sharesSold.toNumber();
+                    const unclaimed = dividendsPerShare - nft.account.dividendsClaimed.toNumber();
+                    pendingUSD = lamportsToUsd(unclaimed, solPrice.usd);
+                  }
+
+                  return (
+                    <motion.div
+                      key={nft.publicKey.toBase58()}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
+                    >
+                      <GlassCard hover glow>
+                        <div className="space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="text-xl font-bold mb-1 text-cyan-400">
+                                NFT #{nft.account.tokenId.toString()}
+                              </h3>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Calendar className="h-4 w-4" />
+                                Minted {new Date(nft.account.mintTime.toNumber() * 1000).toLocaleDateString()}
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <p className="text-xs text-muted-foreground mb-1">Amount Invested</p>
-                            <p className="text-2xl font-bold">
-                              ${investment.amount.toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <p className="text-xs text-muted-foreground mb-1">Total Earned</p>
-                            <p className="text-2xl font-bold text-green-400">
-                              ${investment.dividendsEarned.toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">Pending Dividends</p>
-                              <p className="text-xl font-bold text-cyan-400">
-                                ${investment.pendingDividends.toFixed(2)}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                              <p className="text-xs text-muted-foreground mb-1">Amount Invested</p>
+                              <p className="text-2xl font-bold">
+                                ${priceInUSD.toFixed(2)}
                               </p>
                             </div>
-                            <AnimatedButton variant="outline" size="sm">
-                              Claim
-                            </AnimatedButton>
+                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                              <p className="text-xs text-muted-foreground mb-1">Total Earned</p>
+                              <p className="text-2xl font-bold text-green-400">
+                                ${earnedInUSD.toFixed(2)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="pt-4 border-t border-white/10">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">ROI</span>
-                            <span className="font-semibold text-green-400">
-                              +{((investment.dividendsEarned / investment.amount) * 100).toFixed(2)}%
-                            </span>
+                          <div className="p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Pending Dividends</p>
+                                <p className="text-xl font-bold text-cyan-400">
+                                  ${pendingUSD.toFixed(2)}
+                                </p>
+                              </div>
+                              <AnimatedButton variant="outline" size="sm" disabled={pendingUSD === 0}>
+                                Claim
+                              </AnimatedButton>
+                            </div>
+                          </div>
+
+                          <div className="pt-4 border-t border-white/10">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">ROI</span>
+                              <span className="font-semibold text-green-400">
+                                +{priceInUSD > 0 ? ((earnedInUSD / priceInUSD) * 100).toFixed(2) : 0}%
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </GlassCard>
-                  </motion.div>
-                );
-              })}
-            </div>
+                      </GlassCard>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+            </>
+          )}
         </div>
       </main>
     </div>

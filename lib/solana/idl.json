@@ -1,0 +1,817 @@
+{
+  "address": "H8S27aKztqdyCPZCPUvmAahSDBrTrw5ahCjQbJpzSECL",
+  "metadata": {
+    "name": "real_estate_factory",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Factory contract for creating real estate investment properties"
+  },
+  "instructions": [
+    {
+      "name": "buy_share",
+      "docs": [
+        "Buy a share NFT (minted on-demand)"
+      ],
+      "discriminator": [
+        225,
+        72,
+        68,
+        20,
+        61,
+        152,
+        46,
+        177
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "property",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "share_nft",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  104,
+                  97,
+                  114,
+                  101,
+                  95,
+                  110,
+                  102,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property"
+              },
+              {
+                "kind": "account",
+                "path": "property.shares_sold",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_dividends",
+      "docs": [
+        "Claim dividends proportional to NFT ownership"
+      ],
+      "discriminator": [
+        105,
+        60,
+        172,
+        2,
+        136,
+        93,
+        128,
+        151
+      ],
+      "accounts": [
+        {
+          "name": "property",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property.factory",
+                "account": "Property"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "share_nft",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  104,
+                  97,
+                  114,
+                  101,
+                  95,
+                  110,
+                  102,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property"
+              },
+              {
+                "kind": "account",
+                "path": "share_nft.token_id",
+                "account": "ShareNFT"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "share_nft"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_property_sale",
+      "docs": [
+        "Close a property sale"
+      ],
+      "discriminator": [
+        135,
+        76,
+        215,
+        58,
+        159,
+        111,
+        56,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "property",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_property",
+      "docs": [
+        "Create a new property investment contract"
+      ],
+      "discriminator": [
+        45,
+        115,
+        89,
+        113,
+        193,
+        252,
+        125,
+        27
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "property",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "factory.property_count",
+                "account": "Factory"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "city",
+          "type": "string"
+        },
+        {
+          "name": "province",
+          "type": "string"
+        },
+        {
+          "name": "total_shares",
+          "type": "u64"
+        },
+        {
+          "name": "share_price",
+          "type": "u64"
+        },
+        {
+          "name": "sale_duration",
+          "type": "i64"
+        },
+        {
+          "name": "surface",
+          "type": "u32"
+        },
+        {
+          "name": "rooms",
+          "type": "u8"
+        },
+        {
+          "name": "expected_return",
+          "type": "u32"
+        },
+        {
+          "name": "property_type",
+          "type": "string"
+        },
+        {
+          "name": "year_built",
+          "type": "u16"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "deposit_dividends",
+      "docs": [
+        "Deposit dividends for a specific property"
+      ],
+      "discriminator": [
+        180,
+        188,
+        28,
+        154,
+        131,
+        160,
+        139,
+        90
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "property",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Initialize the factory with treasury wallet"
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "admin",
+          "type": "pubkey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Factory",
+      "discriminator": [
+        159,
+        68,
+        192,
+        61,
+        48,
+        249,
+        216,
+        202
+      ]
+    },
+    {
+      "name": "Property",
+      "discriminator": [
+        195,
+        247,
+        69,
+        181,
+        195,
+        47,
+        152,
+        19
+      ]
+    },
+    {
+      "name": "ShareNFT",
+      "discriminator": [
+        143,
+        169,
+        240,
+        82,
+        138,
+        31,
+        24,
+        65
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NameTooLong",
+      "msg": "Name is too long (max 64 characters)"
+    },
+    {
+      "code": 6001,
+      "name": "CityTooLong",
+      "msg": "City is too long (max 64 characters)"
+    },
+    {
+      "code": 6002,
+      "name": "ProvinceTooLong",
+      "msg": "Province is too long (max 64 characters)"
+    },
+    {
+      "code": 6003,
+      "name": "TypeTooLong",
+      "msg": "Property type is too long (max 32 characters)"
+    },
+    {
+      "code": 6004,
+      "name": "DescriptionTooLong",
+      "msg": "Description is too long (max 512 characters)"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidShareAmount",
+      "msg": "Invalid share amount"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidPrice",
+      "msg": "Invalid price"
+    },
+    {
+      "code": 6007,
+      "name": "SaleEnded",
+      "msg": "Sale has ended"
+    },
+    {
+      "code": 6008,
+      "name": "PropertyInactive",
+      "msg": "Property is inactive"
+    },
+    {
+      "code": 6009,
+      "name": "AllSharesSold",
+      "msg": "All shares have been sold"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidAmount",
+      "msg": "Invalid amount"
+    },
+    {
+      "code": 6011,
+      "name": "NoSharesSold",
+      "msg": "No shares have been sold yet"
+    },
+    {
+      "code": 6012,
+      "name": "MathOverflow",
+      "msg": "Math overflow"
+    },
+    {
+      "code": 6013,
+      "name": "NoDividendsToClaim",
+      "msg": "No dividends to claim"
+    },
+    {
+      "code": 6014,
+      "name": "SaleStillActive",
+      "msg": "Sale is still active"
+    }
+  ],
+  "types": [
+    {
+      "name": "Factory",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "property_count",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Property",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "factory",
+            "type": "pubkey"
+          },
+          {
+            "name": "property_id",
+            "type": "u64"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "city",
+            "type": "string"
+          },
+          {
+            "name": "province",
+            "type": "string"
+          },
+          {
+            "name": "total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "share_price",
+            "type": "u64"
+          },
+          {
+            "name": "shares_sold",
+            "type": "u64"
+          },
+          {
+            "name": "sale_start",
+            "type": "i64"
+          },
+          {
+            "name": "sale_end",
+            "type": "i64"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "surface",
+            "type": "u32"
+          },
+          {
+            "name": "rooms",
+            "type": "u8"
+          },
+          {
+            "name": "expected_return",
+            "type": "u32"
+          },
+          {
+            "name": "property_type",
+            "type": "string"
+          },
+          {
+            "name": "year_built",
+            "type": "u16"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "total_dividends_deposited",
+            "type": "u64"
+          },
+          {
+            "name": "total_dividends_claimed",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ShareNFT",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "property",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_id",
+            "type": "u64"
+          },
+          {
+            "name": "mint_time",
+            "type": "i64"
+          },
+          {
+            "name": "dividends_claimed",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

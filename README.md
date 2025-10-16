@@ -1,4 +1,4 @@
-# BrickChain - Tokenized Real Estate Investment
+# USCI - Tokenized Real Estate Investment
 
 ## Description
 

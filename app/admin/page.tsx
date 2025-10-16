@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -12,7 +12,8 @@ import {
   Settings as SettingsIcon,
   BarChart3,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from "lucide-react";
 import Navbar from "@/components/organisms/Navbar";
 import GlassCard from "@/components/atoms/GlassCard";
@@ -20,7 +21,12 @@ import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import BlurBackground from "@/components/atoms/BlurBackground";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { mockInvestments, mockMetrics } from "@/lib/mock-data";
+import { useBrickChain, useAllProperties } from "@/lib/solana/hooks";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { useSolPrice, usdToLamports } from "@/lib/solana/useSolPrice";
+import { uploadPropertyImage, getIpfsUrl } from "@/lib/pinata/upload";
+import { addTeamMember, removeTeamMember, getAllTeamMembers, type TeamMember } from "@/lib/solana/team";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "properties" | "create" | "investors" | "dividends">("overview");
@@ -68,6 +74,7 @@ export default function AdminDashboard() {
                   { id: "overview", label: "Overview", icon: BarChart3 },
                   { id: "properties", label: "Properties", icon: Building2 },
                   { id: "create", label: "Create New", icon: Plus },
+                  { id: "team", label: "Team", icon: Users },
                   { id: "investors", label: "Investors", icon: Users },
                   { id: "dividends", label: "Dividends", icon: DollarSign },
                 ].map((tab) => (
@@ -92,6 +99,7 @@ export default function AdminDashboard() {
           {activeTab === "overview" && <OverviewTab />}
           {activeTab === "properties" && <PropertiesTab />}
           {activeTab === "create" && <CreatePropertyTab />}
+          {activeTab === "team" && <TeamTab />}
           {activeTab === "investors" && <InvestorsTab />}
           {activeTab === "dividends" && <DividendsTab />}
         </div>
@@ -101,166 +109,369 @@ export default function AdminDashboard() {
 }
 
 function OverviewTab() {
+  const { properties, loading } = useAllProperties();
+  const { price: solPrice } = useSolPrice();
+
+  // Calculate real metrics from blockchain
+  const totalProperties = properties.length;
+  const totalValue = properties.reduce((sum, p) => {
+    const totalShares = p.account.totalShares.toNumber();
+    const sharePrice = p.account.sharePrice.toNumber();
+    const totalLamports = totalShares * sharePrice;
+    return sum + (totalLamports / 1e9) * solPrice.usd;
+  }, 0);
+
+  const avgReturn = properties.length > 0
+    ? properties.reduce((sum, p) => sum + p.account.expectedReturn, 0) / properties.length / 100
+    : 0;
+
   return (
     <div className="space-y-6">
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <GlassCard hover glow>
-          <MetricDisplay
-            icon={Building2}
-            label="Total Properties"
-            value={mockInvestments.length}
-            iconColor="text-cyan-400"
-          />
-        </GlassCard>
-        <GlassCard hover glow>
-          <MetricDisplay
-            icon={Users}
-            label="Total Investors"
-            value={mockMetrics.activeInvestors}
-            iconColor="text-blue-400"
-            delay={0.1}
-          />
-        </GlassCard>
-        <GlassCard hover glow>
-          <MetricDisplay
-            icon={DollarSign}
-            label="Total Value"
-            value={`$${(mockMetrics.totalValueDistributed / 1000000).toFixed(2)}M`}
-            iconColor="text-green-400"
-            delay={0.2}
-          />
-        </GlassCard>
-        <GlassCard hover glow>
-          <MetricDisplay
-            icon={TrendingUp}
-            label="Avg Return"
-            value="5.2%"
-            iconColor="text-purple-400"
-            delay={0.3}
-          />
-        </GlassCard>
-      </div>
-
-      {/* Recent Activity */}
-      <GlassCard>
-        <h3 className="text-xl font-bold mb-4 text-purple-400">Recent Activity</h3>
-        <div className="space-y-3">
-          {[
-            { action: "New property created", property: "Villa Méditerranée", time: "2 hours ago" },
-            { action: "Dividends distributed", property: "Résidence Les Jardins", time: "5 hours ago" },
-            { action: "Funding completed", property: "Résidence Étudiante", time: "1 day ago" },
-            { action: "New investor joined", property: "Immeuble Commerce Lyon", time: "2 days ago" },
-          ].map((activity, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 + i * 0.1 }}
-              className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
-            >
-              <div>
-                <p className="font-medium">{activity.action}</p>
-                <p className="text-sm text-muted-foreground">{activity.property}</p>
-              </div>
-              <span className="text-sm text-muted-foreground">{activity.time}</span>
-            </motion.div>
-          ))}
+      {loading ? (
+        <div className="text-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+          <p className="text-muted-foreground">Loading metrics...</p>
         </div>
-      </GlassCard>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <GlassCard hover glow>
+              <MetricDisplay
+                icon={Building2}
+                label="Total Properties"
+                value={totalProperties}
+                iconColor="text-cyan-400"
+              />
+            </GlassCard>
+            <GlassCard hover glow>
+              <MetricDisplay
+                icon={Users}
+                label="Total Investors"
+                value="Coming Soon"
+                iconColor="text-blue-400"
+                delay={0.1}
+              />
+            </GlassCard>
+            <GlassCard hover glow>
+              <MetricDisplay
+                icon={DollarSign}
+                label="Total Value"
+                value={`$${(totalValue / 1000000).toFixed(2)}M`}
+                iconColor="text-green-400"
+                delay={0.2}
+              />
+            </GlassCard>
+            <GlassCard hover glow>
+              <MetricDisplay
+                icon={TrendingUp}
+                label="Avg Return"
+                value={`${avgReturn.toFixed(2)}%`}
+                iconColor="text-purple-400"
+                delay={0.3}
+              />
+            </GlassCard>
+          </div>
+
+          {/* Recent Properties */}
+          <GlassCard>
+            <h3 className="text-xl font-bold mb-4 text-purple-400">Recent Properties</h3>
+            {properties.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No properties created yet</p>
+            ) : (
+              <div className="space-y-3">
+                {properties.slice(0, 5).map((property, i) => (
+                  <motion.div
+                    key={property.publicKey.toBase58()}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + i * 0.1 }}
+                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
+                  >
+                    <div>
+                      <p className="font-medium">{property.account.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {property.account.city}, {property.account.province}
+                      </p>
+                    </div>
+                    <span className="text-sm text-cyan-400 font-semibold">
+                      {property.account.sharesSold.toNumber()}/{property.account.totalShares.toNumber()} sold
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        </>
+      )}
     </div>
   );
 }
 
 function PropertiesTab() {
+  const { properties, loading, error, refresh } = useAllProperties();
+  const { price: solPrice } = useSolPrice();
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+        <p className="text-muted-foreground">Loading properties from blockchain...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 max-w-md mx-auto">
+          Error loading properties: {error}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Manage Properties</h3>
-        <AnimatedButton variant="primary">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New
-        </AnimatedButton>
+        <h3 className="text-2xl font-bold">Manage Properties ({properties.length})</h3>
+        <div className="flex gap-2">
+          <AnimatedButton variant="outline" onClick={refresh}>
+            Refresh
+          </AnimatedButton>
+          <AnimatedButton variant="primary">
+            <Plus className="h-4 w-4 mr-2" />
+            Add New
+          </AnimatedButton>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        {mockInvestments.map((property, index) => (
-          <motion.div
-            key={property.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <GlassCard hover>
-              <div className="flex items-start justify-between flex-wrap gap-4">
-                <div className="flex-1">
-                  <h4 className="text-xl font-bold text-cyan-400 mb-2">{property.name}</h4>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {property.location.city}, {property.location.province}
-                  </p>
+      {properties.length === 0 ? (
+        <GlassCard>
+          <div className="text-center py-12">
+            <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">No properties created yet</p>
+            <p className="text-sm text-muted-foreground mt-2">Create your first property from the "Create New" tab</p>
+          </div>
+        </GlassCard>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {properties.map((property, index) => {
+            const fundingProgress = (property.account.sharesSold.toNumber() / property.account.totalShares.toNumber()) * 100;
+            const pricePerShareSOL = property.account.sharePrice.toNumber() / 1e9;
+            const pricePerShareUSD = pricePerShareSOL * solPrice.usd;
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Price</p>
-                      <p className="font-semibold">${property.priceUSD.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Funding</p>
-                      <p className="font-semibold text-green-400">{property.fundingProgress}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Return</p>
-                      <p className="font-semibold text-cyan-400">{property.expectedReturn}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Status</p>
-                      <p className="font-semibold">
-                        {property.fundingProgress === 100 ? (
-                          <span className="text-green-400 flex items-center gap-1">
-                            <CheckCircle2 className="h-4 w-4" /> Active
-                          </span>
-                        ) : (
-                          <span className="text-yellow-400 flex items-center gap-1">
-                            <Clock className="h-4 w-4" /> Funding
-                          </span>
-                        )}
+            return (
+              <motion.div
+                key={property.publicKey.toBase58()}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <GlassCard hover>
+                  <div className="flex items-start justify-between flex-wrap gap-4">
+                    <div className="flex-1">
+                      <h4 className="text-xl font-bold text-cyan-400 mb-2">{property.account.name}</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {property.account.city}, {property.account.province}
                       </p>
+                      <p className="text-xs text-muted-foreground font-mono mb-4">
+                        {property.publicKey.toBase58().slice(0, 8)}...{property.publicKey.toBase58().slice(-8)}
+                      </p>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Price per Share</p>
+                          <p className="font-semibold">${pricePerShareUSD.toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">{pricePerShareSOL.toFixed(4)} SOL</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Shares Sold</p>
+                          <p className="font-semibold text-green-400">{property.account.sharesSold.toNumber()} / {property.account.totalShares.toNumber()}</p>
+                          <p className="text-xs text-muted-foreground">{fundingProgress.toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Expected Return</p>
+                          <p className="font-semibold text-cyan-400">{(property.account.expectedReturn / 100).toFixed(2)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <p className="font-semibold">
+                            {property.account.isActive ? (
+                              fundingProgress === 100 ? (
+                                <span className="text-green-400 flex items-center gap-1">
+                                  <CheckCircle2 className="h-4 w-4" /> Funded
+                                </span>
+                              ) : (
+                                <span className="text-yellow-400 flex items-center gap-1">
+                                  <Clock className="h-4 w-4" /> Active
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-gray-400">Closed</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <AnimatedButton variant="outline" size="sm">
+                        View Details
+                      </AnimatedButton>
+                      <AnimatedButton variant="outline" size="sm">
+                        <SettingsIcon className="h-4 w-4" />
+                      </AnimatedButton>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <AnimatedButton variant="outline" size="sm">
-                    Edit
-                  </AnimatedButton>
-                  <AnimatedButton variant="outline" size="sm">
-                    <SettingsIcon className="h-4 w-4" />
-                  </AnimatedButton>
-                </div>
-              </div>
-            </GlassCard>
-          </motion.div>
-        ))}
-      </div>
+                </GlassCard>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 function CreatePropertyTab() {
+  const { createNewProperty, loading, error } = useBrickChain();
+  const { connected } = useWallet();
+  const { price: solPrice } = useSolPrice();
   const [formData, setFormData] = useState({
+    assetType: "real_estate",
     name: "",
     city: "",
     province: "",
+    country: "",
     price: "",
     shares: "",
     pricePerShare: "",
     duration: "",
     expectedReturn: "",
     description: "",
+    longDescription: "",
     surface: "",
     rooms: "",
     features: "",
+    propertyType: "",
+    yearBuilt: "",
+    votingEnabled: true,
   });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageCid, setImageCid] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!connected) {
+      alert("Please connect your wallet first!");
+      return;
+    }
+
+    if (!selectedImage) {
+      alert("Please upload an image!");
+      return;
+    }
+
+    try {
+      setSuccess(false);
+
+      // 1. Upload image to IPFS first
+      setUploadingImage(true);
+      let cid = "";
+      try {
+        cid = await uploadPropertyImage(selectedImage, formData.name);
+        setImageCid(cid);
+        console.log("✅ Image uploaded to IPFS:", cid);
+      } catch (err) {
+        alert("Failed to upload image to IPFS. Please check your Pinata configuration.");
+        setUploadingImage(false);
+        return;
+      }
+      setUploadingImage(false);
+
+      // 2. Convert USD to lamports using real SOL price
+      const pricePerShareUSD = parseFloat(formData.pricePerShare);
+      const pricePerShareLamports = usdToLamports(pricePerShareUSD, solPrice.usd);
+
+      // 3. Convert expected return to basis points (5.5% -> 550)
+      const expectedReturnBasisPoints = Math.floor(parseFloat(formData.expectedReturn) * 100);
+
+      // 4. Convert duration days to seconds
+      const durationSeconds = parseInt(formData.duration) * 24 * 60 * 60;
+
+      // 5. Prepare params with IPFS CID
+      const propertyId = 0; // Will be fetched from factory in production
+      const params = {
+        assetType: formData.assetType,
+        name: formData.name,
+        city: formData.city,
+        province: formData.province,
+        country: formData.country,
+        totalShares: parseInt(formData.shares),
+        sharePrice: pricePerShareLamports,
+        saleDuration: durationSeconds,
+        surface: parseInt(formData.surface),
+        rooms: parseInt(formData.rooms),
+        expectedReturn: expectedReturnBasisPoints,
+        propertyType: formData.propertyType,
+        yearBuilt: parseInt(formData.yearBuilt),
+        description: formData.description,
+        imageCid: cid,  // IPFS CID
+        longDescription: formData.longDescription,
+        metadataUri: `https://usci.com/asset/${propertyId}`,
+        votingEnabled: formData.votingEnabled,
+      };
+
+      // 6. Create property on-chain
+      const result = await createNewProperty(params);
+
+      setSuccess(true);
+      alert(`Property created successfully!\nProperty PDA: ${result.propertyPDA.toBase58()}`);
+
+      // Reset form
+      setFormData({
+        assetType: "real_estate",
+        name: "",
+        city: "",
+        province: "",
+        country: "",
+        price: "",
+        shares: "",
+        pricePerShare: "",
+        duration: "",
+        expectedReturn: "",
+        description: "",
+        longDescription: "",
+        surface: "",
+        rooms: "",
+        features: "",
+        propertyType: "",
+        yearBuilt: "",
+        votingEnabled: true,
+      });
+      setSelectedImage(null);
+      setImagePreview("");
+      setImageCid("");
+    } catch (err: any) {
+      console.error("Error creating property:", err);
+      alert(`Error: ${err.message || "Failed to create property"}`);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -300,6 +511,16 @@ function CreatePropertyTab() {
                   onChange={(e) => setFormData({ ...formData, province: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., Île-de-France"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Country</label>
+                <input
+                  type="text"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
+                  placeholder="e.g., France"
                 />
               </div>
               <div>
@@ -363,9 +584,9 @@ function CreatePropertyTab() {
             </div>
           </div>
 
-          {/* Duration */}
+          {/* Duration and Property Details */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Funding Duration</h4>
+            <h4 className="text-lg font-semibold mb-4">Property Details</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Duration (days)</label>
@@ -375,6 +596,7 @@ function CreatePropertyTab() {
                   onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., 30"
+                  required
                 />
               </div>
               <div>
@@ -385,6 +607,29 @@ function CreatePropertyTab() {
                   onChange={(e) => setFormData({ ...formData, rooms: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., 4"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Property Type</label>
+                <input
+                  type="text"
+                  value={formData.propertyType}
+                  onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
+                  placeholder="e.g., Résidentiel, Commercial"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Year Built</label>
+                <input
+                  type="number"
+                  value={formData.yearBuilt}
+                  onChange={(e) => setFormData({ ...formData, yearBuilt: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
+                  placeholder="e.g., 2020"
+                  required
                 />
               </div>
             </div>
@@ -392,14 +637,55 @@ function CreatePropertyTab() {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-2">Description</label>
+            <label className="block text-sm font-medium mb-2">Description (courte - max 512 caractères)</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
+              maxLength={512}
               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none resize-none"
               placeholder="Describe the property..."
             />
+            <p className="text-xs text-muted-foreground mt-1">{formData.description.length}/512 caractères</p>
+          </div>
+
+          {/* Long Description */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Description détaillée pour investisseurs (max 2000 caractères)</label>
+            <textarea
+              value={formData.longDescription}
+              onChange={(e) => setFormData({ ...formData, longDescription: e.target.value })}
+              rows={8}
+              maxLength={2000}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none resize-none"
+              placeholder="Description complète avec tous les détails pour les investisseurs..."
+              required
+            />
+            <p className="text-xs text-muted-foreground mt-1">{formData.longDescription.length}/2000 caractères</p>
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Image de la propriété</label>
+            <div className="space-y-4">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
+                required
+              />
+              {imagePreview && (
+                <div className="relative rounded-xl overflow-hidden border border-white/10">
+                  <img src={imagePreview} alt="Preview" className="w-full h-64 object-cover" />
+                  {imageCid && (
+                    <div className="absolute top-2 right-2 px-3 py-1 rounded-lg bg-green-500/80 text-white text-xs font-mono">
+                      CID: {imageCid.substring(0, 8)}...
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Features */}
@@ -414,13 +700,77 @@ function CreatePropertyTab() {
             />
           </div>
 
+          {/* SOL Price Display */}
+          <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
+            <p className="text-sm text-muted-foreground">
+              Current SOL Price: <span className="text-cyan-400 font-semibold">${solPrice.usd.toFixed(2)} USD</span>
+              {" • "}
+              <span className="text-xs">Updated: {new Date(solPrice.lastUpdated).toLocaleTimeString()}</span>
+            </p>
+          </div>
+
+          {/* Success/Error Messages */}
+          {success && (
+            <div className="p-4 rounded-xl bg-green-500/20 border border-green-500/50 text-green-400">
+              Property created successfully!
+            </div>
+          )}
+          {error && (
+            <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400">
+              Error: {error}
+            </div>
+          )}
+
+          {/* Wallet Warning */}
+          {!connected && (
+            <div className="p-4 rounded-xl bg-yellow-500/20 border border-yellow-500/50 text-yellow-400">
+              Please connect your wallet to create a property
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-4 pt-6">
-            <AnimatedButton variant="outline" className="flex-1">
-              Cancel
+            <AnimatedButton
+              variant="outline"
+              className="flex-1"
+              onClick={() => setFormData({
+                name: "",
+                city: "",
+                province: "",
+                price: "",
+                shares: "",
+                pricePerShare: "",
+                duration: "",
+                expectedReturn: "",
+                description: "",
+                surface: "",
+                rooms: "",
+                features: "",
+                propertyType: "",
+                yearBuilt: "",
+              })}
+            >
+              Reset Form
             </AnimatedButton>
-            <AnimatedButton variant="primary" className="flex-1">
-              Create Property
+            <AnimatedButton
+              variant="primary"
+              className="flex-1"
+              onClick={handleSubmit}
+              disabled={loading || uploadingImage || !connected}
+            >
+              {uploadingImage ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading to IPFS...
+                </>
+              ) : loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating on-chain...
+                </>
+              ) : (
+                "Create Property"
+              )}
             </AnimatedButton>
           </div>
         </div>
@@ -430,12 +780,7 @@ function CreatePropertyTab() {
 }
 
 function InvestorsTab() {
-  const investors = [
-    { address: "0x742d...f0bEb", invested: "$245,000", properties: 3, joined: "2024-01-15" },
-    { address: "0x8f3C...6A063", invested: "$189,000", properties: 2, joined: "2024-02-20" },
-    { address: "0x2791...84174", invested: "$145,000", properties: 2, joined: "2024-03-10" },
-    { address: "0x7ceB...9f619", invested: "$98,000", properties: 1, joined: "2024-03-25" },
-  ];
+  const investors: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -483,6 +828,250 @@ function InvestorsTab() {
   );
 }
 
+function TeamTab() {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const [teamMembers, setTeamMembers] = useState<{ publicKey: PublicKey; account: TeamMember }[]>([]);
+  const [newMemberAddress, setNewMemberAddress] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [fetchingMembers, setFetchingMembers] = useState(true);
+
+  // Fetch team members on mount
+  useEffect(() => {
+    const fetchMembers = async () => {
+      setFetchingMembers(true);
+      try {
+        const members = await getAllTeamMembers(connection);
+        setTeamMembers(members);
+      } catch (err) {
+        console.error("Error fetching team members:", err);
+      } finally {
+        setFetchingMembers(false);
+      }
+    };
+
+    fetchMembers();
+  }, [connection]);
+
+  const handleAddMember = async () => {
+    if (!newMemberAddress.trim()) {
+      alert("Please enter a wallet address");
+      return;
+    }
+
+    if (!wallet.connected || !wallet.publicKey) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Validate address
+      let memberPubkey: PublicKey;
+      try {
+        memberPubkey = new PublicKey(newMemberAddress);
+      } catch {
+        alert("Invalid wallet address format");
+        setLoading(false);
+        return;
+      }
+
+      // Create transaction
+      const { transaction, teamMemberPDA } = await addTeamMember(
+        connection,
+        newMemberAddress,
+        wallet.publicKey
+      );
+
+      // Sign and send transaction
+      const signature = await wallet.sendTransaction(transaction, connection);
+      console.log("Transaction signature:", signature);
+
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, "confirmed");
+
+      // Refresh team members list
+      const members = await getAllTeamMembers(connection);
+      setTeamMembers(members);
+
+      setNewMemberAddress("");
+      alert(`Team member added successfully!\nSignature: ${signature}`);
+    } catch (err: any) {
+      console.error("Error adding team member:", err);
+      alert(`Error: ${err.message || "Failed to add team member"}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberWallet: PublicKey) => {
+    const address = memberWallet.toBase58();
+    if (!confirm(`Remove ${address.slice(0, 8)}...${address.slice(-8)} from team?`)) return;
+
+    if (!wallet.connected || !wallet.publicKey) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create transaction
+      const transaction = await removeTeamMember(
+        connection,
+        address,
+        wallet.publicKey
+      );
+
+      // Sign and send transaction
+      const signature = await wallet.sendTransaction(transaction, connection);
+      console.log("Transaction signature:", signature);
+
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, "confirmed");
+
+      // Refresh team members list
+      const members = await getAllTeamMembers(connection);
+      setTeamMembers(members);
+
+      alert(`Team member removed successfully!\nSignature: ${signature}`);
+    } catch (err: any) {
+      console.error("Error removing team member:", err);
+      alert(`Error: ${err.message || "Failed to remove team member"}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-2xl font-bold">Team Management</h3>
+          <p className="text-muted-foreground mt-1">Manage team members who can create properties and proposals</p>
+        </div>
+      </div>
+
+      {/* Add Team Member */}
+      <GlassCard>
+        <h4 className="text-lg font-semibold mb-4">Add Team Member</h4>
+        <div className="flex gap-4">
+          <input
+            type="text"
+            value={newMemberAddress}
+            onChange={(e) => setNewMemberAddress(e.target.value)}
+            placeholder="Enter wallet address (e.g., 7xKX...aBcD)"
+            className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
+            disabled={loading}
+          />
+          <AnimatedButton
+            variant="primary"
+            onClick={handleAddMember}
+            disabled={loading || !newMemberAddress.trim()}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Member
+          </AnimatedButton>
+        </div>
+      </GlassCard>
+
+      {/* Team Members List */}
+      <GlassCard>
+        <h4 className="text-lg font-semibold mb-4">
+          Team Members ({teamMembers.length})
+        </h4>
+
+        {fetchingMembers ? (
+          <div className="text-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+            <p className="text-muted-foreground">Loading team members from blockchain...</p>
+          </div>
+        ) : teamMembers.length === 0 ? (
+          <div className="text-center py-12">
+            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">No team members added yet</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Add team members to delegate property and proposal management
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {teamMembers.map((member, i) => {
+              const walletAddress = member.account.wallet.toBase58();
+              const addedAt = new Date(member.account.addedAt.toNumber() * 1000).toLocaleDateString();
+              const isActive = member.account.isActive;
+
+              return (
+                <motion.div
+                  key={member.publicKey.toBase58()}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${isActive ? 'from-purple-500 to-pink-600' : 'from-gray-500 to-gray-600'} flex items-center justify-center`}>
+                      <Users className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <code className="text-cyan-400 font-mono text-sm">
+                          {walletAddress.slice(0, 8)}...{walletAddress.slice(-8)}
+                        </code>
+                        {isActive ? (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold bg-green-500/20 text-green-400 rounded-full">
+                            ACTIVE
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold bg-gray-500/20 text-gray-400 rounded-full">
+                            INACTIVE
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Added on {addedAt} • Can manage properties & proposals
+                      </p>
+                    </div>
+                  </div>
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveMember(member.account.wallet)}
+                    disabled={loading || !isActive}
+                    className="text-red-400 hover:text-red-300 border-red-400/20 hover:border-red-400/40"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Remove"}
+                  </AnimatedButton>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </GlassCard>
+
+      {/* Info Card */}
+      <GlassCard className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/20">
+        <div className="flex gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-cyan-400" />
+            </div>
+          </div>
+          <div>
+            <h5 className="font-semibold text-cyan-400 mb-2">Team Member Permissions</h5>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Create new properties and campaigns</li>
+              <li>• Create proposals for voting</li>
+              <li>• Manage property details</li>
+              <li>• View admin dashboard</li>
+              <li className="text-yellow-400">⚠️ Cannot withdraw funds from treasury</li>
+            </ul>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
 function DividendsTab() {
   return (
     <div className="space-y-6">
@@ -499,7 +1088,7 @@ function DividendsTab() {
           <MetricDisplay
             icon={DollarSign}
             label="Pending Distribution"
-            value="$45,750"
+            value="$0"
             iconColor="text-yellow-400"
           />
         </GlassCard>
@@ -507,7 +1096,7 @@ function DividendsTab() {
           <MetricDisplay
             icon={CheckCircle2}
             label="Distributed This Month"
-            value="$124,500"
+            value="$0"
             iconColor="text-green-400"
             delay={0.1}
           />
@@ -516,7 +1105,7 @@ function DividendsTab() {
           <MetricDisplay
             icon={TrendingUp}
             label="Total Distributed"
-            value="$2.45M"
+            value="$0"
             iconColor="text-cyan-400"
             delay={0.2}
           />
@@ -526,11 +1115,7 @@ function DividendsTab() {
       <GlassCard>
         <h4 className="text-lg font-semibold mb-4">Recent Distributions</h4>
         <div className="space-y-3">
-          {[
-            { property: "Résidence Les Jardins", amount: "$8,750", date: "2024-11-01", investors: 52 },
-            { property: "Immeuble Commerce Lyon", amount: "$12,450", date: "2024-11-01", investors: 38 },
-            { property: "Résidence Étudiante", amount: "$15,600", date: "2024-11-01", investors: 45 },
-          ].map((dist, i) => (
+          {[].map((dist: any, i: number) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, x: -20 }}
