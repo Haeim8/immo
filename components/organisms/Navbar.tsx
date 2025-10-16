@@ -143,13 +143,13 @@ export default function Navbar() {
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center gap-3">
-            {/* Admin Link (only visible for admins or team members) */}
-            {isConnected && canAccessAdmin && <AdminLink isAdmin={canAccessAdmin} />}
+          <div className="flex items-center gap-2">
+            {/* Admin Link (only visible for admins or team members) - Hidden on mobile */}
+            {isConnected && canAccessAdmin && <AdminLink isAdmin={canAccessAdmin} className="hidden sm:flex" />}
 
-            {/* Network Selector - Solana */}
+            {/* Network Selector - Solana - Hidden on mobile */}
             <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-              <SelectTrigger className="w-[140px] bg-white/5 border-white/10">
+              <SelectTrigger className="hidden sm:flex w-[140px] bg-white/5 border-white/10">
                 <div className="flex items-center gap-2">
                   <svg width="16" height="16" viewBox="0 0 397.7 311.7" className="shrink-0">
                     <defs>
@@ -217,38 +217,45 @@ export default function Navbar() {
               </SelectContent>
             </Select>
 
-            {/* Theme Toggle */}
-            <ThemeToggle />
+            {/* Theme Toggle - Hidden on mobile */}
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
 
-            {/* Connect Wallet Button */}
+            {/* Connect Wallet Button - Compact on mobile */}
             {!isConnected ? (
               <AnimatedButton
                 variant="primary"
                 size="sm"
                 onClick={handleConnect}
                 disabled={connecting}
+                className="text-xs sm:text-sm"
               >
-                <Wallet className="h-4 w-4 mr-2" />
-                Connect
+                <Wallet className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Connect</span>
               </AnimatedButton>
             ) : (
-              <div className="flex items-center gap-2">
-                <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm font-medium">
-                  <Wallet className="h-3 w-3 inline mr-1.5" />
-                  {currentWallet ? `${currentWallet.slice(0, 4)}...${currentWallet.slice(-4)}` : "Connected"}
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs sm:text-sm font-medium">
+                  <Wallet className="h-3 w-3 inline mr-1" />
+                  {currentWallet ? `${currentWallet.slice(0, 4)}...${currentWallet.slice(-3)}` : "•"}
                 </div>
                 <AnimatedButton
                   variant="outline"
                   size="sm"
                   onClick={handleDisconnect}
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  Disconnect
+                  <span className="hidden sm:inline">Disconnect</span>
+                  <span className="sm:hidden">×</span>
                 </AnimatedButton>
               </div>
             )}
 
-            {/* Settings Dropdown */}
-            <SettingsDropdown />
+            {/* Settings Dropdown - Hidden on mobile */}
+            <div className="hidden sm:block">
+              <SettingsDropdown />
+            </div>
           </div>
         </div>
       </div>
