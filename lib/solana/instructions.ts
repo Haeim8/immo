@@ -163,8 +163,12 @@ export async function buyShare(
 
   const [shareNFTPDA] = getShareNFTPDA(propertyPDA, tokenId);
 
+  // For now, use placeholder CIDs (will be replaced with real NFT generation later)
+  const placeholderImageCid = "QmPlaceholderImageCid123456789";
+  const placeholderMetadataCid = "QmPlaceholderMetadataCid123456789";
+
   const instruction = await program.methods
-    .buyShare()
+    .buyShare(placeholderImageCid, placeholderMetadataCid)
     .accounts({
       factory: factoryPDA,
       property: propertyPDA,

@@ -1,5 +1,5 @@
 {
-  "address": "H8S27aKztqdyCPZCPUvmAahSDBrTrw5ahCjQbJpzSECL",
+  "address": "3zg9q8VeJr4RHcEW7kt9TEjCNPC61VR6tNEvvzuoTkMw",
   "metadata": {
     "name": "real_estate_factory",
     "version": "0.1.0",
@@ -7,6 +7,93 @@
     "description": "Factory contract for creating real estate investment properties"
   },
   "instructions": [
+    {
+      "name": "add_team_member",
+      "docs": [
+        "Add team member (admin only)"
+      ],
+      "discriminator": [
+        64,
+        13,
+        248,
+        67,
+        55,
+        245,
+        184,
+        173
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "team_member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  101,
+                  97,
+                  109,
+                  95,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "wallet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet"
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        }
+      ]
+    },
     {
       "name": "buy_share",
       "docs": [
@@ -117,7 +204,164 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "nft_image_cid",
+          "type": "string"
+        },
+        {
+          "name": "nft_metadata_cid",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "cast_vote",
+      "docs": [
+        "Cast a vote (NFT holders only)"
+      ],
+      "discriminator": [
+        20,
+        212,
+        15,
+        189,
+        69,
+        180,
+        69,
+        151
+      ],
+      "accounts": [
+        {
+          "name": "property",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property.factory",
+                "account": "Property"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.proposal_id",
+                "account": "Proposal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "share_nft",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  104,
+                  97,
+                  114,
+                  101,
+                  95,
+                  110,
+                  102,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property"
+              },
+              {
+                "kind": "account",
+                "path": "share_nft.token_id",
+                "account": "ShareNFT"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vote",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal"
+              },
+              {
+                "kind": "account",
+                "path": "share_nft"
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "vote_choice",
+          "type": "bool"
+        }
+      ]
     },
     {
       "name": "claim_dividends",
@@ -285,9 +529,110 @@
       "args": []
     },
     {
+      "name": "close_proposal",
+      "docs": [
+        "Close a proposal (admin only)"
+      ],
+      "discriminator": [
+        213,
+        178,
+        139,
+        19,
+        50,
+        191,
+        82,
+        245
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "property",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.proposal_id",
+                "account": "Proposal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "create_property",
       "docs": [
-        "Create a new property investment contract"
+        "Create a new asset tokenization contract (property, vehicle, business, etc.)"
       ],
       "discriminator": [
         45,
@@ -362,6 +707,10 @@
       ],
       "args": [
         {
+          "name": "asset_type",
+          "type": "string"
+        },
+        {
           "name": "name",
           "type": "string"
         },
@@ -371,6 +720,10 @@
         },
         {
           "name": "province",
+          "type": "string"
+        },
+        {
+          "name": "country",
           "type": "string"
         },
         {
@@ -408,6 +761,115 @@
         {
           "name": "description",
           "type": "string"
+        },
+        {
+          "name": "image_cid",
+          "type": "string"
+        },
+        {
+          "name": "long_description",
+          "type": "string"
+        },
+        {
+          "name": "metadata_uri",
+          "type": "string"
+        },
+        {
+          "name": "voting_enabled",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "create_proposal",
+      "docs": [
+        "Create a proposal for voting (admin only)"
+      ],
+      "discriminator": [
+        132,
+        116,
+        68,
+        174,
+        216,
+        160,
+        198,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "property",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "voting_duration",
+          "type": "i64"
         }
       ]
     },
@@ -548,6 +1010,81 @@
           "type": "pubkey"
         }
       ]
+    },
+    {
+      "name": "remove_team_member",
+      "docs": [
+        "Remove team member (admin only)"
+      ],
+      "discriminator": [
+        224,
+        54,
+        115,
+        192,
+        42,
+        203,
+        4,
+        15
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "team_member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  101,
+                  97,
+                  109,
+                  95,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "team_member.wallet",
+                "account": "TeamMember"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -578,6 +1115,19 @@
       ]
     },
     {
+      "name": "Proposal",
+      "discriminator": [
+        26,
+        94,
+        189,
+        187,
+        116,
+        136,
+        53,
+        33
+      ]
+    },
+    {
       "name": "ShareNFT",
       "discriminator": [
         143,
@@ -589,83 +1139,184 @@
         24,
         65
       ]
+    },
+    {
+      "name": "TeamMember",
+      "discriminator": [
+        45,
+        32,
+        135,
+        109,
+        75,
+        252,
+        204,
+        244
+      ]
+    },
+    {
+      "name": "Vote",
+      "discriminator": [
+        96,
+        91,
+        104,
+        57,
+        145,
+        35,
+        172,
+        155
+      ]
     }
   ],
   "errors": [
     {
       "code": 6000,
+      "name": "AssetTypeTooLong",
+      "msg": "Asset type is too long (max 32 characters)"
+    },
+    {
+      "code": 6001,
       "name": "NameTooLong",
       "msg": "Name is too long (max 64 characters)"
     },
     {
-      "code": 6001,
+      "code": 6002,
       "name": "CityTooLong",
       "msg": "City is too long (max 64 characters)"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "ProvinceTooLong",
       "msg": "Province is too long (max 64 characters)"
     },
     {
-      "code": 6003,
+      "code": 6004,
+      "name": "CountryTooLong",
+      "msg": "Country is too long (max 64 characters)"
+    },
+    {
+      "code": 6005,
       "name": "TypeTooLong",
       "msg": "Property type is too long (max 32 characters)"
     },
     {
-      "code": 6004,
+      "code": 6006,
       "name": "DescriptionTooLong",
       "msg": "Description is too long (max 512 characters)"
     },
     {
-      "code": 6005,
+      "code": 6007,
+      "name": "ImageCidTooLong",
+      "msg": "Image CID is too long (max 100 characters)"
+    },
+    {
+      "code": 6008,
+      "name": "LongDescriptionTooLong",
+      "msg": "Long description is too long (max 2000 characters)"
+    },
+    {
+      "code": 6009,
+      "name": "MetadataUriTooLong",
+      "msg": "Metadata URI is too long (max 200 characters)"
+    },
+    {
+      "code": 6010,
       "name": "InvalidShareAmount",
       "msg": "Invalid share amount"
     },
     {
-      "code": 6006,
+      "code": 6011,
       "name": "InvalidPrice",
       "msg": "Invalid price"
     },
     {
-      "code": 6007,
+      "code": 6012,
       "name": "SaleEnded",
       "msg": "Sale has ended"
     },
     {
-      "code": 6008,
+      "code": 6013,
       "name": "PropertyInactive",
       "msg": "Property is inactive"
     },
     {
-      "code": 6009,
+      "code": 6014,
       "name": "AllSharesSold",
       "msg": "All shares have been sold"
     },
     {
-      "code": 6010,
+      "code": 6015,
       "name": "InvalidAmount",
       "msg": "Invalid amount"
     },
     {
-      "code": 6011,
+      "code": 6016,
       "name": "NoSharesSold",
       "msg": "No shares have been sold yet"
     },
     {
-      "code": 6012,
+      "code": 6017,
       "name": "MathOverflow",
       "msg": "Math overflow"
     },
     {
-      "code": 6013,
+      "code": 6018,
       "name": "NoDividendsToClaim",
       "msg": "No dividends to claim"
     },
     {
-      "code": 6014,
+      "code": 6019,
       "name": "SaleStillActive",
       "msg": "Sale is still active"
+    },
+    {
+      "code": 6020,
+      "name": "TitleTooLong",
+      "msg": "Title is too long (max 200 characters)"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidDuration",
+      "msg": "Invalid voting duration"
+    },
+    {
+      "code": 6022,
+      "name": "VotingDisabled",
+      "msg": "Voting is disabled for this property"
+    },
+    {
+      "code": 6023,
+      "name": "ProposalInactive",
+      "msg": "Proposal is inactive"
+    },
+    {
+      "code": 6024,
+      "name": "VotingEnded",
+      "msg": "Voting has ended"
+    },
+    {
+      "code": 6025,
+      "name": "NotNftOwner",
+      "msg": "You do not own this NFT"
+    },
+    {
+      "code": 6026,
+      "name": "WrongProperty",
+      "msg": "NFT does not belong to this property"
+    },
+    {
+      "code": 6027,
+      "name": "NoVotingPower",
+      "msg": "This NFT has no voting power"
+    },
+    {
+      "code": 6028,
+      "name": "VotingStillActive",
+      "msg": "Voting is still active"
+    },
+    {
+      "code": 6029,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: Only admin or team members can perform this action"
     }
   ],
   "types": [
@@ -707,6 +1358,10 @@
             "type": "u64"
           },
           {
+            "name": "asset_type",
+            "type": "string"
+          },
+          {
             "name": "name",
             "type": "string"
           },
@@ -716,6 +1371,10 @@
           },
           {
             "name": "province",
+            "type": "string"
+          },
+          {
+            "name": "country",
             "type": "string"
           },
           {
@@ -767,12 +1426,84 @@
             "type": "string"
           },
           {
+            "name": "image_cid",
+            "type": "string"
+          },
+          {
+            "name": "long_description",
+            "type": "string"
+          },
+          {
+            "name": "metadata_uri",
+            "type": "string"
+          },
+          {
+            "name": "voting_enabled",
+            "type": "bool"
+          },
+          {
             "name": "total_dividends_deposited",
             "type": "u64"
           },
           {
             "name": "total_dividends_claimed",
             "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Proposal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "property",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposal_id",
+            "type": "u64"
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "voting_ends_at",
+            "type": "i64"
+          },
+          {
+            "name": "yes_votes",
+            "type": "u64"
+          },
+          {
+            "name": "no_votes",
+            "type": "u64"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "is_executed",
+            "type": "bool"
           },
           {
             "name": "bump",
@@ -805,6 +1536,82 @@
           {
             "name": "dividends_claimed",
             "type": "u64"
+          },
+          {
+            "name": "nft_image_uri",
+            "type": "string"
+          },
+          {
+            "name": "nft_metadata_uri",
+            "type": "string"
+          },
+          {
+            "name": "voting_power",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TeamMember",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "factory",
+            "type": "pubkey"
+          },
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "added_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "added_at",
+            "type": "i64"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vote",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "voter",
+            "type": "pubkey"
+          },
+          {
+            "name": "share_nft",
+            "type": "pubkey"
+          },
+          {
+            "name": "vote_choice",
+            "type": "bool"
+          },
+          {
+            "name": "voted_at",
+            "type": "i64"
           },
           {
             "name": "bump",
