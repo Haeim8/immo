@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import {
-  buyShare,
   claimDividends,
   createProperty,
   depositDividends,
@@ -13,6 +12,7 @@ import {
   fetchUserShareNFTs,
   fetchAllProperties,
 } from "./instructions";
+import { buyShareWithNFT } from "./buy-share-with-nft";
 import {
   CreatePropertyParams,
   Property,
@@ -41,17 +41,22 @@ export function useBrickChain() {
       setError(null);
 
       try {
-        const { transaction, shareNFTPDA, tokenId } = await buyShare(
-          connection,
-          propertyPDA,
-          publicKey
-        );
+        // Generate NFT and create transaction
+        const { transaction, shareNFTPDA, tokenId, nftImageCid, nftMetadataCid } =
+          await buyShareWithNFT(connection, propertyPDA, publicKey);
 
+        // Send transaction
         const signature = await sendTransaction(transaction, connection);
         await connection.confirmTransaction(signature, "confirmed");
 
         setLoading(false);
-        return { signature, shareNFTPDA, tokenId };
+        return {
+          signature,
+          shareNFTPDA,
+          tokenId,
+          nftImageCid,
+          nftMetadataCid
+        };
       } catch (err) {
         handleError(err);
         throw err;

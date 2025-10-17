@@ -6,28 +6,32 @@ import GradientText from "@/components/atoms/GradientText";
 import StatCard from "@/components/molecules/StatCard";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import BlurBackground from "@/components/atoms/BlurBackground";
-import { mockMetrics } from "@/lib/mock-data";
+import { useAllProperties } from "@/lib/solana/hooks";
+import { calculateGlobalMetrics } from "@/lib/solana/adapters";
 
 export default function HeroSection() {
+  const { properties } = useAllProperties();
+  const globalMetrics = calculateGlobalMetrics(properties);
+
   const metrics = [
     {
       icon: Building2,
       label: "Projects Funded",
-      value: mockMetrics.totalProjectsFunded,
+      value: globalMetrics.totalProjectsFunded,
       iconColor: "text-cyan-400",
       delay: 0.2,
     },
     {
       icon: TrendingUp,
       label: "Dividends Distributed",
-      value: `$${(mockMetrics.totalValueDistributed / 1000000).toFixed(2)}M`,
+      value: `$${(globalMetrics.totalValueDistributed / 1000000).toFixed(2)}M`,
       iconColor: "text-blue-400",
       delay: 0.4,
     },
     {
       icon: Users,
       label: "Active Investors",
-      value: mockMetrics.activeInvestors,
+      value: globalMetrics.activeInvestors,
       iconColor: "text-purple-400",
       delay: 0.6,
     },
@@ -71,7 +75,7 @@ export default function HeroSection() {
             <AnimatedButton
               variant="outline"
               size="lg"
-              onClick={() => window.open(mockMetrics.blockchainExplorerUrl, "_blank")}
+              onClick={() => window.open(globalMetrics.blockchainExplorerUrl, "_blank")}
             >
               <ExternalLink className="h-5 w-5 mr-2" />
               View on Blockchain

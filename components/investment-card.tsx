@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Investment } from "@/lib/mock-data";
+import { Investment } from "@/lib/types";
 import { MapPin, TrendingUp, Home, ExternalLink, Calendar } from "lucide-react";
 import Image from "next/image";
 import { getIpfsUrl } from "@/lib/pinata/upload";

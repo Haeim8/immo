@@ -26,6 +26,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { useSolPrice, usdToLamports } from "@/lib/solana/useSolPrice";
 import { uploadPropertyImage, getIpfsUrl } from "@/lib/pinata/upload";
+import { createPropertyMetadata, uploadPropertyMetadata } from "@/lib/pinata/metadata";
 import { addTeamMember, removeTeamMember, getAllTeamMembers, type TeamMember } from "@/lib/solana/team";
 
 export default function AdminDashboard() {
@@ -405,30 +406,63 @@ function CreatePropertyTab() {
 
       // 1. Upload image to IPFS first
       setUploadingImage(true);
-      let cid = "";
+      let imageCid = "";
       try {
-        cid = await uploadPropertyImage(selectedImage, formData.name);
-        setImageCid(cid);
-        console.log("✅ Image uploaded to IPFS:", cid);
+        imageCid = await uploadPropertyImage(selectedImage, formData.name);
+        setImageCid(imageCid);
+        console.log("✅ Image uploaded to IPFS:", imageCid);
       } catch (err) {
         alert("Failed to upload image to IPFS. Please check your Pinata configuration.");
         setUploadingImage(false);
         return;
       }
+
+      // 2. Create and upload property metadata JSON to IPFS
+      const pricePerShareUSD = parseFloat(formData.pricePerShare);
+      const expectedReturnPercentage = parseFloat(formData.expectedReturn);
+
+      const metadata = createPropertyMetadata({
+        assetType: formData.assetType,
+        name: formData.name,
+        city: formData.city,
+        province: formData.province,
+        country: formData.country,
+        description: formData.description,
+        longDescription: formData.longDescription,
+        imageCid: imageCid,
+        surface: parseInt(formData.surface),
+        rooms: parseInt(formData.rooms),
+        propertyType: formData.propertyType,
+        yearBuilt: parseInt(formData.yearBuilt),
+        features: formData.features,
+        totalShares: parseInt(formData.shares),
+        sharePrice: pricePerShareUSD,
+        expectedReturn: expectedReturnPercentage,
+        votingEnabled: formData.votingEnabled,
+        externalUrl: `https://usci.com/property/`,
+      });
+
+      let metadataCid = "";
+      try {
+        metadataCid = await uploadPropertyMetadata(metadata);
+        console.log("✅ Property metadata uploaded to IPFS:", metadataCid);
+      } catch (err) {
+        alert("Failed to upload metadata to IPFS. Please check your Pinata configuration.");
+        setUploadingImage(false);
+        return;
+      }
       setUploadingImage(false);
 
-      // 2. Convert USD to lamports using real SOL price
-      const pricePerShareUSD = parseFloat(formData.pricePerShare);
+      // 3. Convert USD to lamports using real SOL price
       const pricePerShareLamports = usdToLamports(pricePerShareUSD, solPrice.usd);
 
-      // 3. Convert expected return to basis points (5.5% -> 550)
-      const expectedReturnBasisPoints = Math.floor(parseFloat(formData.expectedReturn) * 100);
+      // 4. Convert expected return to basis points (5.5% -> 550)
+      const expectedReturnBasisPoints = Math.floor(expectedReturnPercentage * 100);
 
-      // 4. Convert duration days to seconds
+      // 5. Convert duration days to seconds
       const durationSeconds = parseInt(formData.duration) * 24 * 60 * 60;
 
-      // 5. Prepare params with IPFS CID
-      const propertyId = 0; // Will be fetched from factory in production
+      // 6. Prepare params with IPFS CIDs (minimal onchain data)
       const params = {
         assetType: formData.assetType,
         name: formData.name,
@@ -443,14 +477,12 @@ function CreatePropertyTab() {
         expectedReturn: expectedReturnBasisPoints,
         propertyType: formData.propertyType,
         yearBuilt: parseInt(formData.yearBuilt),
-        description: formData.description,
-        imageCid: cid,  // IPFS CID
-        longDescription: formData.longDescription,
-        metadataUri: `https://usci.com/asset/${propertyId}`,
+        imageCid: imageCid,  // IPFS CID only
+        metadataCid: metadataCid,  // IPFS CID for full metadata JSON
         votingEnabled: formData.votingEnabled,
       };
 
-      // 6. Create property on-chain
+      // 7. Create property on-chain
       const result = await createNewProperty(params);
 
       setSuccess(true);

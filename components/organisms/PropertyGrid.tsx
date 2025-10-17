@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useAllProperties } from "@/lib/solana/hooks";
-import { lamportsToSOL } from "@/lib/solana/instructions";
+import { propertyToInvestment } from "@/lib/solana/adapters";
 import PropertyCard from "@/components/molecules/PropertyCard";
 import GradientText from "@/components/atoms/GradientText";
 import { Loader2 } from "lucide-react";
@@ -87,36 +87,7 @@ export default function PropertyGrid() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {properties.map((property, index) => {
-            const totalShares = property.account.totalShares.toNumber();
-            const sharesSold = property.account.sharesSold.toNumber();
-            const sharesAvailable = totalShares - sharesSold;
-
-            const investment = {
-              id: property.account.propertyId.toString(),
-              name: property.account.name,
-              location: {
-                city: property.account.city,
-                province: property.account.province,
-              },
-              priceUSD: lamportsToSOL(property.account.sharePrice.toNumber()) * 150, // Convert SOL to USD estimate
-              estimatedValue: lamportsToSOL(totalShares * property.account.sharePrice.toNumber()) * 150,
-              imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800", // Fallback image
-              imageCid: property.account.imageCid || undefined, // IPFS CID from contract
-              description: property.account.description,
-              type: property.account.propertyType,
-              surface: property.account.surface,
-              expectedReturn: property.account.expectedReturn / 100, // basis points to percentage
-              fundingProgress: (sharesSold / totalShares) * 100,
-              sharesAvailable,
-              totalShares,
-              sharesSold,
-              contractAddress: property.publicKey.toBase58(),
-              details: {
-                yearBuilt: property.account.yearBuilt,
-                rooms: property.account.rooms,
-                features: [],
-              },
-            };
+            const investment = propertyToInvestment(property);
 
             return (
               <motion.div

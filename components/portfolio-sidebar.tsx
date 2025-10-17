@@ -1,17 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { mockPortfolio, mockInvestments } from "@/lib/mock-data";
+import { useUserShareNFTs, useAllProperties } from "@/lib/solana/hooks";
+import { shareNFTsToPortfolio, getPropertyById } from "@/lib/solana/adapters";
+import { PortfolioData } from "@/lib/types";
 import { Wallet, TrendingUp, Home, Calendar, Gift } from "lucide-react";
 
 export default function PortfolioSidebar() {
   const [activeTab, setActiveTab] = useState<"home" | "dividends">("home");
   const [claiming, setClaiming] = useState(false);
+  const [portfolio, setPortfolio] = useState<PortfolioData>({
+    totalInvested: 0,
+    totalDividends: 0,
+    investments: []
+  });
 
-  const totalPendingDividends = mockPortfolio.investments.reduce(
+  const { shareNFTs } = useUserShareNFTs();
+  const { properties } = useAllProperties();
+
+  useEffect(() => {
+    if (shareNFTs.length > 0 && properties.length > 0) {
+      shareNFTsToPortfolio(shareNFTs, properties).then(setPortfolio);
+    }
+  }, [shareNFTs, properties]);
+
+  const totalPendingDividends = portfolio.investments.reduce(
     (sum, inv) => sum + inv.pendingDividends,
     0
   );
@@ -69,7 +85,7 @@ export default function PortfolioSidebar() {
                   <span className="text-xs text-muted-foreground">Investi</span>
                 </div>
                 <p className="text-xl font-bold">
-                  ${mockPortfolio.totalInvested.toLocaleString()}
+                  ${portfolio.totalInvested.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -81,7 +97,7 @@ export default function PortfolioSidebar() {
                   <span className="text-xs text-muted-foreground">Dividendes</span>
                 </div>
                 <p className="text-xl font-bold text-emerald-500">
-                  ${mockPortfolio.totalDividends.toLocaleString()}
+                  ${portfolio.totalDividends.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -91,17 +107,15 @@ export default function PortfolioSidebar() {
           <div>
             <h3 className="text-lg font-semibold mb-3">Mes Investissements</h3>
             <div className="space-y-3">
-              {mockPortfolio.investments.map((investment) => {
-                const projectDetails = mockInvestments.find(
-                  (inv) => inv.id === investment.investmentId
-                );
+              {portfolio.investments.map((investment) => {
+                const projectDetails = getPropertyById(properties, investment.investmentId);
                 if (!projectDetails) return null;
 
                 return (
                   <Card key={investment.investmentId} className="border-2">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base">
-                        {projectDetails.name}
+                        {projectDetails.account.name}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
@@ -171,10 +185,8 @@ export default function PortfolioSidebar() {
           <div>
             <h3 className="text-lg font-semibold mb-3">Historique</h3>
             <div className="space-y-2">
-              {mockPortfolio.investments.map((investment) => {
-                const projectDetails = mockInvestments.find(
-                  (inv) => inv.id === investment.investmentId
-                );
+              {portfolio.investments.map((investment) => {
+                const projectDetails = getPropertyById(properties, investment.investmentId);
                 if (!projectDetails) return null;
 
                 return (
@@ -183,7 +195,7 @@ export default function PortfolioSidebar() {
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="font-semibold text-sm">
-                            {projectDetails.name}
+                            {projectDetails.account.name}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Dividendes totaux

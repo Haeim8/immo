@@ -35,10 +35,8 @@ pub mod real_estate_factory {
         expected_return: u32,       // Expected return in basis points (550 = 5.50%)
         property_type: String,      // "Résidentiel", "Commercial", "Sedan", "SUV", etc.
         year_built: u16,            // Year built/manufactured
-        description: String,        // Short description
         image_cid: String,          // IPFS CID for main image
-        long_description: String,   // Detailed description for investors
-        metadata_uri: String,       // URI pointing to website or JSON metadata
+        metadata_cid: String,       // IPFS CID for full property metadata JSON
         voting_enabled: bool,       // Enable voting for investors
     ) -> Result<()> {
         require!(asset_type.len() <= 32, FactoryError::AssetTypeTooLong);
@@ -47,10 +45,8 @@ pub mod real_estate_factory {
         require!(province.len() <= 64, FactoryError::ProvinceTooLong);
         require!(country.len() <= 64, FactoryError::CountryTooLong);
         require!(property_type.len() <= 32, FactoryError::TypeTooLong);
-        require!(description.len() <= 512, FactoryError::DescriptionTooLong);
         require!(image_cid.len() <= 100, FactoryError::ImageCidTooLong);
-        require!(long_description.len() <= 2000, FactoryError::LongDescriptionTooLong);
-        require!(metadata_uri.len() <= 200, FactoryError::MetadataUriTooLong);
+        require!(metadata_cid.len() <= 100, FactoryError::MetadataCidTooLong);
         require!(total_shares > 0, FactoryError::InvalidShareAmount);
         require!(share_price > 0, FactoryError::InvalidPrice);
 
@@ -77,10 +73,8 @@ pub mod real_estate_factory {
         property.expected_return = expected_return;
         property.property_type = property_type;
         property.year_built = year_built;
-        property.description = description;
-        property.image_cid = image_cid;
-        property.long_description = long_description;
-        property.metadata_uri = metadata_uri;
+        property.image_cid = image_cid.clone();
+        property.metadata_cid = metadata_cid.clone();
         property.voting_enabled = voting_enabled;
         property.total_dividends_deposited = 0;
         property.total_dividends_claimed = 0;
@@ -90,6 +84,7 @@ pub mod real_estate_factory {
 
         msg!("Asset created: {} (ID: {}, Type: {})", name, property.property_id, asset_type);
         msg!("Total shares: {}, Price: {} lamports", total_shares, share_price);
+        msg!("Image CID: {}, Metadata CID: {}", image_cid, metadata_cid);
         msg!("Voting enabled: {}", voting_enabled);
 
         Ok(())
@@ -692,14 +687,10 @@ pub struct Property {
     #[max_len(32)]
     pub property_type: String,            // 4 + 32 ("Résidentiel", "Commercial", "Sedan", "SUV", etc.)
     pub year_built: u16,                  // 2 (or year manufactured)
-    #[max_len(512)]
-    pub description: String,              // 4 + 512
     #[max_len(100)]
     pub image_cid: String,                // 4 + 100 (IPFS CID for main image)
-    #[max_len(2000)]
-    pub long_description: String,         // 4 + 2000 (Description détaillée)
-    #[max_len(200)]
-    pub metadata_uri: String,             // 4 + 200 (URI pointing to site or JSON metadata)
+    #[max_len(100)]
+    pub metadata_cid: String,             // 4 + 100 (IPFS CID for full property metadata JSON)
     pub voting_enabled: bool,             // 1 (Enable voting for investors)
     pub total_dividends_deposited: u64,   // 8
     pub total_dividends_claimed: u64,     // 8
@@ -779,14 +770,10 @@ pub enum FactoryError {
     CountryTooLong,
     #[msg("Property type is too long (max 32 characters)")]
     TypeTooLong,
-    #[msg("Description is too long (max 512 characters)")]
-    DescriptionTooLong,
     #[msg("Image CID is too long (max 100 characters)")]
     ImageCidTooLong,
-    #[msg("Long description is too long (max 2000 characters)")]
-    LongDescriptionTooLong,
-    #[msg("Metadata URI is too long (max 200 characters)")]
-    MetadataUriTooLong,
+    #[msg("Metadata CID is too long (max 100 characters)")]
+    MetadataCidTooLong,
     #[msg("Invalid share amount")]
     InvalidShareAmount,
     #[msg("Invalid price")]

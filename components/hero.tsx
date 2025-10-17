@@ -2,27 +2,31 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { mockMetrics } from "@/lib/mock-data";
+import { useAllProperties } from "@/lib/solana/hooks";
+import { calculateGlobalMetrics } from "@/lib/solana/adapters";
 import { TrendingUp, Users, Building2, ExternalLink } from "lucide-react";
 
 export default function Hero() {
+  const { properties } = useAllProperties();
+  const globalMetrics = calculateGlobalMetrics(properties);
+
   const metrics = [
     {
       icon: Building2,
       label: "Projets Financés",
-      value: mockMetrics.totalProjectsFunded,
+      value: globalMetrics.totalProjectsFunded,
       color: "text-turquoise-500",
     },
     {
       icon: TrendingUp,
       label: "Dividendes Distribués",
-      value: `$${(mockMetrics.totalValueDistributed / 1000000).toFixed(2)}M`,
+      value: `$${(globalMetrics.totalValueDistributed / 1000000).toFixed(2)}M`,
       color: "text-emerald-500",
     },
     {
       icon: Users,
       label: "Investisseurs Actifs",
-      value: mockMetrics.activeInvestors,
+      value: globalMetrics.activeInvestors,
       color: "text-blue-500",
     },
   ];
@@ -63,7 +67,7 @@ export default function Hero() {
         <Button
           variant="outline"
           className="gap-2"
-          onClick={() => window.open(mockMetrics.blockchainExplorerUrl, "_blank")}
+          onClick={() => window.open(globalMetrics.blockchainExplorerUrl, "_blank")}
         >
           <ExternalLink className="h-4 w-4" />
           Voir les Contrats sur la Blockchain

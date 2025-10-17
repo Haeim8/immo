@@ -33,10 +33,8 @@ export interface Property {
   expectedReturn: number; // basis points (550 = 5.50%)
   propertyType: string;
   yearBuilt: number;
-  description: string;
-  imageCid: string;
-  longDescription: string;
-  metadataUri: string;
+  imageCid: string; // IPFS CID for main image
+  metadataCid: string; // IPFS CID for full property metadata JSON
   votingEnabled: boolean;
   totalDividendsDeposited: BN;
   totalDividendsClaimed: BN;
@@ -125,10 +123,8 @@ export interface CreatePropertyParams {
   expectedReturn: number; // basis points (ex: 550 = 5.50%)
   propertyType: string; // "Résidentiel", "Commercial", etc.
   yearBuilt: number;
-  description: string;
-  imageCid: string; // IPFS CID
-  longDescription: string; // Detailed description
-  metadataUri: string; // URI to website or JSON metadata
+  imageCid: string; // IPFS CID for main image
+  metadataCid: string; // IPFS CID for full property metadata JSON
   votingEnabled: boolean; // Enable voting for investors
 }
 

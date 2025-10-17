@@ -123,10 +123,8 @@ export async function createProperty(
       params.expectedReturn,
       params.propertyType,
       params.yearBuilt,
-      params.description,
       params.imageCid,
-      params.longDescription,
-      params.metadataUri,
+      params.metadataCid,
       params.votingEnabled
     )
     .accounts({
@@ -142,11 +140,16 @@ export async function createProperty(
   return { transaction, propertyPDA, propertyId };
 }
 
-// Buy a share NFT
+/**
+ * Buy a share NFT with dynamically generated NFT image and metadata
+ * This is the main function to use for buying shares
+ */
 export async function buyShare(
   connection: Connection,
   propertyPDA: PublicKey,
-  buyer: PublicKey
+  buyer: PublicKey,
+  nftImageCid: string,
+  nftMetadataCid: string
 ): Promise<{ transaction: Transaction; shareNFTPDA: PublicKey; tokenId: number }> {
   const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
   const program = getProgram(provider);
@@ -163,12 +166,8 @@ export async function buyShare(
 
   const [shareNFTPDA] = getShareNFTPDA(propertyPDA, tokenId);
 
-  // For now, use placeholder CIDs (will be replaced with real NFT generation later)
-  const placeholderImageCid = "QmPlaceholderImageCid123456789";
-  const placeholderMetadataCid = "QmPlaceholderMetadataCid123456789";
-
   const instruction = await program.methods
-    .buyShare(placeholderImageCid, placeholderMetadataCid)
+    .buyShare(nftImageCid, nftMetadataCid)
     .accounts({
       factory: factoryPDA,
       property: propertyPDA,

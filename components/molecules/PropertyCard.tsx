@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { MapPin, TrendingUp, ExternalLink, Calendar, Home } from "lucide-react";
-import { Investment } from "@/lib/mock-data";
+import { Investment } from "@/lib/types";
 import GlassCard from "@/components/atoms/GlassCard";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import {
