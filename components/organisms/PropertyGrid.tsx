@@ -87,6 +87,10 @@ export default function PropertyGrid() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {properties.map((property, index) => {
+            const totalShares = property.account.totalShares.toNumber();
+            const sharesSold = property.account.sharesSold.toNumber();
+            const sharesAvailable = totalShares - sharesSold;
+
             const investment = {
               id: property.account.propertyId.toString(),
               name: property.account.name,
@@ -95,13 +99,17 @@ export default function PropertyGrid() {
                 province: property.account.province,
               },
               priceUSD: lamportsToSOL(property.account.sharePrice.toNumber()) * 150, // Convert SOL to USD estimate
-              estimatedValue: lamportsToSOL(property.account.totalShares.toNumber() * property.account.sharePrice.toNumber()) * 150,
-              imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
+              estimatedValue: lamportsToSOL(totalShares * property.account.sharePrice.toNumber()) * 150,
+              imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800", // Fallback image
+              imageCid: property.account.imageCid || undefined, // IPFS CID from contract
               description: property.account.description,
               type: property.account.propertyType,
               surface: property.account.surface,
               expectedReturn: property.account.expectedReturn / 100, // basis points to percentage
-              fundingProgress: (property.account.sharesSold.toNumber() / property.account.totalShares.toNumber()) * 100,
+              fundingProgress: (sharesSold / totalShares) * 100,
+              sharesAvailable,
+              totalShares,
+              sharesSold,
               contractAddress: property.publicKey.toBase58(),
               details: {
                 yearBuilt: property.account.yearBuilt,

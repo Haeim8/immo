@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Investment } from "@/lib/mock-data";
 import { MapPin, TrendingUp, Home, ExternalLink, Calendar } from "lucide-react";
 import Image from "next/image";
+import { getIpfsUrl } from "@/lib/pinata/upload";
 
 interface InvestmentCardProps {
   investment: Investment;
@@ -29,12 +30,17 @@ interface InvestmentCardProps {
 export default function InvestmentCard({ investment }: InvestmentCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Get image URL from IPFS if imageCid exists, otherwise use imageUrl
+  const displayImageUrl = investment.imageCid
+    ? getIpfsUrl(investment.imageCid)
+    : investment.imageUrl || "/placeholder-property.jpg";
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <Card className="overflow-hidden hover:shadow-xl transition-shadow border-2 hover:border-turquoise-500/50">
         <div className="relative h-48 w-full overflow-hidden">
           <Image
-            src={investment.imageUrl}
+            src={displayImageUrl}
             alt={investment.name}
             fill
             className="object-cover"
@@ -98,7 +104,7 @@ export default function InvestmentCard({ investment }: InvestmentCardProps) {
           {/* Image */}
           <div className="relative h-64 w-full overflow-hidden rounded-lg">
             <Image
-              src={investment.imageUrl}
+              src={displayImageUrl}
               alt={investment.name}
               fill
               className="object-cover"

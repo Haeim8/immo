@@ -17,6 +17,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { buyShare } from "@/lib/solana/instructions";
 import { PublicKey } from "@solana/web3.js";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { getIpfsUrl } from "@/lib/pinata/upload";
 
 interface PropertyCardProps {
   investment: Investment;
@@ -31,6 +32,11 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
   const { connection } = useConnection();
   const wallet = useWallet();
   const { setVisible } = useWalletModal();
+
+  // Get image URL from IPFS if imageCid exists, otherwise use imageUrl
+  const displayImageUrl = investment.imageCid
+    ? getIpfsUrl(investment.imageCid)
+    : investment.imageUrl || "/placeholder-property.jpg";
 
   const handleInvest = async () => {
     if (!wallet.connected || !wallet.publicKey) {
@@ -82,7 +88,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
           {/* Image */}
           <div className="relative h-56 w-full overflow-hidden">
             <Image
-              src={investment.imageUrl}
+              src={displayImageUrl}
               alt={investment.name}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -90,8 +96,14 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
             {/* Funding Progress Badge */}
-            <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-cyan-500/90 backdrop-blur-sm text-white text-sm font-semibold">
-              {investment.fundingProgress.toFixed(0)}% Funded
+            <div className={`absolute top-4 right-4 px-3 py-1 rounded-full backdrop-blur-sm text-white text-sm font-semibold ${
+              investment.fundingProgress >= 100
+                ? "bg-yellow-500/90"
+                : "bg-cyan-500/90"
+            }`}>
+              {investment.fundingProgress >= 100
+                ? "SOLD OUT"
+                : `${investment.fundingProgress.toFixed(0)}% Funded`}
             </div>
 
             {/* Location */}
@@ -165,7 +177,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             {/* Image */}
             <div className="relative h-80 w-full overflow-hidden rounded-2xl">
               <Image
-                src={investment.imageUrl}
+                src={displayImageUrl}
                 alt={investment.name}
                 fill
                 className="object-cover"
@@ -182,7 +194,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             </div>
 
             {/* Key Metrics */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <GlassCard className="p-4">
                 <Home className="h-5 w-5 text-cyan-400 mb-2" />
                 <p className="text-xs text-muted-foreground">Surface</p>
@@ -197,6 +209,11 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 <Calendar className="h-5 w-5 text-blue-400 mb-2" />
                 <p className="text-xs text-muted-foreground">Built</p>
                 <p className="text-2xl font-bold">{investment.details.yearBuilt}</p>
+              </GlassCard>
+              <GlassCard className="p-4">
+                <Home className="h-5 w-5 text-purple-400 mb-2" />
+                <p className="text-xs text-muted-foreground">Rooms</p>
+                <p className="text-2xl font-bold">{investment.details.rooms}</p>
               </GlassCard>
             </div>
 
@@ -246,6 +263,26 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
               </div>
             )}
 
+            {/* Shares Available Info */}
+            {investment.sharesAvailable !== undefined && investment.totalShares !== undefined && (
+              <div className={`p-4 rounded-xl border text-center ${
+                investment.fundingProgress >= 100
+                  ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-400"
+                  : investment.sharesAvailable <= 10
+                    ? "bg-orange-500/20 border-orange-500/50 text-orange-400"
+                    : "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
+              }`}>
+                {investment.fundingProgress >= 100 ? (
+                  <span className="font-semibold">🎉 SOLD OUT - 100% Funded</span>
+                ) : (
+                  <span className="font-semibold">
+                    {investment.sharesAvailable} / {investment.totalShares} shares available
+                    {investment.sharesAvailable <= 10 && " - Hurry up!"}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-4">
               <AnimatedButton
@@ -253,9 +290,17 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 size="lg"
                 className="flex-1"
                 onClick={handleInvest}
-                disabled={isBuying || success}
+                disabled={isBuying || success || investment.fundingProgress >= 100}
               >
-                {isBuying ? "Processing..." : success ? "Purchased!" : wallet.connected ? "Buy Share" : "Connect Wallet"}
+                {investment.fundingProgress >= 100
+                  ? "Sold Out"
+                  : isBuying
+                    ? "Processing..."
+                    : success
+                      ? "Purchased!"
+                      : wallet.connected
+                        ? "Buy Share"
+                        : "Connect Wallet"}
               </AnimatedButton>
             </div>
           </div>

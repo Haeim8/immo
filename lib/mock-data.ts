@@ -8,11 +8,15 @@ export interface Investment {
   priceUSD: number;
   estimatedValue: number;
   imageUrl: string;
+  imageCid?: string; // IPFS CID from Pinata (optional for backward compatibility)
   description: string;
   type: string;
   surface: number;
   expectedReturn: number;
   fundingProgress: number;
+  sharesAvailable?: number; // Shares available for purchase
+  totalShares?: number; // Total shares
+  sharesSold?: number; // Shares already sold
   contractAddress: string;
   details: {
     yearBuilt: number;

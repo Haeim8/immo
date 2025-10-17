@@ -187,19 +187,94 @@ export function useProperty(propertyPDA: PublicKey | null) {
   return { property, loading, error, refresh };
 }
 
-// Hook for fetching all properties
+// Cache configuration
+const CACHE_KEY = "usci_properties_cache";
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+interface CachedProperties {
+  properties: Array<{ publicKey: string; account: Property }>;
+  timestamp: number;
+}
+
+function getCachedProperties(): Array<{ publicKey: PublicKey; account: Property }> | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+
+    const data: CachedProperties = JSON.parse(cached);
+    const now = Date.now();
+
+    // Check if cache is still valid
+    if (now - data.timestamp > CACHE_DURATION) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+
+    // Reconstruct PublicKey objects
+    return data.properties.map((p) => ({
+      publicKey: new PublicKey(p.publicKey),
+      account: p.account,
+    }));
+  } catch (err) {
+    console.error("Error reading cache:", err);
+    return null;
+  }
+}
+
+function setCachedProperties(properties: Array<{ publicKey: PublicKey; account: Property }>) {
+  if (typeof window === "undefined") return;
+
+  try {
+    const data: CachedProperties = {
+      properties: properties.map((p) => ({
+        publicKey: p.publicKey.toBase58(),
+        account: p.account,
+      })),
+      timestamp: Date.now(),
+    };
+
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    console.log("✅ Properties cached successfully");
+  } catch (err) {
+    console.error("Error writing cache:", err);
+  }
+}
+
+// Hook for fetching all properties with cache
 export function useAllProperties() {
   const { connection } = useConnection();
   const [properties, setProperties] = useState<Array<{ publicKey: PublicKey; account: Property }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fromCache, setFromCache] = useState(false);
 
-  const fetchProperties = useCallback(async () => {
+  const fetchProperties = useCallback(async (skipCache = false) => {
     setLoading(true);
     setError(null);
+    setFromCache(false);
+
     try {
+      // Try to load from cache first (unless skipCache is true)
+      if (!skipCache) {
+        const cached = getCachedProperties();
+        if (cached && cached.length > 0) {
+          console.log("📦 Loading properties from cache");
+          setProperties(cached);
+          setFromCache(true);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fetch from blockchain
+      console.log("🔗 Fetching properties from blockchain...");
       const allProperties = await fetchAllProperties(connection);
       setProperties(allProperties);
+
+      // Save to cache
+      setCachedProperties(allProperties);
     } catch (err: any) {
       setError(err.message || "Failed to fetch properties");
     } finally {
@@ -207,17 +282,22 @@ export function useAllProperties() {
     }
   }, [connection]);
 
+  const refresh = useCallback(() => {
+    console.log("🔄 Force refreshing properties from blockchain");
+    fetchProperties(true); // Skip cache on manual refresh
+  }, [fetchProperties]);
+
   useEffect(() => {
     fetchProperties();
   }, [fetchProperties]);
 
-  return { properties, loading, error, refresh: fetchProperties };
+  return { properties, loading, error, refresh, fromCache };
 }
 
 export function useUserShareNFTs() {
   const { connection } = useConnection();
   const { publicKey } = useWallet();
-  const [shareNFTs, setShareNFTs] = useState<PublicKey[]>([]);
+  const [shareNFTs, setShareNFTs] = useState<Array<{ publicKey: PublicKey; account: ShareNFT }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
