@@ -364,6 +364,19 @@ function CreatePropertyTab() {
   const [imageCid, setImageCid] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // Calcul automatique du prix par part
+  useEffect(() => {
+    const totalPrice = parseFloat(formData.price);
+    const totalShares = parseFloat(formData.shares);
+
+    if (totalPrice > 0 && totalShares > 0) {
+      const calculatedPricePerShare = (totalPrice / totalShares).toFixed(2);
+      setFormData(prev => ({ ...prev, pricePerShare: calculatedPricePerShare }));
+    } else if (!formData.price || !formData.shares) {
+      setFormData(prev => ({ ...prev, pricePerShare: "" }));
+    }
+  }, [formData.price, formData.shares]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -541,34 +554,52 @@ function CreatePropertyTab() {
             <h4 className="text-lg font-semibold mb-4">Financial Details</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Total Price (USD)</label>
+                <label className="block text-sm font-medium mb-2">
+                  Total Amount to Raise (USD)
+                  <span className="text-xs text-muted-foreground ml-2">Montant total à collecter</span>
+                </label>
                 <input
                   type="number"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., 500000"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Total Shares</label>
+                <label className="block text-sm font-medium mb-2">
+                  Number of Shares to Sell
+                  <span className="text-xs text-muted-foreground ml-2">Nombre de parts à vendre</span>
+                </label>
                 <input
                   type="number"
                   value={formData.shares}
                   onChange={(e) => setFormData({ ...formData, shares: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., 1000"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Price per Share (USD)</label>
+                <label className="block text-sm font-medium mb-2">
+                  Price per Share (USD)
+                  <span className="text-xs text-cyan-400 ml-2">✨ Calculé automatiquement</span>
+                </label>
                 <input
-                  type="number"
-                  value={formData.pricePerShare}
-                  onChange={(e) => setFormData({ ...formData, pricePerShare: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 500"
+                  type="text"
+                  value={formData.pricePerShare ? `$${parseFloat(formData.pricePerShare).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
+                  disabled
+                  className="w-full px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-semibold cursor-not-allowed"
+                  placeholder="Enter total price and shares first"
                 />
+                {formData.pricePerShare && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formData.price && formData.shares && (
+                      <>💡 ${formData.price} ÷ {formData.shares} shares = ${formData.pricePerShare} per share</>
+                    )}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Expected Return (%)</label>
@@ -582,6 +613,30 @@ function CreatePropertyTab() {
                 />
               </div>
             </div>
+
+            {/* Calculation Summary */}
+            {formData.price && formData.shares && (
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-cyan-400">💰</span>
+                  <h5 className="font-semibold text-cyan-400">Calculation Summary</h5>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Total to raise</p>
+                    <p className="text-lg font-bold">${parseFloat(formData.price).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Number of shares</p>
+                    <p className="text-lg font-bold">{parseFloat(formData.shares).toLocaleString()} shares</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Price per share</p>
+                    <p className="text-lg font-bold text-cyan-400">${formData.pricePerShare}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Duration and Property Details */}
@@ -733,22 +788,31 @@ function CreatePropertyTab() {
             <AnimatedButton
               variant="outline"
               className="flex-1"
-              onClick={() => setFormData({
-                name: "",
-                city: "",
-                province: "",
-                price: "",
-                shares: "",
-                pricePerShare: "",
-                duration: "",
-                expectedReturn: "",
-                description: "",
-                surface: "",
-                rooms: "",
-                features: "",
-                propertyType: "",
-                yearBuilt: "",
-              })}
+              onClick={() => {
+                setFormData({
+                  assetType: "real_estate",
+                  name: "",
+                  city: "",
+                  province: "",
+                  country: "",
+                  price: "",
+                  shares: "",
+                  pricePerShare: "",
+                  duration: "",
+                  expectedReturn: "",
+                  description: "",
+                  longDescription: "",
+                  surface: "",
+                  rooms: "",
+                  features: "",
+                  propertyType: "",
+                  yearBuilt: "",
+                  votingEnabled: true,
+                });
+                setSelectedImage(null);
+                setImagePreview("");
+                setImageCid("");
+              }}
             >
               Reset Form
             </AnimatedButton>
