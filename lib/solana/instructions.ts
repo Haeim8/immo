@@ -5,6 +5,8 @@ import {
   Connection,
   Transaction,
   TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction,
 } from "@solana/web3.js";
 import { AnchorProvider, Program, BN, Wallet } from "@coral-xyz/anchor";
 import {
@@ -178,9 +180,18 @@ export async function buyShare(
     })
     .instruction();
 
-  const transaction = new Transaction().add(instruction);
+  // Use versioned transaction (v0) for better size optimization
+  const { blockhash } = await connection.getLatestBlockhash();
 
-  return { transaction, shareNFTPDA, tokenId };
+  const messageV0 = new TransactionMessage({
+    payerKey: buyer,
+    recentBlockhash: blockhash,
+    instructions: [instruction],
+  }).compileToV0Message();
+
+  const transaction = new VersionedTransaction(messageV0);
+
+  return { transaction: transaction as any, shareNFTPDA, tokenId };
 }
 
 // Deposit dividends (admin only)

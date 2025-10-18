@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { buyShare } from "@/lib/solana/instructions";
+import { buyShareWithNFT } from "@/lib/solana/buy-share-with-nft";
 import { PublicKey } from "@solana/web3.js";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getIpfsUrl } from "@/lib/pinata/upload";
@@ -28,6 +28,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
   const [isBuying, setIsBuying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const { connection } = useConnection();
   const wallet = useWallet();
@@ -44,28 +45,47 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
       return;
     }
 
+    if (quantity < 1 || quantity > investment.sharesAvailable) {
+      setError(`Please select between 1 and ${investment.sharesAvailable} shares`);
+      return;
+    }
+
     setIsBuying(true);
     setError(null);
     setSuccess(false);
 
     try {
       const propertyPDA = new PublicKey(investment.contractAddress);
-      const { transaction, shareNFTPDA, tokenId } = await buyShare(
-        connection,
-        propertyPDA,
-        wallet.publicKey
-      );
+      const purchasedShares: string[] = [];
 
-      const signature = await wallet.sendTransaction(transaction, connection);
-      await connection.confirmTransaction(signature, "confirmed");
+      // Purchase shares one by one
+      for (let i = 0; i < quantity; i++) {
+        console.log(`🛒 Buying share ${i + 1}/${quantity} with NFT generation...`);
 
-      console.log("Share purchased!", { signature, shareNFTPDA, tokenId });
+        const { transaction, shareNFTPDA, tokenId, nftImageCid, nftMetadataCid } = await buyShareWithNFT(
+          connection,
+          propertyPDA,
+          wallet.publicKey
+        );
+
+        console.log(`📤 Sending transaction ${i + 1}/${quantity} to blockchain...`);
+        const signature = await wallet.sendTransaction(transaction, connection);
+
+        console.log(`⏳ Confirming transaction ${i + 1}/${quantity}...`);
+        await connection.confirmTransaction(signature, "confirmed");
+
+        console.log(`✅ Share ${i + 1}/${quantity} purchased!`, { signature, shareNFTPDA, tokenId, nftImageCid, nftMetadataCid });
+        purchasedShares.push(signature);
+      }
+
       setSuccess(true);
+      console.log(`🎉 All ${quantity} shares purchased successfully!`, purchasedShares);
 
       // Close modal after 2 seconds
       setTimeout(() => {
         setIsOpen(false);
         setSuccess(false);
+        setQuantity(1);
       }, 2000);
     } catch (err: any) {
       console.error("Error buying share:", err);
@@ -283,6 +303,53 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
               </div>
             )}
 
+            {/* Quantity Selector */}
+            {investment.fundingProgress < 100 && investment.sharesAvailable > 0 && (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium">Number of shares to buy</label>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center font-bold transition-colors"
+                    disabled={isBuying || quantity <= 1}
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max={investment.sharesAvailable}
+                    value={quantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 1;
+                      setQuantity(Math.min(investment.sharesAvailable, Math.max(1, val)));
+                    }}
+                    className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-center text-xl font-bold focus:border-cyan-500 focus:outline-none"
+                    disabled={isBuying}
+                  />
+                  <button
+                    onClick={() => setQuantity(Math.min(investment.sharesAvailable, quantity + 1))}
+                    className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center font-bold transition-colors"
+                    disabled={isBuying || quantity >= investment.sharesAvailable}
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="p-4 rounded-lg bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-muted-foreground">Price per share</span>
+                    <span className="font-semibold">${investment.priceUSD.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold">Total price</span>
+                    <span className="text-2xl font-bold text-cyan-400">
+                      ${(investment.priceUSD * quantity).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-4">
               <AnimatedButton
@@ -295,11 +362,11 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 {investment.fundingProgress >= 100
                   ? "Sold Out"
                   : isBuying
-                    ? "Processing..."
+                    ? `Processing ${quantity} share${quantity > 1 ? 's' : ''}...`
                     : success
                       ? "Purchased!"
                       : wallet.connected
-                        ? "Buy Share"
+                        ? `Buy ${quantity} Share${quantity > 1 ? 's' : ''}`
                         : "Connect Wallet"}
               </AnimatedButton>
             </div>

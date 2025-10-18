@@ -4,7 +4,7 @@
  */
 
 import { PublicKey, Connection } from "@solana/web3.js";
-import { Property, ShareNFT } from "./types";
+import { Property, ShareNFT, FACTORY_PROGRAM_ID } from "./types";
 import { Investment, PortfolioData, GlobalMetrics, PortfolioInvestment } from "../types";
 import { lamportsToSOL } from "./instructions";
 import { fetchPropertyMetadata, PropertyMetadata } from "../pinata/metadata";
@@ -102,7 +102,7 @@ export function calculateGlobalMetrics(
     totalProjectsFunded,
     totalValueDistributed,
     activeInvestors,
-    blockchainExplorerUrl: "https://explorer.solana.com/?cluster=devnet",
+    blockchainExplorerUrl: `https://explorer.solana.com/address/${FACTORY_PROGRAM_ID.toBase58()}?cluster=devnet`,
   };
 }
 
