@@ -18,10 +18,10 @@ export function propertyToInvestment(
   property: { publicKey: PublicKey; account: Property },
   metadata?: PropertyMetadata
 ): Investment {
-  const totalShares = property.account.totalShares.toNumber();
-  const sharesSold = property.account.sharesSold.toNumber();
+  const totalShares = property.account.totalShares?.toNumber ? property.account.totalShares.toNumber() : 0;
+  const sharesSold = property.account.sharesSold?.toNumber ? property.account.sharesSold.toNumber() : 0;
   const sharesAvailable = totalShares - sharesSold;
-  const sharePrice = lamportsToSOL(property.account.sharePrice.toNumber());
+  const sharePrice = property.account.sharePrice?.toNumber ? lamportsToSOL(property.account.sharePrice.toNumber()) : 0;
 
   return {
     id: property.account.propertyId.toString(),
@@ -81,13 +81,21 @@ export function calculateGlobalMetrics(
   const totalProjectsFunded = properties.length;
 
   const totalValueDistributed = properties.reduce((sum, property) => {
-    const dividends = lamportsToSOL(property.account.totalDividendsClaimed.toNumber());
-    return sum + dividends * SOL_TO_USD_ESTIMATE;
+    try {
+      const dividends = property.account.totalDividendsClaimed?.toNumber ? lamportsToSOL(property.account.totalDividendsClaimed.toNumber()) : 0;
+      return sum + dividends * SOL_TO_USD_ESTIMATE;
+    } catch (e) {
+      return sum;
+    }
   }, 0);
 
   // Count unique investors (approximate - would need to aggregate all ShareNFT owners)
   const activeInvestors = properties.reduce((sum, property) => {
-    return sum + property.account.sharesSold.toNumber();
+    try {
+      return sum + (property.account.sharesSold?.toNumber ? property.account.sharesSold.toNumber() : 0);
+    } catch (e) {
+      return sum;
+    }
   }, 0);
 
   return {
@@ -110,34 +118,41 @@ export async function shareNFTsToPortfolio(
   let totalDividends = 0;
 
   for (const nft of shareNFTs) {
-    const property = properties.find((p) =>
-      p.publicKey.equals(nft.account.property)
-    );
+    try {
+      const property = properties.find((p) =>
+        p.publicKey.equals(nft.account.property)
+      );
 
-    if (!property) continue;
+      if (!property?.account) continue;
 
-    const sharePrice = lamportsToSOL(property.account.sharePrice.toNumber());
-    const amount = sharePrice * SOL_TO_USD_ESTIMATE;
-    const dividendsEarned = lamportsToSOL(nft.account.dividendsClaimed.toNumber()) * SOL_TO_USD_ESTIMATE;
+      const sharePrice = property.account.sharePrice?.toNumber ? lamportsToSOL(property.account.sharePrice.toNumber()) : 0;
+      const amount = sharePrice * SOL_TO_USD_ESTIMATE;
+      const dividendsEarned = nft.account.dividendsClaimed?.toNumber ? lamportsToSOL(nft.account.dividendsClaimed.toNumber()) * SOL_TO_USD_ESTIMATE : 0;
 
-    // Calculate pending dividends (simplified - would need more complex calculation)
-    const totalDividendsPerShare = property.account.totalShares.toNumber() > 0
-      ? lamportsToSOL(property.account.totalDividendsDeposited.toNumber()) / property.account.totalShares.toNumber()
-      : 0;
-    const claimedDividendsPerShare = lamportsToSOL(nft.account.dividendsClaimed.toNumber());
-    const pendingDividends = Math.max(0, (totalDividendsPerShare - claimedDividendsPerShare) * SOL_TO_USD_ESTIMATE);
+      // Calculate pending dividends (simplified - would need more complex calculation)
+      const totalShares = property.account.totalShares?.toNumber ? property.account.totalShares.toNumber() : 1;
+      const totalDividendsPerShare = totalShares > 0 && property.account.totalDividendsDeposited?.toNumber
+        ? lamportsToSOL(property.account.totalDividendsDeposited.toNumber()) / totalShares
+        : 0;
+      const claimedDividendsPerShare = nft.account.dividendsClaimed?.toNumber ? lamportsToSOL(nft.account.dividendsClaimed.toNumber()) : 0;
+      const pendingDividends = Math.max(0, (totalDividendsPerShare - claimedDividendsPerShare) * SOL_TO_USD_ESTIMATE);
 
-    investments.push({
-      investmentId: property.account.propertyId.toString(),
-      amount,
-      dividendsEarned,
-      pendingDividends,
-      purchaseDate: new Date(nft.account.mintTime.toNumber() * 1000).toISOString(),
-      shareCount: 1,
-    });
+      const mintTime = nft.account.mintTime?.toNumber ? nft.account.mintTime.toNumber() : 0;
+      investments.push({
+        investmentId: property.account.propertyId.toString(),
+        amount,
+        dividendsEarned,
+        pendingDividends,
+        purchaseDate: new Date(mintTime * 1000).toISOString(),
+        shareCount: 1,
+      });
 
-    totalInvested += amount;
-    totalDividends += dividendsEarned;
+      totalInvested += amount;
+      totalDividends += dividendsEarned;
+    } catch (e) {
+      console.error("Error processing NFT for portfolio:", e);
+      continue;
+    }
   }
 
   return {

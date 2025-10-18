@@ -8,32 +8,61 @@ import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import BlurBackground from "@/components/atoms/BlurBackground";
-import { useUserShareNFTs } from "@/lib/solana/hooks";
+import { useUserShareNFTs, useAllProperties } from "@/lib/solana/hooks";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useSolPrice, lamportsToUsd } from "@/lib/solana/useSolPrice";
 
 export default function PortfolioPage() {
   const { connected } = useWallet();
-  const { shareNFTs, loading, error } = useUserShareNFTs();
+  const { shareNFTs, loading: loadingNFTs, error: errorNFTs } = useUserShareNFTs();
+  const { properties, loading: loadingProperties } = useAllProperties();
   const { price: solPrice } = useSolPrice();
 
-  // Calculate totals from real blockchain data
+  const loading = loadingNFTs || loadingProperties;
+  const error = errorNFTs;
+
+  // Calculate totals from real blockchain data with safety checks
   const totalInvested = shareNFTs.reduce((sum, nft) => {
-    const priceInUSD = lamportsToUsd(nft.account.property.sharePrice?.toNumber() || 0, solPrice.usd);
-    return sum + priceInUSD;
+    try {
+      // Find the property for this NFT
+      const property = properties.find(p => p.publicKey.equals(nft.account.property));
+      if (!property?.account?.sharePrice) return sum;
+
+      const priceInUSD = lamportsToUsd(property.account.sharePrice.toNumber(), solPrice.usd);
+      return sum + priceInUSD;
+    } catch (e) {
+      console.error("Error calculating invested amount:", e);
+      return sum;
+    }
   }, 0);
 
   const totalPendingDividends = shareNFTs.reduce((sum, nft) => {
-    // Calculate unclaimed dividends
-    const property = nft.account.property;
-    if (!property) return sum;
-    const dividendsPerShare = property.totalDividendsDeposited.toNumber() / property.sharesSold.toNumber();
-    const unclaimed = dividendsPerShare - nft.account.dividendsClaimed.toNumber();
-    return sum + lamportsToUsd(unclaimed, solPrice.usd);
+    try {
+      // Find the property for this NFT
+      const property = properties.find(p => p.publicKey.equals(nft.account.property));
+      if (!property?.account) return sum;
+
+      const totalDividends = property.account.totalDividendsDeposited?.toNumber() || 0;
+      const sharesSold = property.account.sharesSold?.toNumber() || 1;
+      const claimedDividends = nft.account.dividendsClaimed?.toNumber() || 0;
+
+      const dividendsPerShare = totalDividends / sharesSold;
+      const unclaimed = Math.max(0, dividendsPerShare - claimedDividends);
+      return sum + lamportsToUsd(unclaimed, solPrice.usd);
+    } catch (e) {
+      console.error("Error calculating pending dividends:", e);
+      return sum;
+    }
   }, 0);
 
   const totalDividendsEarned = shareNFTs.reduce((sum, nft) => {
-    return sum + lamportsToUsd(nft.account.dividendsClaimed.toNumber(), solPrice.usd);
+    try {
+      const claimed = nft.account.dividendsClaimed?.toNumber() || 0;
+      return sum + lamportsToUsd(claimed, solPrice.usd);
+    } catch (e) {
+      console.error("Error calculating earned dividends:", e);
+      return sum;
+    }
   }, 0);
 
   return (
@@ -149,15 +178,30 @@ export default function PortfolioPage() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {shareNFTs.map((nft, index) => {
-                  const priceInUSD = lamportsToUsd(nft.account.property?.sharePrice?.toNumber() || 0, solPrice.usd);
-                  const earnedInUSD = lamportsToUsd(nft.account.dividendsClaimed.toNumber(), solPrice.usd);
-                  const property = nft.account.property;
+                  // Find the property for this NFT
+                  const property = properties.find(p => p.publicKey.equals(nft.account.property));
 
+                  let priceInUSD = 0;
+                  let earnedInUSD = 0;
                   let pendingUSD = 0;
-                  if (property) {
-                    const dividendsPerShare = property.totalDividendsDeposited.toNumber() / property.sharesSold.toNumber();
-                    const unclaimed = dividendsPerShare - nft.account.dividendsClaimed.toNumber();
-                    pendingUSD = lamportsToUsd(unclaimed, solPrice.usd);
+                  let propertyName = "Unknown Property";
+
+                  try {
+                    if (property?.account) {
+                      propertyName = property.account.name || propertyName;
+                      priceInUSD = lamportsToUsd(property.account.sharePrice?.toNumber() || 0, solPrice.usd);
+                      earnedInUSD = lamportsToUsd(nft.account.dividendsClaimed?.toNumber() || 0, solPrice.usd);
+
+                      const totalDividends = property.account.totalDividendsDeposited?.toNumber() || 0;
+                      const sharesSold = property.account.sharesSold?.toNumber() || 1;
+                      const claimedDividends = nft.account.dividendsClaimed?.toNumber() || 0;
+
+                      const dividendsPerShare = totalDividends / sharesSold;
+                      const unclaimed = Math.max(0, dividendsPerShare - claimedDividends);
+                      pendingUSD = lamportsToUsd(unclaimed, solPrice.usd);
+                    }
+                  } catch (e) {
+                    console.error("Error calculating NFT values:", e);
                   }
 
                   return (
@@ -172,11 +216,14 @@ export default function PortfolioPage() {
                           <div className="flex items-start justify-between">
                             <div>
                               <h3 className="text-xl font-bold mb-1 text-cyan-400">
-                                NFT #{nft.account.tokenId.toString()}
+                                {propertyName}
                               </h3>
+                              <p className="text-sm text-muted-foreground mb-1">
+                                NFT #{nft.account.tokenId?.toString() || "N/A"}
+                              </p>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Calendar className="h-4 w-4" />
-                                Minted {new Date(nft.account.mintTime.toNumber() * 1000).toLocaleDateString()}
+                                Minted {new Date((nft.account.mintTime?.toNumber() || 0) * 1000).toLocaleDateString()}
                               </div>
                             </div>
                           </div>

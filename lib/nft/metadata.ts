@@ -62,12 +62,14 @@ export function generateNFTMetadata(
     votingPower,
   } = params;
 
-  const sharePriceUSD = (property.sharePrice.toNumber() / 1e9) * 100; // Approximate
+  const sharePrice = property.sharePrice?.toNumber ? property.sharePrice.toNumber() : 0;
+  const sharePriceUSD = (sharePrice / 1e9) * 100; // Approximate
   const expectedReturn = property.expectedReturn / 100; // Convert basis points to percentage
+  const totalShares = property.totalShares?.toNumber ? property.totalShares.toNumber() : 0;
 
   return {
     name: `${property.name} - Share #${shareNumber}`,
-    description: `Ownership certificate for 1 share of ${property.name}. This NFT represents fractional ownership of a ${property.assetType.replace("_", " ")} asset located in ${property.city}, ${property.country}. Share #${shareNumber} of ${property.totalShares.toNumber()} total shares.`,
+    description: `Ownership certificate for 1 share of ${property.name}. This NFT represents fractional ownership of a ${property.assetType.replace("_", " ")} asset located in ${property.city}, ${property.country}. Share #${shareNumber} of ${totalShares} total shares.`,
     image: `ipfs://${nftImageCid}`,
     external_url: `https://usci.com/property/${property.propertyId}`,
     attributes: [
@@ -81,7 +83,7 @@ export function generateNFTMetadata(
       },
       {
         trait_type: "Total Shares",
-        value: property.totalShares.toNumber(),
+        value: totalShares,
       },
       {
         trait_type: "City",

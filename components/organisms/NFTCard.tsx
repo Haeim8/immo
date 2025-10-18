@@ -32,10 +32,11 @@ export default function NFTCard({ shareNFT, property, index }: NFTCardProps) {
     setNftImageUrl(`https://${gateway}/ipfs/${imageCid}`);
   }, [shareNFT]);
 
-  const tokenId = shareNFT.account.tokenId.toNumber();
-  const totalShares = property.totalShares.toNumber();
-  const mintDate = new Date(shareNFT.account.mintTime.toNumber() * 1000);
-  const votingPower = shareNFT.account.votingPower.toNumber();
+  const tokenId = shareNFT.account.tokenId?.toNumber ? shareNFT.account.tokenId.toNumber() : 0;
+  const totalShares = property.totalShares?.toNumber ? property.totalShares.toNumber() : 0;
+  const mintTime = shareNFT.account.mintTime?.toNumber ? shareNFT.account.mintTime.toNumber() : 0;
+  const mintDate = new Date(mintTime * 1000);
+  const votingPower = shareNFT.account.votingPower?.toNumber ? shareNFT.account.votingPower.toNumber() : 0;
   const expectedReturn = property.expectedReturn / 100; // basis points to percentage
 
   const metadataUrl = getNFTMetadataUrl(
