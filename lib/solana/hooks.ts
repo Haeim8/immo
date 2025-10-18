@@ -18,6 +18,7 @@ import {
   Property,
   ShareNFT,
 } from "./types";
+import BN from "bn.js";
 
 export function useBrickChain() {
   const { connection } = useConnection();
@@ -197,8 +198,24 @@ const CACHE_KEY = "usci_properties_cache";
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 interface CachedProperties {
-  properties: Array<{ publicKey: string; account: Property }>;
+  properties: Array<{ publicKey: string; account: any }>;
   timestamp: number;
+}
+
+// Reconstruct BN objects from cached JSON data
+function reconstructPropertyAccount(cachedAccount: any): Property {
+  return {
+    ...cachedAccount,
+    propertyId: new BN(cachedAccount.propertyId),
+    totalShares: new BN(cachedAccount.totalShares),
+    sharePrice: new BN(cachedAccount.sharePrice),
+    sharesSold: new BN(cachedAccount.sharesSold),
+    saleStart: new BN(cachedAccount.saleStart),
+    saleEnd: new BN(cachedAccount.saleEnd),
+    totalDividendsDeposited: new BN(cachedAccount.totalDividendsDeposited),
+    totalDividendsClaimed: new BN(cachedAccount.totalDividendsClaimed),
+    factory: new PublicKey(cachedAccount.factory),
+  };
 }
 
 function getCachedProperties(): Array<{ publicKey: PublicKey; account: Property }> | null {
@@ -217,10 +234,10 @@ function getCachedProperties(): Array<{ publicKey: PublicKey; account: Property 
       return null;
     }
 
-    // Reconstruct PublicKey objects
+    // Reconstruct PublicKey and BN objects
     return data.properties.map((p) => ({
       publicKey: new PublicKey(p.publicKey),
-      account: p.account,
+      account: reconstructPropertyAccount(p.account),
     }));
   } catch (err) {
     console.error("Error reading cache:", err);
@@ -235,7 +252,19 @@ function setCachedProperties(properties: Array<{ publicKey: PublicKey; account: 
     const data: CachedProperties = {
       properties: properties.map((p) => ({
         publicKey: p.publicKey.toBase58(),
-        account: p.account,
+        account: {
+          ...p.account,
+          // Convert BN to strings for JSON serialization
+          propertyId: p.account.propertyId.toString(),
+          totalShares: p.account.totalShares.toString(),
+          sharePrice: p.account.sharePrice.toString(),
+          sharesSold: p.account.sharesSold.toString(),
+          saleStart: p.account.saleStart.toString(),
+          saleEnd: p.account.saleEnd.toString(),
+          totalDividendsDeposited: p.account.totalDividendsDeposited.toString(),
+          totalDividendsClaimed: p.account.totalDividendsClaimed.toString(),
+          factory: p.account.factory.toBase58(),
+        },
       })),
       timestamp: Date.now(),
     };

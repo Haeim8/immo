@@ -45,6 +45,11 @@ export async function uploadPropertyImage(
 export function getIpfsUrl(cid: string): string {
   if (!cid) return "";
 
+  // Skip test CIDs (used in testing)
+  if (cid.startsWith("QmTest")) {
+    return "/placeholder-property.jpg";
+  }
+
   // Retourner l'URL via la gateway Pinata
   return `https://${PINATA_GATEWAY}/ipfs/${cid}`;
 }

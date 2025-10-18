@@ -116,14 +116,26 @@ function OverviewTab() {
   // Calculate real metrics from blockchain
   const totalProperties = properties.length;
   const totalValue = properties.reduce((sum, p) => {
-    const totalShares = p.account.totalShares.toNumber();
-    const sharePrice = p.account.sharePrice.toNumber();
-    const totalLamports = totalShares * sharePrice;
-    return sum + (totalLamports / 1e9) * solPrice.usd;
+    try {
+      if (!p?.account?.totalShares || !p?.account?.sharePrice) return sum;
+      const totalShares = p.account.totalShares.toNumber();
+      const sharePrice = p.account.sharePrice.toNumber();
+      const totalLamports = totalShares * sharePrice;
+      return sum + (totalLamports / 1e9) * solPrice.usd;
+    } catch (e) {
+      console.error("Error calculating property value:", e);
+      return sum;
+    }
   }, 0);
 
   const avgReturn = properties.length > 0
-    ? properties.reduce((sum, p) => sum + p.account.expectedReturn, 0) / properties.length / 100
+    ? properties.reduce((sum, p) => {
+        try {
+          return sum + (p?.account?.expectedReturn || 0);
+        } catch (e) {
+          return sum;
+        }
+      }, 0) / properties.length / 100
     : 0;
 
   return (

@@ -1,14 +1,20 @@
-{
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/real_estate_factory.json`.
+ */
+export type RealEstateFactory = {
   "address": "3zg9q8VeJr4RHcEW7kt9TEjCNPC61VR6tNEvvzuoTkMw",
   "metadata": {
-    "name": "real_estate_factory",
+    "name": "realEstateFactory",
     "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Factory contract for creating real estate investment properties"
   },
   "instructions": [
     {
-      "name": "add_team_member",
+      "name": "addTeamMember",
       "docs": [
         "Add team member (admin only)"
       ],
@@ -43,7 +49,7 @@
           }
         },
         {
-          "name": "team_member",
+          "name": "teamMember",
           "writable": true,
           "pda": {
             "seeds": [
@@ -83,7 +89,7 @@
           "signer": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -95,7 +101,7 @@
       ]
     },
     {
-      "name": "buy_share",
+      "name": "buyShare",
       "docs": [
         "Buy a share NFT (minted on-demand)"
       ],
@@ -154,13 +160,13 @@
               {
                 "kind": "account",
                 "path": "property.property_id",
-                "account": "Property"
+                "account": "property"
               }
             ]
           }
         },
         {
-          "name": "share_nft",
+          "name": "shareNft",
           "writable": true,
           "pda": {
             "seeds": [
@@ -185,7 +191,7 @@
               {
                 "kind": "account",
                 "path": "property.shares_sold",
-                "account": "Property"
+                "account": "property"
               }
             ]
           }
@@ -200,23 +206,23 @@
           "writable": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "nft_image_cid",
+          "name": "nftImageCid",
           "type": "string"
         },
         {
-          "name": "nft_metadata_cid",
+          "name": "nftMetadataCid",
           "type": "string"
         }
       ]
     },
     {
-      "name": "cast_vote",
+      "name": "castVote",
       "docs": [
         "Cast a vote (NFT holders only)"
       ],
@@ -251,12 +257,12 @@
               {
                 "kind": "account",
                 "path": "property.factory",
-                "account": "Property"
+                "account": "property"
               },
               {
                 "kind": "account",
                 "path": "property.property_id",
-                "account": "Property"
+                "account": "property"
               }
             ]
           }
@@ -286,13 +292,13 @@
               {
                 "kind": "account",
                 "path": "proposal.proposal_id",
-                "account": "Proposal"
+                "account": "proposal"
               }
             ]
           }
         },
         {
-          "name": "share_nft",
+          "name": "shareNft",
           "pda": {
             "seeds": [
               {
@@ -316,7 +322,7 @@
               {
                 "kind": "account",
                 "path": "share_nft.token_id",
-                "account": "ShareNFT"
+                "account": "shareNft"
               }
             ]
           }
@@ -341,7 +347,7 @@
               },
               {
                 "kind": "account",
-                "path": "share_nft"
+                "path": "shareNft"
               }
             ]
           }
@@ -352,19 +358,19 @@
           "signer": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "vote_choice",
+          "name": "voteChoice",
           "type": "bool"
         }
       ]
     },
     {
-      "name": "claim_dividends",
+      "name": "claimDividends",
       "docs": [
         "Claim dividends proportional to NFT ownership"
       ],
@@ -400,18 +406,18 @@
               {
                 "kind": "account",
                 "path": "property.factory",
-                "account": "Property"
+                "account": "property"
               },
               {
                 "kind": "account",
                 "path": "property.property_id",
-                "account": "Property"
+                "account": "property"
               }
             ]
           }
         },
         {
-          "name": "share_nft",
+          "name": "shareNft",
           "writable": true,
           "pda": {
             "seeds": [
@@ -436,7 +442,7 @@
               {
                 "kind": "account",
                 "path": "share_nft.token_id",
-                "account": "ShareNFT"
+                "account": "shareNft"
               }
             ]
           }
@@ -446,18 +452,18 @@
           "writable": true,
           "signer": true,
           "relations": [
-            "share_nft"
+            "shareNft"
           ]
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
     },
     {
-      "name": "close_property_sale",
+      "name": "closePropertySale",
       "docs": [
         "Close a property sale"
       ],
@@ -516,7 +522,7 @@
               {
                 "kind": "account",
                 "path": "property.property_id",
-                "account": "Property"
+                "account": "property"
               }
             ]
           }
@@ -529,7 +535,7 @@
       "args": []
     },
     {
-      "name": "close_proposal",
+      "name": "closeProposal",
       "docs": [
         "Close a proposal (admin only)"
       ],
@@ -587,7 +593,7 @@
               {
                 "kind": "account",
                 "path": "property.property_id",
-                "account": "Property"
+                "account": "property"
               }
             ]
           }
@@ -617,7 +623,7 @@
               {
                 "kind": "account",
                 "path": "proposal.proposal_id",
-                "account": "Proposal"
+                "account": "proposal"
               }
             ]
           }
@@ -630,7 +636,7 @@
       "args": []
     },
     {
-      "name": "create_property",
+      "name": "createProperty",
       "docs": [
         "Create a new asset tokenization contract (property, vehicle, business, etc.)"
       ],
@@ -690,7 +696,7 @@
               {
                 "kind": "account",
                 "path": "factory.property_count",
-                "account": "Factory"
+                "account": "factory"
               }
             ]
           }
@@ -701,13 +707,13 @@
           "signer": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "asset_type",
+          "name": "assetType",
           "type": "string"
         },
         {
@@ -727,15 +733,15 @@
           "type": "string"
         },
         {
-          "name": "total_shares",
+          "name": "totalShares",
           "type": "u64"
         },
         {
-          "name": "share_price",
+          "name": "sharePrice",
           "type": "u64"
         },
         {
-          "name": "sale_duration",
+          "name": "saleDuration",
           "type": "i64"
         },
         {
@@ -747,33 +753,33 @@
           "type": "u8"
         },
         {
-          "name": "expected_return",
+          "name": "expectedReturn",
           "type": "u32"
         },
         {
-          "name": "property_type",
+          "name": "propertyType",
           "type": "string"
         },
         {
-          "name": "year_built",
+          "name": "yearBuilt",
           "type": "u16"
         },
         {
-          "name": "image_cid",
+          "name": "imageCid",
           "type": "string"
         },
         {
-          "name": "metadata_cid",
+          "name": "metadataCid",
           "type": "string"
         },
         {
-          "name": "voting_enabled",
+          "name": "votingEnabled",
           "type": "bool"
         }
       ]
     },
     {
-      "name": "create_proposal",
+      "name": "createProposal",
       "docs": [
         "Create a proposal for voting (admin only)"
       ],
@@ -831,7 +837,7 @@
               {
                 "kind": "account",
                 "path": "property.property_id",
-                "account": "Property"
+                "account": "property"
               }
             ]
           }
@@ -846,7 +852,7 @@
           "signer": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -860,13 +866,13 @@
           "type": "string"
         },
         {
-          "name": "voting_duration",
+          "name": "votingDuration",
           "type": "i64"
         }
       ]
     },
     {
-      "name": "deposit_dividends",
+      "name": "depositDividends",
       "docs": [
         "Deposit dividends for a specific property"
       ],
@@ -925,7 +931,7 @@
               {
                 "kind": "account",
                 "path": "property.property_id",
-                "account": "Property"
+                "account": "property"
               }
             ]
           }
@@ -936,7 +942,7 @@
           "signer": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -992,7 +998,7 @@
           "signer": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -1004,7 +1010,7 @@
       ]
     },
     {
-      "name": "remove_team_member",
+      "name": "removeTeamMember",
       "docs": [
         "Remove team member (admin only)"
       ],
@@ -1039,7 +1045,7 @@
           }
         },
         {
-          "name": "team_member",
+          "name": "teamMember",
           "writable": true,
           "pda": {
             "seeds": [
@@ -1066,7 +1072,7 @@
               {
                 "kind": "account",
                 "path": "team_member.wallet",
-                "account": "TeamMember"
+                "account": "teamMember"
               }
             ]
           }
@@ -1081,7 +1087,7 @@
   ],
   "accounts": [
     {
-      "name": "Factory",
+      "name": "factory",
       "discriminator": [
         159,
         68,
@@ -1094,7 +1100,7 @@
       ]
     },
     {
-      "name": "Property",
+      "name": "property",
       "discriminator": [
         195,
         247,
@@ -1107,7 +1113,7 @@
       ]
     },
     {
-      "name": "Proposal",
+      "name": "proposal",
       "discriminator": [
         26,
         94,
@@ -1120,7 +1126,7 @@
       ]
     },
     {
-      "name": "ShareNFT",
+      "name": "shareNft",
       "discriminator": [
         143,
         169,
@@ -1133,7 +1139,7 @@
       ]
     },
     {
-      "name": "TeamMember",
+      "name": "teamMember",
       "discriminator": [
         45,
         32,
@@ -1146,7 +1152,7 @@
       ]
     },
     {
-      "name": "Vote",
+      "name": "vote",
       "discriminator": [
         96,
         91,
@@ -1162,153 +1168,153 @@
   "errors": [
     {
       "code": 6000,
-      "name": "AssetTypeTooLong",
+      "name": "assetTypeTooLong",
       "msg": "Asset type is too long (max 32 characters)"
     },
     {
       "code": 6001,
-      "name": "NameTooLong",
+      "name": "nameTooLong",
       "msg": "Name is too long (max 64 characters)"
     },
     {
       "code": 6002,
-      "name": "CityTooLong",
+      "name": "cityTooLong",
       "msg": "City is too long (max 64 characters)"
     },
     {
       "code": 6003,
-      "name": "ProvinceTooLong",
+      "name": "provinceTooLong",
       "msg": "Province is too long (max 64 characters)"
     },
     {
       "code": 6004,
-      "name": "CountryTooLong",
+      "name": "countryTooLong",
       "msg": "Country is too long (max 64 characters)"
     },
     {
       "code": 6005,
-      "name": "TypeTooLong",
+      "name": "typeTooLong",
       "msg": "Property type is too long (max 32 characters)"
     },
     {
       "code": 6006,
-      "name": "ImageCidTooLong",
+      "name": "imageCidTooLong",
       "msg": "Image CID is too long (max 100 characters)"
     },
     {
       "code": 6007,
-      "name": "MetadataCidTooLong",
+      "name": "metadataCidTooLong",
       "msg": "Metadata CID is too long (max 100 characters)"
     },
     {
       "code": 6008,
-      "name": "InvalidShareAmount",
+      "name": "invalidShareAmount",
       "msg": "Invalid share amount"
     },
     {
       "code": 6009,
-      "name": "InvalidPrice",
+      "name": "invalidPrice",
       "msg": "Invalid price"
     },
     {
       "code": 6010,
-      "name": "SaleEnded",
+      "name": "saleEnded",
       "msg": "Sale has ended"
     },
     {
       "code": 6011,
-      "name": "PropertyInactive",
+      "name": "propertyInactive",
       "msg": "Property is inactive"
     },
     {
       "code": 6012,
-      "name": "AllSharesSold",
+      "name": "allSharesSold",
       "msg": "All shares have been sold"
     },
     {
       "code": 6013,
-      "name": "InvalidAmount",
+      "name": "invalidAmount",
       "msg": "Invalid amount"
     },
     {
       "code": 6014,
-      "name": "NoSharesSold",
+      "name": "noSharesSold",
       "msg": "No shares have been sold yet"
     },
     {
       "code": 6015,
-      "name": "MathOverflow",
+      "name": "mathOverflow",
       "msg": "Math overflow"
     },
     {
       "code": 6016,
-      "name": "NoDividendsToClaim",
+      "name": "noDividendsToClaim",
       "msg": "No dividends to claim"
     },
     {
       "code": 6017,
-      "name": "SaleStillActive",
+      "name": "saleStillActive",
       "msg": "Sale is still active"
     },
     {
       "code": 6018,
-      "name": "TitleTooLong",
+      "name": "titleTooLong",
       "msg": "Title is too long (max 200 characters)"
     },
     {
       "code": 6019,
-      "name": "DescriptionTooLong",
+      "name": "descriptionTooLong",
       "msg": "Description is too long (max 1000 characters)"
     },
     {
       "code": 6020,
-      "name": "InvalidDuration",
+      "name": "invalidDuration",
       "msg": "Invalid voting duration"
     },
     {
       "code": 6021,
-      "name": "VotingDisabled",
+      "name": "votingDisabled",
       "msg": "Voting is disabled for this property"
     },
     {
       "code": 6022,
-      "name": "ProposalInactive",
+      "name": "proposalInactive",
       "msg": "Proposal is inactive"
     },
     {
       "code": 6023,
-      "name": "VotingEnded",
+      "name": "votingEnded",
       "msg": "Voting has ended"
     },
     {
       "code": 6024,
-      "name": "NotNftOwner",
+      "name": "notNftOwner",
       "msg": "You do not own this NFT"
     },
     {
       "code": 6025,
-      "name": "WrongProperty",
+      "name": "wrongProperty",
       "msg": "NFT does not belong to this property"
     },
     {
       "code": 6026,
-      "name": "NoVotingPower",
+      "name": "noVotingPower",
       "msg": "This NFT has no voting power"
     },
     {
       "code": 6027,
-      "name": "VotingStillActive",
+      "name": "votingStillActive",
       "msg": "Voting is still active"
     },
     {
       "code": 6028,
-      "name": "Unauthorized",
+      "name": "unauthorized",
       "msg": "Unauthorized: Only admin or team members can perform this action"
     }
   ],
   "types": [
     {
-      "name": "Factory",
+      "name": "factory",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1321,7 +1327,7 @@
             "type": "pubkey"
           },
           {
-            "name": "property_count",
+            "name": "propertyCount",
             "type": "u64"
           },
           {
@@ -1332,7 +1338,7 @@
       }
     },
     {
-      "name": "Property",
+      "name": "property",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1341,11 +1347,11 @@
             "type": "pubkey"
           },
           {
-            "name": "property_id",
+            "name": "propertyId",
             "type": "u64"
           },
           {
-            "name": "asset_type",
+            "name": "assetType",
             "type": "string"
           },
           {
@@ -1365,27 +1371,27 @@
             "type": "string"
           },
           {
-            "name": "total_shares",
+            "name": "totalShares",
             "type": "u64"
           },
           {
-            "name": "share_price",
+            "name": "sharePrice",
             "type": "u64"
           },
           {
-            "name": "shares_sold",
+            "name": "sharesSold",
             "type": "u64"
           },
           {
-            "name": "sale_start",
+            "name": "saleStart",
             "type": "i64"
           },
           {
-            "name": "sale_end",
+            "name": "saleEnd",
             "type": "i64"
           },
           {
-            "name": "is_active",
+            "name": "isActive",
             "type": "bool"
           },
           {
@@ -1397,35 +1403,35 @@
             "type": "u8"
           },
           {
-            "name": "expected_return",
+            "name": "expectedReturn",
             "type": "u32"
           },
           {
-            "name": "property_type",
+            "name": "propertyType",
             "type": "string"
           },
           {
-            "name": "year_built",
+            "name": "yearBuilt",
             "type": "u16"
           },
           {
-            "name": "image_cid",
+            "name": "imageCid",
             "type": "string"
           },
           {
-            "name": "metadata_cid",
+            "name": "metadataCid",
             "type": "string"
           },
           {
-            "name": "voting_enabled",
+            "name": "votingEnabled",
             "type": "bool"
           },
           {
-            "name": "total_dividends_deposited",
+            "name": "totalDividendsDeposited",
             "type": "u64"
           },
           {
-            "name": "total_dividends_claimed",
+            "name": "totalDividendsClaimed",
             "type": "u64"
           },
           {
@@ -1436,7 +1442,7 @@
       }
     },
     {
-      "name": "Proposal",
+      "name": "proposal",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1445,7 +1451,7 @@
             "type": "pubkey"
           },
           {
-            "name": "proposal_id",
+            "name": "proposalId",
             "type": "u64"
           },
           {
@@ -1461,27 +1467,27 @@
             "type": "pubkey"
           },
           {
-            "name": "created_at",
+            "name": "createdAt",
             "type": "i64"
           },
           {
-            "name": "voting_ends_at",
+            "name": "votingEndsAt",
             "type": "i64"
           },
           {
-            "name": "yes_votes",
+            "name": "yesVotes",
             "type": "u64"
           },
           {
-            "name": "no_votes",
+            "name": "noVotes",
             "type": "u64"
           },
           {
-            "name": "is_active",
+            "name": "isActive",
             "type": "bool"
           },
           {
-            "name": "is_executed",
+            "name": "isExecuted",
             "type": "bool"
           },
           {
@@ -1492,7 +1498,7 @@
       }
     },
     {
-      "name": "ShareNFT",
+      "name": "shareNft",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1505,27 +1511,27 @@
             "type": "pubkey"
           },
           {
-            "name": "token_id",
+            "name": "tokenId",
             "type": "u64"
           },
           {
-            "name": "mint_time",
+            "name": "mintTime",
             "type": "i64"
           },
           {
-            "name": "dividends_claimed",
+            "name": "dividendsClaimed",
             "type": "u64"
           },
           {
-            "name": "nft_image_uri",
+            "name": "nftImageUri",
             "type": "string"
           },
           {
-            "name": "nft_metadata_uri",
+            "name": "nftMetadataUri",
             "type": "string"
           },
           {
-            "name": "voting_power",
+            "name": "votingPower",
             "type": "u64"
           },
           {
@@ -1536,7 +1542,7 @@
       }
     },
     {
-      "name": "TeamMember",
+      "name": "teamMember",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1549,15 +1555,15 @@
             "type": "pubkey"
           },
           {
-            "name": "added_by",
+            "name": "addedBy",
             "type": "pubkey"
           },
           {
-            "name": "added_at",
+            "name": "addedAt",
             "type": "i64"
           },
           {
-            "name": "is_active",
+            "name": "isActive",
             "type": "bool"
           },
           {
@@ -1568,7 +1574,7 @@
       }
     },
     {
-      "name": "Vote",
+      "name": "vote",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1581,15 +1587,15 @@
             "type": "pubkey"
           },
           {
-            "name": "share_nft",
+            "name": "shareNft",
             "type": "pubkey"
           },
           {
-            "name": "vote_choice",
+            "name": "voteChoice",
             "type": "bool"
           },
           {
-            "name": "voted_at",
+            "name": "votedAt",
             "type": "i64"
           },
           {
@@ -1600,4 +1606,4 @@
       }
     }
   ]
-}
+};
