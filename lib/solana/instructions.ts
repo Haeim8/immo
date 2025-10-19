@@ -143,15 +143,14 @@ export async function createProperty(
 }
 
 /**
- * Buy a share NFT with dynamically generated NFT image and metadata
+ * Buy a share NFT with on-chain SVG data
  * This is the main function to use for buying shares
  */
 export async function buyShare(
   connection: Connection,
   propertyPDA: PublicKey,
   buyer: PublicKey,
-  nftImageCid: string,
-  nftMetadataCid: string
+  nftSvgData: string
 ): Promise<{ transaction: Transaction; shareNFTPDA: PublicKey; tokenId: number }> {
   const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
   const program = getProgram(provider);
@@ -169,7 +168,7 @@ export async function buyShare(
   const [shareNFTPDA] = getShareNFTPDA(propertyPDA, tokenId);
 
   const instruction = await program.methods
-    .buyShare(nftImageCid, nftMetadataCid)
+    .buyShare(nftSvgData)
     .accounts({
       factory: factoryPDA,
       property: propertyPDA,

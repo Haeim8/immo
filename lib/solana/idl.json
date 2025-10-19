@@ -1,5 +1,5 @@
 {
-  "address": "3zg9q8VeJr4RHcEW7kt9TEjCNPC61VR6tNEvvzuoTkMw",
+  "address": "BHyYjFqUQxMw6YNj9s4k82ngMHjby4Pn463J6epEDyKq",
   "metadata": {
     "name": "real_estate_factory",
     "version": "0.1.0",
@@ -206,11 +206,7 @@
       ],
       "args": [
         {
-          "name": "nft_image_cid",
-          "type": "string"
-        },
-        {
-          "name": "nft_metadata_cid",
+          "name": "nft_svg_data",
           "type": "string"
         }
       ]
@@ -1262,46 +1258,56 @@
     },
     {
       "code": 6020,
+      "name": "SvgDataTooLong",
+      "msg": "SVG data is too long (max 5000 characters)"
+    },
+    {
+      "code": 6021,
+      "name": "EmptySvgData",
+      "msg": "SVG data cannot be empty"
+    },
+    {
+      "code": 6022,
       "name": "InvalidDuration",
       "msg": "Invalid voting duration"
     },
     {
-      "code": 6021,
+      "code": 6023,
       "name": "VotingDisabled",
       "msg": "Voting is disabled for this property"
     },
     {
-      "code": 6022,
+      "code": 6024,
       "name": "ProposalInactive",
       "msg": "Proposal is inactive"
     },
     {
-      "code": 6023,
+      "code": 6025,
       "name": "VotingEnded",
       "msg": "Voting has ended"
     },
     {
-      "code": 6024,
+      "code": 6026,
       "name": "NotNftOwner",
       "msg": "You do not own this NFT"
     },
     {
-      "code": 6025,
+      "code": 6027,
       "name": "WrongProperty",
       "msg": "NFT does not belong to this property"
     },
     {
-      "code": 6026,
+      "code": 6028,
       "name": "NoVotingPower",
       "msg": "This NFT has no voting power"
     },
     {
-      "code": 6027,
+      "code": 6029,
       "name": "VotingStillActive",
       "msg": "Voting is still active"
     },
     {
-      "code": 6028,
+      "code": 6030,
       "name": "Unauthorized",
       "msg": "Unauthorized: Only admin or team members can perform this action"
     }
@@ -1531,6 +1537,10 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "nft_svg_data",
+            "type": "string"
           }
         ]
       }

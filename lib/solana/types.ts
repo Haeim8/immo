@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 
 // Program IDs - DEVNET
-export const FACTORY_PROGRAM_ID = new PublicKey("3zg9q8VeJr4RHcEW7kt9TEjCNPC61VR6tNEvvzuoTkMw");
+export const FACTORY_PROGRAM_ID = new PublicKey("BHyYjFqUQxMw6YNj9s4k82ngMHjby4Pn463J6epEDyKq");
 export const PROPERTY_PROGRAM_ID = new PublicKey("97eUkEnc8ycsVemeh65NEfh4P4nnPMSZReUG66fSe3Kr");
 
 // Factory Account
@@ -52,6 +52,7 @@ export interface ShareNFT {
   nftMetadataUri: string;
   votingPower: BN;
   bump: number;
+  nftSvgData: string;
 }
 
 // Property Stats (from property_contract)

@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/real_estate_factory.json`.
  */
 export type RealEstateFactory = {
-  "address": "3zg9q8VeJr4RHcEW7kt9TEjCNPC61VR6tNEvvzuoTkMw",
+  "address": "BHyYjFqUQxMw6YNj9s4k82ngMHjby4Pn463J6epEDyKq",
   "metadata": {
     "name": "realEstateFactory",
     "version": "0.1.0",

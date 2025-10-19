@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("3zg9q8VeJr4RHcEW7kt9TEjCNPC61VR6tNEvvzuoTkMw");
+declare_id!("BHyYjFqUQxMw6YNj9s4k82ngMHjby4Pn463J6epEDyKq");
 
 #[program]
 pub mod real_estate_factory {
@@ -93,11 +93,10 @@ pub mod real_estate_factory {
     /// Buy a share NFT (minted on-demand)
     pub fn buy_share(
         ctx: Context<BuyShare>,
-        nft_image_cid: String,      // IPFS CID of the generated NFT image
-        nft_metadata_cid: String,   // IPFS CID of the NFT metadata JSON
+        nft_svg_data: String,       // ON-CHAIN SVG data with embedded property image
     ) -> Result<()> {
-        require!(nft_image_cid.len() <= 100, FactoryError::ImageCidTooLong);
-        require!(nft_metadata_cid.len() <= 100, FactoryError::ImageCidTooLong);
+        require!(nft_svg_data.len() <= 5000, FactoryError::SvgDataTooLong);
+        require!(nft_svg_data.len() > 0, FactoryError::EmptySvgData);
 
         let property = &mut ctx.accounts.property;
         let _factory = &ctx.accounts.factory;
@@ -118,7 +117,7 @@ pub mod real_estate_factory {
         );
         transfer(transfer_ctx, property.share_price)?;
 
-        // Create share NFT record with IPFS metadata
+        // Create share NFT record with ON-CHAIN SVG
         let share_nft = &mut ctx.accounts.share_nft;
         share_nft.property = property.key();
         share_nft.owner = ctx.accounts.buyer.key();
@@ -126,9 +125,12 @@ pub mod real_estate_factory {
         share_nft.mint_time = clock.unix_timestamp;
         share_nft.dividends_claimed = 0;
 
-        // Store IPFS URIs for the NFT (image with overlay + metadata JSON)
-        share_nft.nft_image_uri = format!("ipfs://{}", nft_image_cid);
-        share_nft.nft_metadata_uri = format!("ipfs://{}", nft_metadata_cid);
+        // Store on-chain SVG data
+        share_nft.nft_svg_data = nft_svg_data.clone();
+
+        // Keep old fields empty for compatibility
+        share_nft.nft_image_uri = String::from("");
+        share_nft.nft_metadata_uri = String::from("");
 
         // Set voting power (1 share = 1 vote if voting enabled)
         share_nft.voting_power = if property.voting_enabled { 1 } else { 0 };
@@ -137,9 +139,16 @@ pub mod real_estate_factory {
 
         property.shares_sold += 1;
 
-        msg!("Share NFT #{} minted for property {}", share_nft.token_id, property.property_id);
+        // Auto-close property sale if all shares are sold (SOLD OUT)
+        if property.shares_sold >= property.total_shares {
+            property.is_active = false;
+            msg!("SOLD OUT! Property {} sale automatically closed", property.property_id);
+            msg!("All {} shares have been sold", property.total_shares);
+        }
+
+        msg!("Share NFT #{} minted for property {} (ON-CHAIN SVG)", share_nft.token_id, property.property_id);
         msg!("Buyer: {}", ctx.accounts.buyer.key());
-        msg!("NFT Image: ipfs://{}", nft_image_cid);
+        msg!("SVG size: {} bytes", nft_svg_data.len());
         msg!("Voting power: {}", share_nft.voting_power);
         msg!("Payment {} lamports transferred to treasury", property.share_price);
 
@@ -706,11 +715,13 @@ pub struct ShareNFT {
     pub mint_time: i64,          // 8
     pub dividends_claimed: u64,  // 8
     #[max_len(200)]
-    pub nft_image_uri: String,   // 4 + 200 (NFT visual image URI for explorers)
+    pub nft_image_uri: String,   // 4 + 200 (DEPRECATED: kept for compatibility)
     #[max_len(200)]
-    pub nft_metadata_uri: String, // 4 + 200 (NFT metadata JSON URI)
+    pub nft_metadata_uri: String, // 4 + 200 (DEPRECATED: kept for compatibility)
     pub voting_power: u64,       // 8 (Voting power = 1 share = 1 vote)
     pub bump: u8,                // 1
+    #[max_len(5000)]
+    pub nft_svg_data: String,    // 4 + 5000 (ON-CHAIN SVG with embedded property image - reduced for Solana limits)
 }
 
 #[account]
@@ -799,6 +810,10 @@ pub enum FactoryError {
     TitleTooLong,
     #[msg("Description is too long (max 1000 characters)")]
     DescriptionTooLong,
+    #[msg("SVG data is too long (max 5000 characters)")]
+    SvgDataTooLong,
+    #[msg("SVG data cannot be empty")]
+    EmptySvgData,
     #[msg("Invalid voting duration")]
     InvalidDuration,
     #[msg("Voting is disabled for this property")]

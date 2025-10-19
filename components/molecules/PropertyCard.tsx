@@ -62,7 +62,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
       for (let i = 0; i < quantity; i++) {
         console.log(`🛒 Buying share ${i + 1}/${quantity} with NFT generation...`);
 
-        const { transaction, shareNFTPDA, tokenId, nftImageCid, nftMetadataCid } = await buyShareWithNFT(
+        const { transaction, shareNFTPDA, tokenId, nftSvgData } = await buyShareWithNFT(
           connection,
           propertyPDA,
           wallet.publicKey
@@ -74,7 +74,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
         console.log(`⏳ Confirming transaction ${i + 1}/${quantity}...`);
         await connection.confirmTransaction(signature, "confirmed");
 
-        console.log(`✅ Share ${i + 1}/${quantity} purchased!`, { signature, shareNFTPDA, tokenId, nftImageCid, nftMetadataCid });
+        console.log(`✅ Share ${i + 1}/${quantity} purchased!`, { signature, shareNFTPDA, tokenId, nftSvgData });
         purchasedShares.push(signature);
       }
 

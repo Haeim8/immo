@@ -42,8 +42,8 @@ export function useBrickChain() {
       setError(null);
 
       try {
-        // Generate NFT and create transaction
-        const { transaction, shareNFTPDA, tokenId, nftImageCid, nftMetadataCid } =
+        // Generate SVG NFT and create transaction
+        const { transaction, shareNFTPDA, tokenId, nftSvgData } =
           await buyShareWithNFT(connection, propertyPDA, publicKey);
 
         // Send transaction
@@ -55,8 +55,7 @@ export function useBrickChain() {
           signature,
           shareNFTPDA,
           tokenId,
-          nftImageCid,
-          nftMetadataCid
+          nftSvgData
         };
       } catch (err) {
         handleError(err);
