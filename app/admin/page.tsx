@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -13,7 +13,9 @@ import {
   BarChart3,
   Clock,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Gavel,
+  Wrench
 } from "lucide-react";
 import Navbar from "@/components/organisms/Navbar";
 import GlassCard from "@/components/atoms/GlassCard";
@@ -21,7 +23,7 @@ import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import BlurBackground from "@/components/atoms/BlurBackground";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { useBrickChain, useAllProperties } from "@/lib/solana/hooks";
+import { useBrickChain, useAllProperties, usePropertyProposals } from "@/lib/solana/hooks";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { useSolPrice, usdToLamports } from "@/lib/solana/useSolPrice";
@@ -30,7 +32,9 @@ import { createPropertyMetadata, uploadPropertyMetadata } from "@/lib/pinata/met
 import { addTeamMember, removeTeamMember, getAllTeamMembers, type TeamMember } from "@/lib/solana/team";
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<"overview" | "properties" | "create" | "investors" | "dividends">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "properties" | "create" | "team" | "investors" | "dividends" | "governance" | "operations"
+  >("overview");
 
   return (
     <div className="min-h-screen">
@@ -78,6 +82,8 @@ export default function AdminDashboard() {
                   { id: "team", label: "Team", icon: Users },
                   { id: "investors", label: "Investors", icon: Users },
                   { id: "dividends", label: "Dividends", icon: DollarSign },
+                  { id: "governance", label: "Governance", icon: Gavel },
+                  { id: "operations", label: "Operations", icon: Wrench },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -103,6 +109,8 @@ export default function AdminDashboard() {
           {activeTab === "team" && <TeamTab />}
           {activeTab === "investors" && <InvestorsTab />}
           {activeTab === "dividends" && <DividendsTab />}
+          {activeTab === "governance" && <GovernanceTab />}
+          {activeTab === "operations" && <OperationsTab />}
         </div>
       </main>
     </div>
@@ -292,11 +300,17 @@ function PropertiesTab() {
                         {property.publicKey.toBase58().slice(0, 8)}...{property.publicKey.toBase58().slice(-8)}
                       </p>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         <div>
                           <p className="text-xs text-muted-foreground">Price per Share</p>
                           <p className="font-semibold">${pricePerShareUSD.toFixed(2)}</p>
                           <p className="text-xs text-muted-foreground">{pricePerShareSOL.toFixed(4)} SOL</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Proposals</p>
+                          <p className="font-semibold text-purple-400">
+                            {property.account.proposalCount.toNumber()}
+                          </p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Shares Sold</p>
@@ -310,7 +324,11 @@ function PropertiesTab() {
                         <div>
                           <p className="text-xs text-muted-foreground">Status</p>
                           <p className="font-semibold">
-                            {property.account.isActive ? (
+                            {property.account.isLiquidated ? (
+                              <span className="text-purple-400 flex items-center gap-1">
+                                <CheckCircle2 className="h-4 w-4" /> Liquidated
+                              </span>
+                            ) : property.account.isActive ? (
                               fundingProgress === 100 ? (
                                 <span className="text-green-400 flex items-center gap-1">
                                   <CheckCircle2 className="h-4 w-4" /> Funded
@@ -880,6 +898,461 @@ function CreatePropertyTab() {
                 "Create Property"
               )}
             </AnimatedButton>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+function GovernanceTab() {
+  const { properties, loading: loadingProperties, error: propertiesError, refresh } = useAllProperties();
+  const { createGovernanceProposal, closeGovernanceProposal, loading, error } = useBrickChain();
+  const [selectedProperty, setSelectedProperty] = useState<string>("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [durationHours, setDurationHours] = useState("24");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const propertyPubkey = selectedProperty ? new PublicKey(selectedProperty) : null;
+  const {
+    proposals,
+    loading: proposalsLoading,
+    error: proposalsError,
+    refresh: refreshProposals,
+  } = usePropertyProposals(propertyPubkey);
+
+  const handleCreateProposal = async () => {
+    if (!propertyPubkey) {
+      alert("Please select a property first.");
+      return;
+    }
+
+    if (!title.trim()) {
+      alert("Please provide a proposal title.");
+      return;
+    }
+
+    const durationSeconds = Math.max(1, Math.floor(Number(durationHours || "0") * 3600));
+
+    try {
+      const { proposalId } = await createGovernanceProposal(
+        propertyPubkey,
+        title.trim(),
+        description.trim(),
+        durationSeconds
+      );
+
+      setSuccessMessage(`Proposal #${proposalId} created successfully.`);
+      setTitle("");
+      setDescription("");
+      refreshProposals();
+      refresh();
+    } catch {
+      // handled by hook (error state)
+    }
+  };
+
+  const handleCloseProposal = async (proposalKey: PublicKey) => {
+    if (!propertyPubkey) return;
+    try {
+      await closeGovernanceProposal(propertyPubkey, proposalKey);
+      refreshProposals();
+      refresh();
+    } catch {
+      // handled by hook
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h3 className="text-2xl font-bold">Governance</h3>
+          <p className="text-muted-foreground">
+            Create proposals and follow the decision process for each property.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <AnimatedButton variant="outline" onClick={refresh}>
+            Refresh Properties
+          </AnimatedButton>
+          <AnimatedButton variant="outline" onClick={refreshProposals} disabled={!propertyPubkey}>
+            Refresh Proposals
+          </AnimatedButton>
+        </div>
+      </div>
+
+      {propertiesError && (
+        <GlassCard>
+          <div className="text-red-400">Error loading properties: {propertiesError}</div>
+        </GlassCard>
+      )}
+
+      <GlassCard>
+        <div className="grid gap-4">
+          <div>
+            <label className="text-sm text-muted-foreground block mb-2">Select Property</label>
+            <select
+              value={selectedProperty}
+              onChange={(e) => {
+                setSelectedProperty(e.target.value);
+                setSuccessMessage(null);
+              }}
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
+            >
+              <option value="">-- Select a property --</option>
+              {properties.map((property) => (
+                <option key={property.publicKey.toBase58()} value={property.publicKey.toBase58()}>
+                  {property.account.name} ({property.account.city})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-muted-foreground block mb-2">Proposal Title</label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
+                  placeholder="e.g. Approve renovation budget"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground block mb-2">Voting Duration (hours)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={durationHours}
+                  onChange={(e) => setDurationHours(e.target.value)}
+                  className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm text-muted-foreground block mb-2">Proposal Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={6}
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm resize-none"
+                placeholder="Explain the proposal, expected benefits, risks, etc."
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm">
+              {error}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="p-3 rounded-lg border border-green-500/40 bg-green-500/10 text-green-200 text-sm">
+              {successMessage}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <AnimatedButton
+              variant="primary"
+              onClick={handleCreateProposal}
+              disabled={!selectedProperty || loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...
+                </>
+              ) : (
+                "Create Proposal"
+              )}
+            </AnimatedButton>
+          </div>
+        </div>
+      </GlassCard>
+
+      {propertyPubkey && (
+        <GlassCard>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="text-lg font-semibold text-purple-400">Proposals</h4>
+              <p className="text-sm text-muted-foreground">
+                {propertyPubkey.toBase58()}
+              </p>
+            </div>
+          </div>
+
+          {proposalsError && (
+            <div className="p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm mb-4">
+              {proposalsError}
+            </div>
+          )}
+
+          {proposalsLoading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+              <p className="text-muted-foreground">Loading proposals...</p>
+            </div>
+          ) : proposals.length === 0 ? (
+            <div className="text-muted-foreground text-center py-8">
+              No proposals found for this property.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {proposals.map((proposal) => {
+                const votingEndsAt = new Date(proposal.account.votingEndsAt.toNumber() * 1000);
+                return (
+                  <div
+                    key={proposal.publicKey.toBase58()}
+                    className="border border-white/10 rounded-xl p-4 bg-white/5"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <h5 className="text-lg font-semibold text-cyan-400">
+                          {proposal.account.title}
+                        </h5>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {proposal.account.description}
+                        </p>
+                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                          <span>Yes votes: {proposal.account.yesVotes.toNumber()}</span>
+                          <span>No votes: {proposal.account.noVotes.toNumber()}</span>
+                          <span>
+                            Voting ends: {votingEndsAt.toLocaleString()}
+                          </span>
+                          <span>Status: {proposal.account.isActive ? "Active" : "Closed"}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {proposal.account.isActive && (
+                          <AnimatedButton
+                            variant="outline"
+                            onClick={() => handleCloseProposal(proposal.publicKey)}
+                            disabled={loading}
+                          >
+                            {loading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              "Close Proposal"
+                            )}
+                          </AnimatedButton>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {loadingProperties && (
+            <div className="text-muted-foreground text-sm mt-4">Loading properties...</div>
+          )}
+        </GlassCard>
+      )}
+    </div>
+  );
+}
+
+function OperationsTab() {
+  const { properties, loading, error, refresh } = useAllProperties();
+  const { closeSaleManually, triggerLiquidation, loading: actionLoading, error: actionError } = useBrickChain();
+  const [selectedProperty, setSelectedProperty] = useState<string>("");
+  const [liquidationAmount, setLiquidationAmount] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const selected = useMemo(
+    () => properties.find((p) => p.publicKey.toBase58() === selectedProperty) || null,
+    [properties, selectedProperty]
+  );
+
+  const handleCloseSale = async () => {
+    if (!selected) {
+      alert("Select a property first.");
+      return;
+    }
+
+    setSuccessMessage(null);
+
+    try {
+      await closeSaleManually(selected.publicKey);
+      setSuccessMessage("Sale closed successfully.");
+      refresh();
+    } catch {
+      // handled by hook
+    }
+  };
+
+  const handleLiquidation = async () => {
+    if (!selected) {
+      alert("Select a property first.");
+      return;
+    }
+
+    const amountSOL = parseFloat(liquidationAmount);
+    if (isNaN(amountSOL) || amountSOL <= 0) {
+      alert("Enter a valid liquidation amount (in SOL).");
+      return;
+    }
+
+    setSuccessMessage(null);
+
+    try {
+      const lamports = Math.floor(amountSOL * LAMPORTS_PER_SOL);
+      await triggerLiquidation(selected.publicKey, lamports);
+      setSuccessMessage("Liquidation triggered. Investors can now claim their proceeds.");
+      setLiquidationAmount("");
+      refresh();
+    } catch {
+      // handled by hook
+    }
+  };
+
+  const saleEndDate =
+    selected?.account.saleEnd && selected.account.saleEnd.toNumber() > 0
+      ? new Date(selected.account.saleEnd.toNumber() * 1000)
+      : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h3 className="text-2xl font-bold">Manual Operations</h3>
+          <p className="text-muted-foreground">
+            Close sales and trigger liquidation flows directly from the admin panel.
+          </p>
+        </div>
+        <AnimatedButton variant="outline" onClick={refresh}>
+          Refresh Properties
+        </AnimatedButton>
+      </div>
+
+      {error && (
+        <GlassCard>
+          <div className="text-red-400">Error loading properties: {error}</div>
+        </GlassCard>
+      )}
+
+      <GlassCard>
+        <div className="grid gap-4">
+          <div>
+            <label className="text-sm text-muted-foreground block mb-2">Select Property</label>
+            <select
+              value={selectedProperty}
+              onChange={(e) => {
+                setSelectedProperty(e.target.value);
+                setSuccessMessage(null);
+              }}
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
+            >
+              <option value="">-- Select a property --</option>
+              {properties.map((property) => (
+                <option key={property.publicKey.toBase58()} value={property.publicKey.toBase58()}>
+                  {property.account.name} ({property.account.city})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selected && (
+            <div className="grid md:grid-cols-3 gap-4 bg-white/5 border border-white/10 rounded-xl p-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Status</p>
+                <p className="font-semibold">
+                  {selected.account.isLiquidated
+                    ? "Liquidated"
+                    : selected.account.isActive
+                      ? "Active"
+                      : "Closed"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Shares Sold</p>
+                <p className="font-semibold">
+                  {selected.account.sharesSold.toNumber()} / {selected.account.totalShares.toNumber()}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Sale End</p>
+                <p className="font-semibold">
+                  {saleEndDate ? saleEndDate.toLocaleString() : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Liquidation Amount</p>
+                <p className="font-semibold">
+                  {selected.account.liquidationAmount.toNumber() === 0
+                    ? "Not set"
+                    : `${(selected.account.liquidationAmount.toNumber() / LAMPORTS_PER_SOL).toFixed(2)} SOL`}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {actionError && (
+            <div className="p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm">
+              {actionError}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="p-3 rounded-lg border border-green-500/40 bg-green-500/10 text-green-200 text-sm">
+              {successMessage}
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-cyan-400">Close Sale</h4>
+              <p className="text-sm text-muted-foreground">
+                Force the sale to close if the automatic closure fails (for example, after the deadline).
+              </p>
+              <AnimatedButton
+                variant="primary"
+                onClick={handleCloseSale}
+                disabled={!selected || actionLoading}
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  "Close Sale Manually"
+                )}
+              </AnimatedButton>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-purple-400">Trigger Liquidation</h4>
+              <p className="text-sm text-muted-foreground">
+                Deposit the property sale proceeds so investors can claim their final payout. Amount in SOL.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Total sale amount (SOL)"
+                  value={liquidationAmount}
+                  onChange={(e) => setLiquidationAmount(e.target.value)}
+                  className="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
+                />
+                <AnimatedButton
+                  variant="outline"
+                  onClick={handleLiquidation}
+                  disabled={!selected || actionLoading}
+                >
+                  {actionLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Trigger"
+                  )}
+                </AnimatedButton>
+              </div>
+            </div>
           </div>
         </div>
       </GlassCard>

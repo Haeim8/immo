@@ -11,12 +11,18 @@ import {
   fetchShareNFT,
   fetchUserShareNFTs,
   fetchAllProperties,
+  fetchPropertyProposals,
+  closePropertySale,
+  createProposalInstruction,
+  closeProposalInstruction,
+  liquidateProperty,
 } from "./instructions";
 import { buyShareWithNFT } from "./buy-share-with-nft";
 import {
   CreatePropertyParams,
   Property,
   ShareNFT,
+  Proposal,
 } from "./types";
 import BN from "bn.js";
 
@@ -153,11 +159,142 @@ export function useBrickChain() {
     [connection, publicKey, sendTransaction, handleError]
   );
 
+  const createGovernanceProposal = useCallback(
+    async (
+      propertyPDA: PublicKey,
+      title: string,
+      description: string,
+      votingDurationSeconds: number
+    ) => {
+      if (!publicKey) {
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { transaction, proposalPDA, proposalId } =
+          await createProposalInstruction(
+            connection,
+            propertyPDA,
+            publicKey,
+            title,
+            description,
+            votingDurationSeconds
+          );
+
+        const signature = await sendTransaction(transaction, connection);
+        await connection.confirmTransaction(signature, "confirmed");
+
+        setLoading(false);
+        return { signature, proposalPDA, proposalId };
+      } catch (err) {
+        handleError(err);
+        throw err;
+      }
+    },
+    [connection, publicKey, sendTransaction, handleError]
+  );
+
+  const closeGovernanceProposal = useCallback(
+    async (propertyPDA: PublicKey, proposalPDA: PublicKey) => {
+      if (!publicKey) {
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const transaction = await closeProposalInstruction(
+          connection,
+          propertyPDA,
+          proposalPDA,
+          publicKey
+        );
+
+        const signature = await sendTransaction(transaction, connection);
+        await connection.confirmTransaction(signature, "confirmed");
+
+        setLoading(false);
+        return { signature };
+      } catch (err) {
+        handleError(err);
+        throw err;
+      }
+    },
+    [connection, publicKey, sendTransaction, handleError]
+  );
+
+  const closeSaleManually = useCallback(
+    async (propertyPDA: PublicKey) => {
+      if (!publicKey) {
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const transaction = await closePropertySale(
+          connection,
+          propertyPDA,
+          publicKey
+        );
+
+        const signature = await sendTransaction(transaction, connection);
+        await connection.confirmTransaction(signature, "confirmed");
+
+        setLoading(false);
+        return { signature };
+      } catch (err) {
+        handleError(err);
+        throw err;
+      }
+    },
+    [connection, publicKey, sendTransaction, handleError]
+  );
+
+  const triggerLiquidation = useCallback(
+    async (propertyPDA: PublicKey, totalSaleAmountLamports: number) => {
+      if (!publicKey) {
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const transaction = await liquidateProperty(
+          connection,
+          propertyPDA,
+          totalSaleAmountLamports,
+          publicKey
+        );
+
+        const signature = await sendTransaction(transaction, connection);
+        await connection.confirmTransaction(signature, "confirmed");
+
+        setLoading(false);
+        return { signature };
+      } catch (err) {
+        handleError(err);
+        throw err;
+      }
+    },
+    [connection, publicKey, sendTransaction, handleError]
+  );
+
   return {
     buyPropertyShare,
     claimShareDividends,
     createNewProperty,
     depositPropertyDividends,
+    createGovernanceProposal,
+    closeGovernanceProposal,
+    closeSaleManually,
+    triggerLiquidation,
     loading,
     error,
   };
@@ -213,6 +350,10 @@ function reconstructPropertyAccount(cachedAccount: any): Property {
     saleEnd: new BN(cachedAccount.saleEnd),
     totalDividendsDeposited: new BN(cachedAccount.totalDividendsDeposited),
     totalDividendsClaimed: new BN(cachedAccount.totalDividendsClaimed),
+    proposalCount: new BN(cachedAccount.proposalCount),
+    liquidationAmount: new BN(cachedAccount.liquidationAmount),
+    liquidationClaimed: new BN(cachedAccount.liquidationClaimed),
+    isLiquidated: cachedAccount.isLiquidated,
     factory: new PublicKey(cachedAccount.factory),
   };
 }
@@ -262,6 +403,10 @@ function setCachedProperties(properties: Array<{ publicKey: PublicKey; account: 
           saleEnd: p.account.saleEnd.toString(),
           totalDividendsDeposited: p.account.totalDividendsDeposited.toString(),
           totalDividendsClaimed: p.account.totalDividendsClaimed.toString(),
+          proposalCount: p.account.proposalCount.toString(),
+          liquidationAmount: p.account.liquidationAmount.toString(),
+          liquidationClaimed: p.account.liquidationClaimed.toString(),
+          isLiquidated: p.account.isLiquidated,
           factory: p.account.factory.toBase58(),
         },
       })),
@@ -358,4 +503,35 @@ export function useUserShareNFTs() {
   }, [connection, publicKey]);
 
   return { shareNFTs, loading, error, refresh };
+}
+
+export function usePropertyProposals(propertyPDA: PublicKey | null) {
+  const { connection } = useConnection();
+  const [proposals, setProposals] = useState<Array<{ publicKey: PublicKey; account: Proposal }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProposals = useCallback(async () => {
+    if (!propertyPDA) {
+      setProposals([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchPropertyProposals(connection, propertyPDA);
+      setProposals(result);
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch proposals");
+    } finally {
+      setLoading(false);
+    }
+  }, [connection, propertyPDA]);
+
+  useEffect(() => {
+    fetchProposals();
+  }, [fetchProposals]);
+
+  return { proposals, loading, error, refresh: fetchProposals };
 }

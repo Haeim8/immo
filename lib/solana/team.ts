@@ -104,10 +104,28 @@ export async function removeTeamMember(
 export async function getAllTeamMembers(
   connection: Connection
 ): Promise<{ publicKey: PublicKey; account: TeamMember }[]> {
-  // TODO: TeamMember account type is not yet in the IDL
-  // This will be implemented when the contract is updated
-  console.warn("getAllTeamMembers: TeamMember account not yet implemented in contract");
-  return [];
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
+  const [factoryPDA] = getFactoryPDA();
+
+  try {
+    const teamMembers = await program.account.teamMember.all([
+      {
+        memcmp: {
+          offset: 8, // discriminator
+          bytes: factoryPDA.toBase58(),
+        },
+      },
+    ]);
+
+    return teamMembers.map((tm: any) => ({
+      publicKey: tm.publicKey,
+      account: tm.account as TeamMember,
+    }));
+  } catch (err) {
+    console.error("Error fetching team members:", err);
+    return [];
+  }
 }
 
 // Check if wallet is team member
@@ -121,10 +139,14 @@ export async function isTeamMember(
   }
 
   try {
-    // TODO: TeamMember account type is not yet in the IDL
-    // For now, always return false
-    console.warn("isTeamMember: TeamMember account not yet implemented in contract");
-    return false;
+    const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+    const program = getProgram(provider);
+    const [factoryPDA] = getFactoryPDA();
+    const walletPubkey = new PublicKey(walletAddress);
+    const [teamMemberPDA] = getTeamMemberPDA(factoryPDA, walletPubkey);
+
+    const account = await program.account.teamMember.fetchNullable(teamMemberPDA);
+    return !!account && (account as TeamMember).isActive;
   } catch (err) {
     // Invalid address or account doesn't exist = not a team member
     return false;

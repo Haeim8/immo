@@ -1,5 +1,5 @@
 {
-  "address": "BHyYjFqUQxMw6YNj9s4k82ngMHjby4Pn463J6epEDyKq",
+  "address": "23Q3u8W5G32FU61jH5V5ddY7JVWDFjBEuZweft3qtF5h",
   "metadata": {
     "name": "real_estate_factory",
     "version": "0.1.0",
@@ -453,6 +453,96 @@
       "args": []
     },
     {
+      "name": "claim_liquidation",
+      "docs": [
+        "Claim liquidation proceeds and burn NFT"
+      ],
+      "discriminator": [
+        40,
+        164,
+        45,
+        19,
+        185,
+        47,
+        171,
+        117
+      ],
+      "accounts": [
+        {
+          "name": "property",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property.factory",
+                "account": "Property"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "share_nft",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  104,
+                  97,
+                  114,
+                  101,
+                  95,
+                  110,
+                  102,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property"
+              },
+              {
+                "kind": "account",
+                "path": "share_nft.token_id",
+                "account": "ShareNFT"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "close_property_sale",
       "docs": [
         "Close a property sale"
@@ -805,6 +895,7 @@
         },
         {
           "name": "property",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -834,7 +925,33 @@
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "property"
+              },
+              {
+                "kind": "account",
+                "path": "property.proposal_count",
+                "account": "Property"
+              }
+            ]
+          }
         },
         {
           "name": "admin",
@@ -996,6 +1113,88 @@
         {
           "name": "admin",
           "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "liquidate_property",
+      "docs": [
+        "Liquidate property (admin deposits final sale proceeds)"
+      ],
+      "discriminator": [
+        153,
+        219,
+        115,
+        106,
+        143,
+        137,
+        116,
+        91
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "property",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  101,
+                  114,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "factory"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "total_sale_amount",
+          "type": "u64"
         }
       ]
     },
@@ -1310,6 +1509,21 @@
       "code": 6030,
       "name": "Unauthorized",
       "msg": "Unauthorized: Only admin or team members can perform this action"
+    },
+    {
+      "code": 6031,
+      "name": "AlreadyLiquidated",
+      "msg": "Property has already been liquidated"
+    },
+    {
+      "code": 6032,
+      "name": "NotLiquidated",
+      "msg": "Property has not been liquidated yet"
+    },
+    {
+      "code": 6033,
+      "name": "LiquidationInsufficientFunds",
+      "msg": "Not enough liquidation funds remain to honor this claim"
     }
   ],
   "types": [
@@ -1432,6 +1646,22 @@
           },
           {
             "name": "total_dividends_claimed",
+            "type": "u64"
+          },
+          {
+            "name": "proposal_count",
+            "type": "u64"
+          },
+          {
+            "name": "is_liquidated",
+            "type": "bool"
+          },
+          {
+            "name": "liquidation_amount",
+            "type": "u64"
+          },
+          {
+            "name": "liquidation_claimed",
             "type": "u64"
           },
           {

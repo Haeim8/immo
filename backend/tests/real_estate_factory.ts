@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { RealEstateFactory } from "../target/types/real_estate_factory";
-import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { PublicKey, Keypair, LAMPORTS_PER_SOL, SystemProgram } from "@solana/web3.js";
 import { assert } from "chai";
 
 describe("real_estate_factory - Tests Complets", () => {
@@ -16,8 +16,20 @@ describe("real_estate_factory - Tests Complets", () => {
 
   let factoryPDA: PublicKey;
   let propertyPDA: PublicKey;
+  let propertyPDA2: PublicKey;
   let shareNFTPDA1: PublicKey;
   let shareNFTPDA2: PublicKey;
+
+  type Investor = {
+    wallet: Keypair;
+    sharePda: PublicKey;
+    tokenId: number;
+  };
+
+  const investors: Investor[] = [];
+  let dividendsPerShare = 0;
+  let lastDividendAmount = 0;
+  let liquidationPerShare = 0;
 
   // SVG de test avec image IPFS intégrée
   const testSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600">
@@ -194,6 +206,8 @@ describe("real_estate_factory - Tests Complets", () => {
     assert.equal(propertyAfter.sharesSold.toNumber(), 1);
     assert.isTrue(treasuryBalanceAfter > treasuryBalanceBefore, "Treasury devrait recevoir le paiement");
 
+    investors.push({ wallet: buyer1, sharePda: shareNFTPDA1, tokenId });
+
     console.log("✅ Vérifications: NFT créé avec SVG on-chain, lié à la propriété, fonds transférés au treasury\n");
   });
 
@@ -238,6 +252,8 @@ describe("real_estate_factory - Tests Complets", () => {
 
     assert.equal(shareNFT.owner.toBase58(), buyer2.publicKey.toBase58());
     assert.equal(propertyAfter.sharesSold.toNumber(), 2);
+
+    investors.push({ wallet: buyer2, sharePda: shareNFTPDA2, tokenId });
 
     console.log("✅ Vérifications: Plusieurs acheteurs peuvent acheter des parts indépendantes\n");
   });
@@ -390,6 +406,8 @@ describe("real_estate_factory - Tests Complets", () => {
         .rpc();
 
       console.log(`  ✅ Part #${tokenId} vendue`);
+
+      investors.push({ wallet: tempBuyer, sharePda: tempShareNFTPDA, tokenId });
     }
 
     const finalProperty = await program.account.property.fetch(propertyPDA);
@@ -401,8 +419,380 @@ describe("real_estate_factory - Tests Complets", () => {
 
     assert.equal(finalProperty.sharesSold.toNumber(), finalProperty.totalShares.toNumber());
     assert.equal(finalProperty.isActive, false, "La propriété devrait être inactive après sold out");
+    assert.equal(
+      investors.length,
+      finalProperty.totalShares.toNumber(),
+      "Chaque part vendue doit être enregistrée"
+    );
 
     console.log("✅ Vérifications: Campagne terminée après vente de toutes les parts (isActive = false)\n");
+  });
+
+  it("✅ Test 9: Dépôt de dividendes par l'admin", async () => {
+    const propertyBefore = await program.account.property.fetch(propertyPDA);
+    const balanceBefore = await provider.connection.getBalance(propertyPDA);
+    const depositAmount = 1 * LAMPORTS_PER_SOL;
+
+    const tx = await program.methods
+      .depositDividends(new anchor.BN(depositAmount))
+      .accounts({
+        factory: factoryPDA,
+        property: propertyPDA,
+        admin,
+      })
+      .rpc();
+
+    console.log("✅ Dividendes déposés. Tx:", tx);
+
+    const propertyAfter = await program.account.property.fetch(propertyPDA);
+    const balanceAfter = await provider.connection.getBalance(propertyPDA);
+
+    assert.equal(
+      propertyAfter.totalDividendsDeposited.toNumber(),
+      propertyBefore.totalDividendsDeposited.toNumber() + depositAmount,
+      "Le total des dividendes doit augmenter"
+    );
+    assert.equal(
+      balanceAfter - balanceBefore,
+      depositAmount,
+      "Le PDA de la propriété doit recevoir les dividendes"
+    );
+
+    dividendsPerShare = Math.floor(
+      propertyAfter.totalDividendsDeposited.toNumber() /
+        propertyAfter.sharesSold.toNumber()
+    );
+    lastDividendAmount = depositAmount;
+
+    console.log("✅ Dividendes par part:", dividendsPerShare);
+  });
+
+  it("✅ Test 10: Claim des dividendes par un investisseur", async () => {
+    const investor = investors[0];
+    const propertyBalanceBefore = await provider.connection.getBalance(propertyPDA);
+
+    const tx = await program.methods
+      .claimDividends()
+      .accounts({
+        property: propertyPDA,
+        shareNft: investor.sharePda,
+        owner: investor.wallet.publicKey,
+      })
+      .signers([investor.wallet])
+      .rpc();
+
+    console.log("✅ Dividendes réclamés par l'investisseur. Tx:", tx);
+
+    const propertyBalanceAfter = await provider.connection.getBalance(propertyPDA);
+    const shareAccount = await program.account.shareNft.fetch(investor.sharePda);
+    const propertyAfter = await program.account.property.fetch(propertyPDA);
+
+    assert.equal(
+      propertyBalanceBefore - propertyBalanceAfter,
+      dividendsPerShare,
+      "La propriété doit verser exactement une part de dividende"
+    );
+    assert.equal(
+      shareAccount.dividendsClaimed.toNumber(),
+      dividendsPerShare,
+      "Le NFT doit enregistrer les dividendes réclamés"
+    );
+    assert.equal(
+      propertyAfter.totalDividendsClaimed.toNumber(),
+      dividendsPerShare,
+      "La propriété doit comptabiliser les dividendes distribués"
+    );
+
+    try {
+      await program.methods
+        .claimDividends()
+        .accounts({
+          property: propertyPDA,
+          shareNft: investor.sharePda,
+          owner: investor.wallet.publicKey,
+        })
+        .signers([investor.wallet])
+        .rpc();
+      assert.fail("Un second claim devrait être refusé");
+    } catch (err: any) {
+      assert.include(err.toString(), "NoDividendsToClaim");
+      console.log("✅ Double claim bloqué comme prévu");
+    }
+  });
+
+  it("✅ Test 11: Fermeture manuelle d'une vente après expiration", async () => {
+    const factoryAccount = await program.account.factory.fetch(factoryPDA);
+    const nextPropertyId = factoryAccount.propertyCount.toNumber();
+
+    [propertyPDA2] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("property"),
+        factoryPDA.toBuffer(),
+        Buffer.from(new anchor.BN(nextPropertyId).toArray("le", 8)),
+      ],
+      program.programId
+    );
+
+    const txCreate = await program.methods
+      .createProperty(
+        "vehicle",
+        "Voiture Collector",
+        "Paris",
+        "Île-de-France",
+        "France",
+        new anchor.BN(5),
+        new anchor.BN(0.05 * LAMPORTS_PER_SOL),
+        new anchor.BN(1),
+        0,
+        0,
+        0,
+        "Collection",
+        2022,
+        "QmVehicleImage",
+        "QmVehicleMetadata",
+        false
+      )
+      .accounts({
+        factory: factoryPDA,
+        property: propertyPDA2,
+        admin,
+      })
+      .rpc();
+
+    console.log("✅ Propriété #2 créée pour test de fermeture. Tx:", txCreate);
+
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+
+    const txClose = await program.methods
+      .closePropertySale()
+      .accounts({
+        factory: factoryPDA,
+        property: propertyPDA2,
+        admin,
+      })
+      .rpc();
+
+    console.log("✅ Vente fermée manuellement. Tx:", txClose);
+
+    const property2 = await program.account.property.fetch(propertyPDA2);
+    assert.isFalse(property2.isActive, "La propriété 2 doit être inactive après fermeture");
+  });
+
+  it("✅ Test 12: Gouvernance - création, vote et fermeture d'une proposition", async () => {
+    const propertyAccount = await program.account.property.fetch(propertyPDA);
+    const nextProposalId = propertyAccount.proposalCount.toNumber();
+
+    const [proposalPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("proposal"),
+        propertyPDA.toBuffer(),
+        Buffer.from(new anchor.BN(nextProposalId).toArray("le", 8)),
+      ],
+      program.programId
+    );
+
+    const txCreate = await program.methods
+      .createProposal(
+        "Vote travaux",
+        "Accepter les travaux et décaler les dividendes de 6 mois ?",
+        new anchor.BN(5)
+      )
+      .accounts({
+        factory: factoryPDA,
+        property: propertyPDA,
+        proposal: proposalPDA,
+        admin,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    console.log("✅ Proposition créée. Tx:", txCreate);
+
+    const proposalAccount = await program.account.proposal.fetch(proposalPDA);
+    assert.equal(proposalAccount.proposalId.toNumber(), nextProposalId);
+    assert.isTrue(proposalAccount.isActive);
+
+    const [votePDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("vote"),
+        proposalPDA.toBuffer(),
+        investors[0].sharePda.toBuffer(),
+      ],
+      program.programId
+    );
+
+    const txVote = await program.methods
+      .castVote(true)
+      .accounts({
+        property: propertyPDA,
+        proposal: proposalPDA,
+        shareNft: investors[0].sharePda,
+        vote: votePDA,
+        voter: investors[0].wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([investors[0].wallet])
+      .rpc();
+
+    console.log("✅ Vote enregistré. Tx:", txVote);
+
+    const proposalAfterVote = await program.account.proposal.fetch(proposalPDA);
+    assert.equal(proposalAfterVote.yesVotes.toNumber(), 1, "Le vote YES doit être comptabilisé");
+
+    await new Promise((resolve) => setTimeout(resolve, 9000));
+
+    const txClose = await program.methods
+      .closeProposal()
+      .accounts({
+        factory: factoryPDA,
+        property: propertyPDA,
+        proposal: proposalPDA,
+        admin,
+      })
+      .rpc();
+
+    console.log("✅ Proposition close. Tx:", txClose);
+
+    const proposalClosed = await program.account.proposal.fetch(proposalPDA);
+    assert.isFalse(proposalClosed.isActive, "La proposition doit être close");
+  });
+
+  it("✅ Test 13: Gestion des membres de l'équipe", async () => {
+    const teamWallet = Keypair.generate();
+    const [teamMemberPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("team_member"),
+        factoryPDA.toBuffer(),
+        teamWallet.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    const txAdd = await program.methods
+      .addTeamMember(teamWallet.publicKey)
+      .accounts({
+        factory: factoryPDA,
+        teamMember: teamMemberPDA,
+        wallet: teamWallet.publicKey,
+        admin,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    console.log("✅ Membre d'équipe ajouté. Tx:", txAdd);
+
+    const teamAccount = await program.account.teamMember.fetch(teamMemberPDA);
+    assert.isTrue(teamAccount.isActive, "Le membre ajouté doit être actif");
+    assert.equal(teamAccount.wallet.toBase58(), teamWallet.publicKey.toBase58());
+
+    const txRemove = await program.methods
+      .removeTeamMember()
+      .accounts({
+        factory: factoryPDA,
+        teamMember: teamMemberPDA,
+        admin,
+      })
+      .rpc();
+
+    console.log("✅ Membre d'équipe retiré. Tx:", txRemove);
+
+    const teamAccountAfter = await program.account.teamMember.fetch(teamMemberPDA);
+    assert.isFalse(teamAccountAfter.isActive, "Le membre doit être désactivé");
+  });
+
+  it("✅ Test 14: Liquidation de la propriété par l'admin", async () => {
+    const balanceBefore = await provider.connection.getBalance(propertyPDA);
+    const liquidationAmount = 5 * LAMPORTS_PER_SOL;
+
+    const tx = await program.methods
+      .liquidateProperty(new anchor.BN(liquidationAmount))
+      .accounts({
+        factory: factoryPDA,
+        property: propertyPDA,
+        admin,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    console.log("✅ Liquidation déclenchée. Tx:", tx);
+
+    const propertyAfter = await program.account.property.fetch(propertyPDA);
+    const balanceAfter = await provider.connection.getBalance(propertyPDA);
+
+    assert.isTrue(propertyAfter.isLiquidated, "La propriété doit être marquée liquidée");
+    assert.equal(propertyAfter.liquidationAmount.toNumber(), liquidationAmount);
+    assert.equal(propertyAfter.liquidationClaimed.toNumber(), 0);
+    assert.equal(
+      balanceAfter - balanceBefore,
+      liquidationAmount,
+      "Les fonds de liquidation doivent être crédités"
+    );
+
+    liquidationPerShare =
+      propertyAfter.liquidationAmount.toNumber() / propertyAfter.totalShares.toNumber();
+
+    console.log("✅ Liquidation par part:", liquidationPerShare);
+  });
+
+  it("✅ Test 15: Claim de liquidation et burn du NFT", async () => {
+    const investor = investors[0];
+    const shareBalanceBefore = await provider.connection.getBalance(investor.sharePda);
+    const ownerBalanceBefore = await provider.connection.getBalance(investor.wallet.publicKey);
+    const propertyBalanceBefore = await provider.connection.getBalance(propertyPDA);
+
+    const tx = await program.methods
+      .claimLiquidation()
+      .accounts({
+        property: propertyPDA,
+        shareNft: investor.sharePda,
+        owner: investor.wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([investor.wallet])
+      .rpc();
+
+    console.log("✅ Liquidation réclamée. Tx:", tx);
+
+    const ownerBalanceAfter = await provider.connection.getBalance(investor.wallet.publicKey);
+    const propertyBalanceAfter = await provider.connection.getBalance(propertyPDA);
+    const propertyAfter = await program.account.property.fetch(propertyPDA);
+    const shareInfo = await provider.connection.getAccountInfo(investor.sharePda);
+
+    assert.isNull(shareInfo, "Le compte du NFT doit être fermé (burn)");
+    assert.equal(
+      propertyBalanceBefore - propertyBalanceAfter,
+      liquidationPerShare,
+      "La propriété doit verser une part de liquidation"
+    );
+    assert.equal(
+      propertyAfter.liquidationClaimed.toNumber(),
+      liquidationPerShare,
+      "La propriété doit tracer la liquidation réclamée"
+    );
+
+    const expectedGain = liquidationPerShare + shareBalanceBefore;
+    const actualGain = ownerBalanceAfter - ownerBalanceBefore;
+    assert.isAtLeast(
+      actualGain,
+      expectedGain - 5000,
+      "L'investisseur reçoit la liquidation et le rent de son compte (moins les frais)"
+    );
+
+    try {
+      await program.methods
+        .claimLiquidation()
+        .accounts({
+          property: propertyPDA,
+          shareNft: investor.sharePda,
+          owner: investor.wallet.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([investor.wallet])
+        .rpc();
+      assert.fail("Un second claim après burn doit échouer");
+    } catch (err) {
+      console.log("✅ Second claim bloqué comme prévu");
+    }
   });
 
   console.log("\n🎉 TOUS LES TESTS RÉUSSIS !\n");
@@ -414,5 +804,10 @@ describe("real_estate_factory - Tests Complets", () => {
   console.log("✅ Liens NFT <-> Propriété corrects");
   console.log("✅ Campagne se termine au sold out");
   console.log("✅ Chaque propriété est un contrat indépendant (PDA unique)");
-  console.log("✅ Chaque NFT est lié à son contrat parent\n");
+  console.log("✅ Chaque NFT est lié à son contrat parent");
+  console.log("✅ Dividendes déposés et distribués");
+  console.log("✅ Vente fermée après expiration");
+  console.log("✅ Gouvernance (création, vote, fermeture)");
+  console.log("✅ Gestion d'équipe (ajout / retrait)");
+  console.log("✅ Liquidation finale avec burn des NFTs\n");
 });

@@ -15,6 +15,7 @@ import {
   Property,
   ShareNFT,
   Factory,
+  Proposal,
 } from "./types";
 import IDL from "./idl.json";
 
@@ -66,6 +67,34 @@ export function getShareNFTPDA(
       Buffer.from("share_nft"),
       propertyPubkey.toBuffer(),
       new BN(tokenId).toArray("le", 8),
+    ],
+    FACTORY_PROGRAM_ID
+  );
+}
+
+export function getProposalPDA(
+  propertyPubkey: PublicKey,
+  proposalId: number
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("proposal"),
+      propertyPubkey.toBuffer(),
+      new BN(proposalId).toArray("le", 8),
+    ],
+    FACTORY_PROGRAM_ID
+  );
+}
+
+export function getVotePDA(
+  proposalPubkey: PublicKey,
+  shareNftPubkey: PublicKey
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("vote"),
+      proposalPubkey.toBuffer(),
+      shareNftPubkey.toBuffer(),
     ],
     FACTORY_PROGRAM_ID
   );
@@ -255,6 +284,148 @@ export async function claimDividends(
   const transaction = new Transaction().add(instruction);
 
   return { transaction, claimableAmount };
+}
+
+// Close property sale manually (admin only)
+export async function closePropertySale(
+  connection: Connection,
+  propertyPDA: PublicKey,
+  admin: PublicKey
+): Promise<Transaction> {
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
+  const [factoryPDA] = getFactoryPDA();
+
+  const instruction = await program.methods
+    .closePropertySale()
+    .accounts({
+      factory: factoryPDA,
+      property: propertyPDA,
+      admin,
+    })
+    .instruction();
+
+  return new Transaction().add(instruction);
+}
+
+// Create governance proposal (admin)
+export async function createProposalInstruction(
+  connection: Connection,
+  propertyPDA: PublicKey,
+  admin: PublicKey,
+  title: string,
+  description: string,
+  votingDurationSeconds: number
+): Promise<{ transaction: Transaction; proposalPDA: PublicKey; proposalId: number }> {
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
+  const [factoryPDA] = getFactoryPDA();
+
+  const propertyAccount = await program.account.property.fetch(propertyPDA);
+  const proposalId = propertyAccount.proposalCount.toNumber();
+  const [proposalPDA] = getProposalPDA(propertyPDA, proposalId);
+
+  const instruction = await program.methods
+    .createProposal(title, description, new BN(votingDurationSeconds))
+    .accounts({
+      factory: factoryPDA,
+      property: propertyPDA,
+      proposal: proposalPDA,
+      admin,
+      systemProgram: SystemProgram.programId,
+    })
+    .instruction();
+
+  return { transaction: new Transaction().add(instruction), proposalPDA, proposalId };
+}
+
+// Close proposal (admin)
+export async function closeProposalInstruction(
+  connection: Connection,
+  propertyPDA: PublicKey,
+  proposalPDA: PublicKey,
+  admin: PublicKey
+): Promise<Transaction> {
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
+  const [factoryPDA] = getFactoryPDA();
+
+  const instruction = await program.methods
+    .closeProposal()
+    .accounts({
+      factory: factoryPDA,
+      property: propertyPDA,
+      proposal: proposalPDA,
+      admin,
+    })
+    .instruction();
+
+  return new Transaction().add(instruction);
+}
+
+// Fetch proposals for property
+export async function fetchPropertyProposals(
+  connection: Connection,
+  propertyPDA: PublicKey
+): Promise<Array<{ publicKey: PublicKey; account: Proposal }>> {
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
+
+  const proposals = await program.account.proposal.all();
+
+  return proposals
+    .filter((p: any) => p.account.property.equals(propertyPDA))
+    .map((p: any) => ({
+      publicKey: p.publicKey,
+      account: p.account as Proposal,
+    }));
+}
+
+// Liquidate property (admin)
+export async function liquidateProperty(
+  connection: Connection,
+  propertyPDA: PublicKey,
+  totalSaleAmountLamports: number,
+  admin: PublicKey
+): Promise<Transaction> {
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
+  const [factoryPDA] = getFactoryPDA();
+
+  const instruction = await program.methods
+    .liquidateProperty(new BN(totalSaleAmountLamports))
+    .accounts({
+      factory: factoryPDA,
+      property: propertyPDA,
+      admin,
+      systemProgram: SystemProgram.programId,
+    })
+    .instruction();
+
+  return new Transaction().add(instruction);
+}
+
+// Claim liquidation (investor)
+export async function claimLiquidation(
+  connection: Connection,
+  propertyPDA: PublicKey,
+  shareNFTPDA: PublicKey,
+  owner: PublicKey
+): Promise<Transaction> {
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
+
+  const instruction = await program.methods
+    .claimLiquidation()
+    .accounts({
+      property: propertyPDA,
+      shareNft: shareNFTPDA,
+      owner,
+      systemProgram: SystemProgram.programId,
+    })
+    .instruction();
+
+  return new Transaction().add(instruction);
 }
 
 // Helper to convert lamports to SOL

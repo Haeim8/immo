@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("BHyYjFqUQxMw6YNj9s4k82ngMHjby4Pn463J6epEDyKq");
+declare_id!("23Q3u8W5G32FU61jH5V5ddY7JVWDFjBEuZweft3qtF5h");
 
 #[program]
 pub mod real_estate_factory {
@@ -78,6 +78,10 @@ pub mod real_estate_factory {
         property.voting_enabled = voting_enabled;
         property.total_dividends_deposited = 0;
         property.total_dividends_claimed = 0;
+        property.proposal_count = 0;
+        property.is_liquidated = false;
+        property.liquidation_amount = 0;
+        property.liquidation_claimed = 0;
         property.bump = ctx.bumps.property;
 
         factory.property_count += 1;
@@ -264,14 +268,15 @@ pub mod real_estate_factory {
         require!(description.len() <= 1000, FactoryError::DescriptionTooLong);
         require!(voting_duration > 0, FactoryError::InvalidDuration);
 
-        let property = &ctx.accounts.property;
+        let property = &mut ctx.accounts.property;
         require!(property.voting_enabled, FactoryError::VotingDisabled);
 
         let proposal = &mut ctx.accounts.proposal;
         let clock = Clock::get()?;
+        let proposal_id = property.proposal_count;
 
         proposal.property = property.key();
-        proposal.proposal_id = 0; // TODO: increment from property counter
+        proposal.proposal_id = proposal_id;
         proposal.title = title.clone();
         proposal.description = description;
         proposal.creator = ctx.accounts.admin.key();
@@ -283,8 +288,14 @@ pub mod real_estate_factory {
         proposal.is_executed = false;
         proposal.bump = ctx.bumps.proposal;
 
+        property.proposal_count = property
+            .proposal_count
+            .checked_add(1)
+            .ok_or(FactoryError::MathOverflow)?;
+
         msg!("Proposal created: {}", title);
         msg!("Voting ends at: {}", proposal.voting_ends_at);
+        msg!("Proposal ID: {}", proposal_id);
 
         Ok(())
     }
@@ -391,6 +402,137 @@ pub mod real_estate_factory {
         team_member.is_active = false;
 
         msg!("Team member removed: {}", team_member.wallet);
+
+        Ok(())
+    }
+
+    /// Liquidate property (admin deposits final sale proceeds)
+    pub fn liquidate_property(
+        ctx: Context<LiquidateProperty>,
+        total_sale_amount: u64,
+    ) -> Result<()> {
+        require!(total_sale_amount > 0, FactoryError::InvalidAmount);
+
+        let property_info = ctx.accounts.property.to_account_info();
+        let admin_info = ctx.accounts.admin.to_account_info();
+        let system_program = ctx.accounts.system_program.to_account_info();
+
+        let property = &ctx.accounts.property;
+
+        // Verify all shares have been sold
+        require!(
+            property.shares_sold == property.total_shares,
+            FactoryError::NoSharesSold
+        );
+
+        // Verify property is not active anymore
+        require!(!property.is_active, FactoryError::SaleStillActive);
+
+        // Verify not already liquidated
+        require!(!property.is_liquidated, FactoryError::AlreadyLiquidated);
+
+        require!(
+            total_sale_amount % property.total_shares == 0,
+            FactoryError::InvalidAmount
+        );
+
+        // Mutable borrow after readonly checks
+        let property = &mut ctx.accounts.property;
+
+        // Transfer liquidation funds from admin to property PDA
+        let transfer_ctx = CpiContext::new(
+            system_program,
+            Transfer {
+                from: admin_info,
+                to: property_info.clone(),
+            },
+        );
+        transfer(transfer_ctx, total_sale_amount)?;
+
+        // Mark property as liquidated
+        property.is_liquidated = true;
+        property.liquidation_amount = total_sale_amount;
+        property.liquidation_claimed = 0;
+
+        msg!(
+            "Property {} liquidated for {} lamports",
+            property.property_id,
+            total_sale_amount
+        );
+        msg!("Amount per share: {} lamports", total_sale_amount / property.total_shares);
+
+        Ok(())
+    }
+
+    /// Claim liquidation proceeds and burn NFT
+    pub fn claim_liquidation(ctx: Context<ClaimLiquidation>) -> Result<()> {
+        let property_info = ctx.accounts.property.to_account_info();
+        let owner_info = ctx.accounts.owner.to_account_info();
+        let share_nft = &ctx.accounts.share_nft;
+
+        let property_account = &ctx.accounts.property;
+
+        // Verify property is liquidated
+        require!(property_account.is_liquidated, FactoryError::NotLiquidated);
+
+        // Verify NFT owner
+        require!(
+            share_nft.owner == ctx.accounts.owner.key(),
+            FactoryError::NotNftOwner
+        );
+
+        // Verify NFT belongs to this property
+        require!(
+            share_nft.property == property_account.key(),
+            FactoryError::WrongProperty
+        );
+
+        // Calculate claimable amount
+        let amount_per_share = property_account
+            .liquidation_amount
+            .checked_div(property_account.total_shares)
+            .ok_or(FactoryError::MathOverflow)?;
+
+        // Transfer liquidation proceeds from property PDA to NFT owner
+        {
+            {
+                let mut property_lamports = property_info.try_borrow_mut_lamports()?;
+                let current_balance = **property_lamports;
+                let updated_balance = current_balance
+                    .checked_sub(amount_per_share)
+                    .ok_or(FactoryError::MathOverflow)?;
+                **property_lamports = updated_balance;
+            }
+
+            {
+                let mut owner_lamports = owner_info.try_borrow_mut_lamports()?;
+                let current_balance = **owner_lamports;
+                let updated_balance = current_balance
+                    .checked_add(amount_per_share)
+                    .ok_or(FactoryError::MathOverflow)?;
+                **owner_lamports = updated_balance;
+            }
+        }
+
+        let property = &mut ctx.accounts.property;
+        let share_nft = &ctx.accounts.share_nft;
+
+        let new_total_claimed = property
+            .liquidation_claimed
+            .checked_add(amount_per_share)
+            .ok_or(FactoryError::MathOverflow)?;
+        require!(
+            new_total_claimed <= property.liquidation_amount,
+            FactoryError::LiquidationInsufficientFunds
+        );
+
+        property.liquidation_claimed = new_total_claimed;
+
+        msg!("Liquidation claimed: {} lamports for NFT #{}", amount_per_share, share_nft.token_id);
+        msg!("NFT will be closed (burned)");
+
+        // Note: The NFT account will be closed automatically by Anchor's 'close' constraint
+        // Rent lamports will be returned to the owner
 
         Ok(())
     }
@@ -540,6 +682,7 @@ pub struct CreateProposal<'info> {
     pub factory: Account<'info, Factory>,
 
     #[account(
+        mut,
         seeds = [b"property", factory.key().as_ref(), &property.property_id.to_le_bytes()],
         bump = property.bump
     )]
@@ -549,7 +692,11 @@ pub struct CreateProposal<'info> {
         init,
         payer = admin,
         space = 8 + Proposal::INIT_SPACE,
-        seeds = [b"proposal", property.key().as_ref(), &[0u8; 8]], // TODO: use proper proposal_id
+        seeds = [
+            b"proposal",
+            property.key().as_ref(),
+            &property.proposal_count.to_le_bytes()
+        ],
         bump
     )]
     pub proposal: Account<'info, Proposal>,
@@ -658,6 +805,45 @@ pub struct RemoveTeamMember<'info> {
     pub admin: Signer<'info>,
 }
 
+#[derive(Accounts)]
+pub struct LiquidateProperty<'info> {
+    #[account(seeds = [b"factory"], bump = factory.bump)]
+    pub factory: Account<'info, Factory>,
+
+    #[account(
+        mut,
+        seeds = [b"property", factory.key().as_ref(), &property.property_id.to_le_bytes()],
+        bump = property.bump
+    )]
+    pub property: Account<'info, Property>,
+
+    #[account(mut, address = factory.admin)]
+    pub admin: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimLiquidation<'info> {
+    #[account(
+        mut,
+        seeds = [b"property", property.factory.as_ref(), &property.property_id.to_le_bytes()],
+        bump = property.bump
+    )]
+    pub property: Account<'info, Property>,
+
+    #[account(
+        mut,
+        close = owner,
+        seeds = [b"share_nft", property.key().as_ref(), &share_nft.token_id.to_le_bytes()],
+        bump = share_nft.bump
+    )]
+    pub share_nft: Account<'info, ShareNFT>,
+
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
 // ============== DATA STRUCTURES ==============
 
 #[account]
@@ -703,6 +889,10 @@ pub struct Property {
     pub voting_enabled: bool,             // 1 (Enable voting for investors)
     pub total_dividends_deposited: u64,   // 8
     pub total_dividends_claimed: u64,     // 8
+    pub proposal_count: u64,              // 8 (Number of proposals created for this property)
+    pub is_liquidated: bool,              // 1 (Property has been sold/liquidated)
+    pub liquidation_amount: u64,          // 8 (Total sale price for liquidation)
+    pub liquidation_claimed: u64,         // 8 (Amount already claimed by investors)
     pub bump: u8,                         // 1
 }
 
@@ -833,4 +1023,11 @@ pub enum FactoryError {
     // Team management errors
     #[msg("Unauthorized: Only admin or team members can perform this action")]
     Unauthorized,
+    // Liquidation errors
+    #[msg("Property has already been liquidated")]
+    AlreadyLiquidated,
+    #[msg("Property has not been liquidated yet")]
+    NotLiquidated,
+    #[msg("Not enough liquidation funds remain to honor this claim")]
+    LiquidationInsufficientFunds,
 }

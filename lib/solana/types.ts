@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 
 // Program IDs - DEVNET
-export const FACTORY_PROGRAM_ID = new PublicKey("BHyYjFqUQxMw6YNj9s4k82ngMHjby4Pn463J6epEDyKq");
+export const FACTORY_PROGRAM_ID = new PublicKey("23Q3u8W5G32FU61jH5V5ddY7JVWDFjBEuZweft3qtF5h");
 export const PROPERTY_PROGRAM_ID = new PublicKey("97eUkEnc8ycsVemeh65NEfh4P4nnPMSZReUG66fSe3Kr");
 
 // Factory Account
@@ -38,6 +38,10 @@ export interface Property {
   votingEnabled: boolean;
   totalDividendsDeposited: BN;
   totalDividendsClaimed: BN;
+  proposalCount: BN;
+  isLiquidated: boolean;
+  liquidationAmount: BN;
+  liquidationClaimed: BN;
   bump: number;
 }
 
@@ -53,6 +57,31 @@ export interface ShareNFT {
   votingPower: BN;
   bump: number;
   nftSvgData: string;
+}
+
+// Governance
+export interface Proposal {
+  property: PublicKey;
+  proposalId: BN;
+  title: string;
+  description: string;
+  creator: PublicKey;
+  createdAt: BN;
+  votingEndsAt: BN;
+  yesVotes: BN;
+  noVotes: BN;
+  isActive: boolean;
+  isExecuted: boolean;
+  bump: number;
+}
+
+export interface Vote {
+  proposal: PublicKey;
+  voter: PublicKey;
+  shareNft: PublicKey;
+  voteChoice: boolean;
+  votedAt: BN;
+  bump: number;
 }
 
 // Property Stats (from property_contract)
@@ -101,6 +130,7 @@ export interface PropertyDisplay extends Property {
   daysRemaining: number;
   sharePriceSOL: number;
   totalValue: number;
+  isLiquidated: boolean;
 }
 
 export interface ShareNFTDisplay extends ShareNFT {
