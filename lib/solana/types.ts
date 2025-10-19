@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 
 // Program IDs - DEVNET
-export const FACTORY_PROGRAM_ID = new PublicKey("23Q3u8W5G32FU61jH5V5ddY7JVWDFjBEuZweft3qtF5h");
+export const FACTORY_PROGRAM_ID = new PublicKey("HqAokkcBCp4UNz6Pnimctt2EmWP5g2mhLem9bySCWMhc");
 export const PROPERTY_PROGRAM_ID = new PublicKey("97eUkEnc8ycsVemeh65NEfh4P4nnPMSZReUG66fSe3Kr");
 
 // Factory Account

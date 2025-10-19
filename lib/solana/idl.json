@@ -1,5 +1,5 @@
 {
-  "address": "23Q3u8W5G32FU61jH5V5ddY7JVWDFjBEuZweft3qtF5h",
+  "address": "HqAokkcBCp4UNz6Pnimctt2EmWP5g2mhLem9bySCWMhc",
   "metadata": {
     "name": "real_estate_factory",
     "version": "0.1.0",
@@ -1272,6 +1272,55 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "update_admin",
+      "docs": [
+        "Update factory admin (current admin only)"
+      ],
+      "discriminator": [
+        161,
+        176,
+        40,
+        213,
+        60,
+        184,
+        179,
+        228
+      ],
+      "accounts": [
+        {
+          "name": "factory",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  99,
+                  116,
+                  111,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
     }
   ],
   "accounts": [

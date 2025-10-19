@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("23Q3u8W5G32FU61jH5V5ddY7JVWDFjBEuZweft3qtF5h");
+declare_id!("HqAokkcBCp4UNz6Pnimctt2EmWP5g2mhLem9bySCWMhc");
 
 #[program]
 pub mod real_estate_factory {
@@ -536,6 +536,16 @@ pub mod real_estate_factory {
 
         Ok(())
     }
+
+    /// Update factory admin (current admin only)
+    pub fn update_admin(ctx: Context<UpdateAdmin>, new_admin: Pubkey) -> Result<()> {
+        let factory = &mut ctx.accounts.factory;
+        factory.admin = new_admin;
+
+        msg!("Factory admin updated to {}", new_admin);
+
+        Ok(())
+    }
 }
 
 // ============== ACCOUNTS ==============
@@ -842,6 +852,15 @@ pub struct ClaimLiquidation<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateAdmin<'info> {
+    #[account(mut, seeds = [b"factory"], bump = factory.bump)]
+    pub factory: Account<'info, Factory>,
+
+    #[account(mut, address = factory.admin)]
+    pub admin: Signer<'info>,
 }
 
 // ============== DATA STRUCTURES ==============
