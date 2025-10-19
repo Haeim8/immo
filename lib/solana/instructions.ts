@@ -101,25 +101,30 @@ export function getVotePDA(
 }
 
 // Initialize factory (admin only)
-export async function initializeFactory(
-  program: RealEstateFactoryProgram,
+export async function initializeFactoryInstruction(
+  connection: Connection,
   admin: PublicKey,
   treasury: PublicKey,
   payer: PublicKey
-): Promise<string> {
+): Promise<{ transaction: Transaction; factoryPDA: PublicKey }> {
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
   const [factoryPDA] = getFactoryPDA();
 
-  const tx = await program.methods
+  const instruction = await program.methods
     .initialize(admin)
     .accounts({
       factory: factoryPDA,
-      treasury: treasury,
-      payer: payer,
+      treasury,
+      payer,
       systemProgram: SystemProgram.programId,
     })
-    .rpc();
+    .instruction();
 
-  return tx;
+  const transaction = new Transaction().add(instruction);
+  transaction.feePayer = payer;
+
+  return { transaction, factoryPDA };
 }
 
 // Create a new property

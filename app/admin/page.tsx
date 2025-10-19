@@ -23,7 +23,7 @@ import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import BlurBackground from "@/components/atoms/BlurBackground";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { useBrickChain, useAllProperties, usePropertyProposals } from "@/lib/solana/hooks";
+import { useBrickChain, useAllProperties, usePropertyProposals, useFactoryAccount } from "@/lib/solana/hooks";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { useSolPrice, usdToLamports } from "@/lib/solana/useSolPrice";
@@ -1161,10 +1161,12 @@ function GovernanceTab() {
 
 function OperationsTab() {
   const { properties, loading, error, refresh } = useAllProperties();
-  const { closeSaleManually, triggerLiquidation, loading: actionLoading, error: actionError } = useBrickChain();
+  const { factory, loading: loadingFactory, refresh: refreshFactory } = useFactoryAccount();
+  const { closeSaleManually, triggerLiquidation, initializeFactory, loading: actionLoading, error: actionError } = useBrickChain();
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [liquidationAmount, setLiquidationAmount] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [treasuryAddress, setTreasuryAddress] = useState<string>("");
 
   const selected = useMemo(
     () => properties.find((p) => p.publicKey.toBase58() === selectedProperty) || null,
@@ -1213,6 +1215,24 @@ function OperationsTab() {
     }
   };
 
+  const handleInitializeFactory = async () => {
+    const treasury = treasuryAddress.trim();
+    if (!treasury) {
+      alert("Enter a treasury wallet address.");
+      return;
+    }
+
+    try {
+      const treasuryPubkey = new PublicKey(treasury);
+      const { factoryPDA } = await initializeFactory(treasuryPubkey);
+      setSuccessMessage(`Factory initialized: ${factoryPDA.toBase58()}`);
+      setTreasuryAddress("");
+      refreshFactory();
+    } catch (err: any) {
+      alert(err.message || "Failed to initialize factory");
+    }
+  };
+
   const saleEndDate =
     selected?.account.saleEnd && selected.account.saleEnd.toNumber() > 0
       ? new Date(selected.account.saleEnd.toNumber() * 1000)
@@ -1231,6 +1251,36 @@ function OperationsTab() {
           Refresh Properties
         </AnimatedButton>
       </div>
+
+      {!loadingFactory && !factory && (
+        <GlassCard>
+          <div className="grid md:grid-cols-2 gap-6 items-center">
+            <div>
+              <h4 className="text-lg font-semibold text-purple-400">Factory not initialized</h4>
+              <p className="text-sm text-muted-foreground">
+                Deployé sur Devnet, le programme doit être initialisé avec un trésor avant de gérer des propriétés
+                ou l’équipe. Utilise ce formulaire pour créer le compte factory (effectué une seule fois).
+              </p>
+            </div>
+            <div className="flex flex-col md:flex-row gap-3">
+              <input
+                type="text"
+                placeholder="Treasury wallet address"
+                value={treasuryAddress}
+                onChange={(e) => setTreasuryAddress(e.target.value)}
+                className="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
+              />
+              <AnimatedButton
+                variant="primary"
+                onClick={handleInitializeFactory}
+                disabled={actionLoading || !treasuryAddress.trim()}
+              >
+                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Initialize Factory"}
+              </AnimatedButton>
+            </div>
+          </div>
+        </GlassCard>
+      )}
 
       {error && (
         <GlassCard>

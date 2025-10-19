@@ -16,6 +16,8 @@ import {
   createProposalInstruction,
   closeProposalInstruction,
   liquidateProperty,
+  initializeFactoryInstruction,
+  fetchFactory,
 } from "./instructions";
 import { buyShareWithNFT } from "./buy-share-with-nft";
 import {
@@ -23,6 +25,7 @@ import {
   Property,
   ShareNFT,
   Proposal,
+  Factory,
 } from "./types";
 import BN from "bn.js";
 
@@ -286,6 +289,36 @@ export function useBrickChain() {
     [connection, publicKey, sendTransaction, handleError]
   );
 
+  const initializeFactory = useCallback(
+    async (treasury: PublicKey) => {
+      if (!publicKey) {
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { transaction, factoryPDA } = await initializeFactoryInstruction(
+          connection,
+          publicKey,
+          treasury,
+          publicKey
+        );
+
+        const signature = await sendTransaction(transaction, connection);
+        await connection.confirmTransaction(signature, "confirmed");
+
+        setLoading(false);
+        return { signature, factoryPDA };
+      } catch (err) {
+        handleError(err);
+        throw err;
+      }
+    },
+    [connection, publicKey, sendTransaction, handleError]
+  );
+
   return {
     buyPropertyShare,
     claimShareDividends,
@@ -295,6 +328,7 @@ export function useBrickChain() {
     closeGovernanceProposal,
     closeSaleManually,
     triggerLiquidation,
+    initializeFactory,
     loading,
     error,
   };
@@ -503,6 +537,32 @@ export function useUserShareNFTs() {
   }, [connection, publicKey]);
 
   return { shareNFTs, loading, error, refresh };
+}
+
+export function useFactoryAccount() {
+  const { connection } = useConnection();
+  const [factory, setFactory] = useState<{ publicKey: PublicKey; account: Factory } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const account = await fetchFactory(connection);
+      setFactory(account);
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch factory");
+    } finally {
+      setLoading(false);
+    }
+  }, [connection]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { factory, loading, error, refresh };
 }
 
 export function usePropertyProposals(propertyPDA: PublicKey | null) {
