@@ -1,5 +1,5 @@
 {
-  "address": "HqAokkcBCp4UNz6Pnimctt2EmWP5g2mhLem9bySCWMhc",
+  "address": "HZp9dtYNuCC7AUapf8FZmdU83S5UH8AU21ffbpTTXQ6J",
   "metadata": {
     "name": "real_estate_factory",
     "version": "0.1.0",
@@ -608,8 +608,13 @@
           }
         },
         {
-          "name": "admin",
+          "name": "authority",
+          "writable": true,
           "signer": true
+        },
+        {
+          "name": "team_member",
+          "optional": true
         }
       ],
       "args": []
@@ -709,8 +714,13 @@
           }
         },
         {
-          "name": "admin",
+          "name": "authority",
+          "writable": true,
           "signer": true
+        },
+        {
+          "name": "team_member",
+          "optional": true
         }
       ],
       "args": []
@@ -782,9 +792,13 @@
           }
         },
         {
-          "name": "admin",
+          "name": "authority",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "team_member",
+          "optional": true
         },
         {
           "name": "system_program",
@@ -954,9 +968,13 @@
           }
         },
         {
-          "name": "admin",
+          "name": "authority",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "team_member",
+          "optional": true
         },
         {
           "name": "system_program",
@@ -1044,9 +1062,13 @@
           }
         },
         {
-          "name": "admin",
+          "name": "authority",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "team_member",
+          "optional": true
         },
         {
           "name": "system_program",
@@ -1182,9 +1204,13 @@
           }
         },
         {
-          "name": "admin",
+          "name": "authority",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "team_member",
+          "optional": true
         },
         {
           "name": "system_program",
@@ -1556,21 +1582,26 @@
     },
     {
       "code": 6030,
+      "name": "TeamMemberInactive",
+      "msg": "Team member is not active"
+    },
+    {
+      "code": 6031,
       "name": "Unauthorized",
       "msg": "Unauthorized: Only admin or team members can perform this action"
     },
     {
-      "code": 6031,
+      "code": 6032,
       "name": "AlreadyLiquidated",
       "msg": "Property has already been liquidated"
     },
     {
-      "code": 6032,
+      "code": 6033,
       "name": "NotLiquidated",
       "msg": "Property has not been liquidated yet"
     },
     {
-      "code": 6033,
+      "code": 6034,
       "name": "LiquidationInsufficientFunds",
       "msg": "Not enough liquidation funds remain to honor this claim"
     }

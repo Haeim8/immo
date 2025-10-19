@@ -1,7 +1,34 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("HqAokkcBCp4UNz6Pnimctt2EmWP5g2mhLem9bySCWMhc");
+declare_id!("HZp9dtYNuCC7AUapf8FZmdU83S5UH8AU21ffbpTTXQ6J");
+
+fn assert_authorized(
+    program_id: &Pubkey,
+    factory: &Account<Factory>,
+    authority: &Signer,
+    team_member: &Option<Account<TeamMember>>,
+) -> Result<()> {
+    if authority.key() == factory.admin {
+        return Ok(());
+    }
+
+    if let Some(member) = team_member {
+        require!(member.is_active, FactoryError::TeamMemberInactive);
+        require!(member.factory == factory.key(), FactoryError::Unauthorized);
+        require!(member.wallet == authority.key(), FactoryError::Unauthorized);
+
+        let (expected_pda, _) = Pubkey::find_program_address(
+            &[b"team_member", factory.key().as_ref(), authority.key().as_ref()],
+            program_id,
+        );
+        require!(expected_pda == member.key(), FactoryError::Unauthorized);
+        Ok(())
+    } else {
+        err!(FactoryError::Unauthorized)
+    }
+}
 
 #[program]
 pub mod real_estate_factory {
@@ -49,6 +76,13 @@ pub mod real_estate_factory {
         require!(metadata_cid.len() <= 100, FactoryError::MetadataCidTooLong);
         require!(total_shares > 0, FactoryError::InvalidShareAmount);
         require!(share_price > 0, FactoryError::InvalidPrice);
+
+        assert_authorized(
+            ctx.program_id,
+            &ctx.accounts.factory,
+            &ctx.accounts.authority,
+            &ctx.accounts.team_member,
+        )?;
 
         let factory = &mut ctx.accounts.factory;
         let property = &mut ctx.accounts.property;
@@ -163,11 +197,18 @@ pub mod real_estate_factory {
     pub fn deposit_dividends(ctx: Context<DepositDividends>, amount: u64) -> Result<()> {
         require!(amount > 0, FactoryError::InvalidAmount);
 
+        assert_authorized(
+            ctx.program_id,
+            &ctx.accounts.factory,
+            &ctx.accounts.authority,
+            &ctx.accounts.team_member,
+        )?;
+
         // Transfer dividends to property PDA
         let transfer_ctx = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             Transfer {
-                from: ctx.accounts.admin.to_account_info(),
+                from: ctx.accounts.authority.to_account_info(),
                 to: ctx.accounts.property.to_account_info(),
             },
         );
@@ -241,6 +282,13 @@ pub mod real_estate_factory {
 
     /// Close a property sale
     pub fn close_property_sale(ctx: Context<ClosePropertySale>) -> Result<()> {
+        assert_authorized(
+            ctx.program_id,
+            &ctx.accounts.factory,
+            &ctx.accounts.authority,
+            &ctx.accounts.team_member,
+        )?;
+
         let property = &mut ctx.accounts.property;
 
         let clock = Clock::get()?;
@@ -268,6 +316,13 @@ pub mod real_estate_factory {
         require!(description.len() <= 1000, FactoryError::DescriptionTooLong);
         require!(voting_duration > 0, FactoryError::InvalidDuration);
 
+        assert_authorized(
+            ctx.program_id,
+            &ctx.accounts.factory,
+            &ctx.accounts.authority,
+            &ctx.accounts.team_member,
+        )?;
+
         let property = &mut ctx.accounts.property;
         require!(property.voting_enabled, FactoryError::VotingDisabled);
 
@@ -279,7 +334,7 @@ pub mod real_estate_factory {
         proposal.proposal_id = proposal_id;
         proposal.title = title.clone();
         proposal.description = description;
-        proposal.creator = ctx.accounts.admin.key();
+        proposal.creator = ctx.accounts.authority.key();
         proposal.created_at = clock.unix_timestamp;
         proposal.voting_ends_at = clock.unix_timestamp + voting_duration;
         proposal.yes_votes = 0;
@@ -361,6 +416,13 @@ pub mod real_estate_factory {
 
     /// Close a proposal (admin only)
     pub fn close_proposal(ctx: Context<CloseProposal>) -> Result<()> {
+        assert_authorized(
+            ctx.program_id,
+            &ctx.accounts.factory,
+            &ctx.accounts.authority,
+            &ctx.accounts.team_member,
+        )?;
+
         let proposal = &mut ctx.accounts.proposal;
 
         let clock = Clock::get()?;
@@ -413,8 +475,15 @@ pub mod real_estate_factory {
     ) -> Result<()> {
         require!(total_sale_amount > 0, FactoryError::InvalidAmount);
 
+        assert_authorized(
+            ctx.program_id,
+            &ctx.accounts.factory,
+            &ctx.accounts.authority,
+            &ctx.accounts.team_member,
+        )?;
+
         let property_info = ctx.accounts.property.to_account_info();
-        let admin_info = ctx.accounts.admin.to_account_info();
+        let authority_info = ctx.accounts.authority.to_account_info();
         let system_program = ctx.accounts.system_program.to_account_info();
 
         let property = &ctx.accounts.property;
@@ -443,7 +512,7 @@ pub mod real_estate_factory {
         let transfer_ctx = CpiContext::new(
             system_program,
             Transfer {
-                from: admin_info,
+                from: authority_info,
                 to: property_info.clone(),
             },
         );
@@ -580,15 +649,17 @@ pub struct CreateProperty<'info> {
 
     #[account(
         init,
-        payer = admin,
+        payer = authority,
         space = 8 + Property::INIT_SPACE,
         seeds = [b"property", factory.key().as_ref(), &factory.property_count.to_le_bytes()],
         bump
     )]
     pub property: Account<'info, Property>,
 
-    #[account(mut, address = factory.admin)]
-    pub admin: Signer<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub team_member: Option<Account<'info, TeamMember>>,
     pub system_program: Program<'info, System>,
 }
 
@@ -639,8 +710,10 @@ pub struct DepositDividends<'info> {
     )]
     pub property: Account<'info, Property>,
 
-    #[account(mut, address = factory.admin)]
-    pub admin: Signer<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub team_member: Option<Account<'info, TeamMember>>,
     pub system_program: Program<'info, System>,
 }
 
@@ -682,8 +755,10 @@ pub struct ClosePropertySale<'info> {
     )]
     pub property: Account<'info, Property>,
 
-    #[account(address = factory.admin)]
-    pub admin: Signer<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub team_member: Option<Account<'info, TeamMember>>,
 }
 
 #[derive(Accounts)]
@@ -700,7 +775,7 @@ pub struct CreateProposal<'info> {
 
     #[account(
         init,
-        payer = admin,
+        payer = authority,
         space = 8 + Proposal::INIT_SPACE,
         seeds = [
             b"proposal",
@@ -711,8 +786,10 @@ pub struct CreateProposal<'info> {
     )]
     pub proposal: Account<'info, Proposal>,
 
-    #[account(mut, address = factory.admin)]
-    pub admin: Signer<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub team_member: Option<Account<'info, TeamMember>>,
     pub system_program: Program<'info, System>,
 }
 
@@ -773,8 +850,10 @@ pub struct CloseProposal<'info> {
     )]
     pub proposal: Account<'info, Proposal>,
 
-    #[account(address = factory.admin)]
-    pub admin: Signer<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub team_member: Option<Account<'info, TeamMember>>,
 }
 
 #[derive(Accounts)]
@@ -827,8 +906,10 @@ pub struct LiquidateProperty<'info> {
     )]
     pub property: Account<'info, Property>,
 
-    #[account(mut, address = factory.admin)]
-    pub admin: Signer<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub team_member: Option<Account<'info, TeamMember>>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1040,6 +1121,8 @@ pub enum FactoryError {
     #[msg("Voting is still active")]
     VotingStillActive,
     // Team management errors
+    #[msg("Team member is not active")]
+    TeamMemberInactive,
     #[msg("Unauthorized: Only admin or team members can perform this action")]
     Unauthorized,
     // Liquidation errors

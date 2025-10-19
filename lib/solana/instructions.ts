@@ -17,6 +17,7 @@ import {
   Factory,
   Proposal,
 } from "./types";
+import { getTeamMemberPDA } from "./team";
 import IDL from "./idl.json";
 
 // Type for the Anchor Program
@@ -144,6 +145,22 @@ export async function createProperty(
 
   const [propertyPDA] = getPropertyPDA(factoryPDA, propertyId);
 
+  let teamMemberPDA: PublicKey | null = null;
+  if (!factoryAccount.admin.equals(admin)) {
+    teamMemberPDA = await resolveTeamMemberPDA(program, factoryPDA, admin);
+  }
+
+  const accounts: Record<string, any> = {
+    factory: factoryPDA,
+    property: propertyPDA,
+    authority: admin,
+    systemProgram: SystemProgram.programId,
+  };
+
+  if (teamMemberPDA) {
+    accounts.teamMember = teamMemberPDA;
+  }
+
   const instruction = await program.methods
     .createProperty(
       params.assetType,
@@ -163,12 +180,7 @@ export async function createProperty(
       params.metadataCid,
       params.votingEnabled
     )
-    .accounts({
-      factory: factoryPDA,
-      property: propertyPDA,
-      admin: admin,
-      systemProgram: SystemProgram.programId,
-    })
+    .accounts(accounts)
     .instruction();
 
   const transaction = new Transaction().add(instruction);
@@ -238,15 +250,27 @@ export async function depositDividends(
   const program = getProgram(provider);
 
   const [factoryPDA] = getFactoryPDA();
+  const factoryAccount = await program.account.factory.fetch(factoryPDA);
+
+  let teamMemberPDA: PublicKey | null = null;
+  if (!factoryAccount.admin.equals(admin)) {
+    teamMemberPDA = await resolveTeamMemberPDA(program, factoryPDA, admin);
+  }
+
+  const accounts: Record<string, any> = {
+    factory: factoryPDA,
+    property: propertyPDA,
+    authority: admin,
+    systemProgram: SystemProgram.programId,
+  };
+
+  if (teamMemberPDA) {
+    accounts.teamMember = teamMemberPDA;
+  }
 
   const instruction = await program.methods
     .depositDividends(new BN(amount))
-    .accounts({
-      factory: factoryPDA,
-      property: propertyPDA,
-      admin: admin,
-      systemProgram: SystemProgram.programId,
-    })
+    .accounts(accounts)
     .instruction();
 
   const transaction = new Transaction().add(instruction);
@@ -301,13 +325,25 @@ export async function closePropertySale(
   const program = getProgram(provider);
   const [factoryPDA] = getFactoryPDA();
 
+  const factoryAccount = await program.account.factory.fetch(factoryPDA);
+  let teamMemberPDA: PublicKey | null = null;
+  if (!factoryAccount.admin.equals(admin)) {
+    teamMemberPDA = await resolveTeamMemberPDA(program, factoryPDA, admin);
+  }
+
+  const accounts: Record<string, any> = {
+    factory: factoryPDA,
+    property: propertyPDA,
+    authority: admin,
+  };
+
+  if (teamMemberPDA) {
+    accounts.teamMember = teamMemberPDA;
+  }
+
   const instruction = await program.methods
     .closePropertySale()
-    .accounts({
-      factory: factoryPDA,
-      property: propertyPDA,
-      admin,
-    })
+    .accounts(accounts)
     .instruction();
 
   return new Transaction().add(instruction);
@@ -326,19 +362,31 @@ export async function createProposalInstruction(
   const program = getProgram(provider);
   const [factoryPDA] = getFactoryPDA();
 
+  const factoryAccount = await program.account.factory.fetch(factoryPDA);
   const propertyAccount = await program.account.property.fetch(propertyPDA);
   const proposalId = propertyAccount.proposalCount.toNumber();
   const [proposalPDA] = getProposalPDA(propertyPDA, proposalId);
 
+  let teamMemberPDA: PublicKey | null = null;
+  if (!factoryAccount.admin.equals(admin)) {
+    teamMemberPDA = await resolveTeamMemberPDA(program, factoryPDA, admin);
+  }
+
+  const accounts: Record<string, any> = {
+    factory: factoryPDA,
+    property: propertyPDA,
+    proposal: proposalPDA,
+    authority: admin,
+    systemProgram: SystemProgram.programId,
+  };
+
+  if (teamMemberPDA) {
+    accounts.teamMember = teamMemberPDA;
+  }
+
   const instruction = await program.methods
     .createProposal(title, description, new BN(votingDurationSeconds))
-    .accounts({
-      factory: factoryPDA,
-      property: propertyPDA,
-      proposal: proposalPDA,
-      admin,
-      systemProgram: SystemProgram.programId,
-    })
+    .accounts(accounts)
     .instruction();
 
   return { transaction: new Transaction().add(instruction), proposalPDA, proposalId };
@@ -355,14 +403,26 @@ export async function closeProposalInstruction(
   const program = getProgram(provider);
   const [factoryPDA] = getFactoryPDA();
 
+  const factoryAccount = await program.account.factory.fetch(factoryPDA);
+  let teamMemberPDA: PublicKey | null = null;
+  if (!factoryAccount.admin.equals(admin)) {
+    teamMemberPDA = await resolveTeamMemberPDA(program, factoryPDA, admin);
+  }
+
+  const accounts: Record<string, any> = {
+    factory: factoryPDA,
+    property: propertyPDA,
+    proposal: proposalPDA,
+    authority: admin,
+  };
+
+  if (teamMemberPDA) {
+    accounts.teamMember = teamMemberPDA;
+  }
+
   const instruction = await program.methods
     .closeProposal()
-    .accounts({
-      factory: factoryPDA,
-      property: propertyPDA,
-      proposal: proposalPDA,
-      admin,
-    })
+    .accounts(accounts)
     .instruction();
 
   return new Transaction().add(instruction);
@@ -397,14 +457,26 @@ export async function liquidateProperty(
   const program = getProgram(provider);
   const [factoryPDA] = getFactoryPDA();
 
+  const factoryAccount = await program.account.factory.fetch(factoryPDA);
+  let teamMemberPDA: PublicKey | null = null;
+  if (!factoryAccount.admin.equals(admin)) {
+    teamMemberPDA = await resolveTeamMemberPDA(program, factoryPDA, admin);
+  }
+
+  const accounts: Record<string, any> = {
+    factory: factoryPDA,
+    property: propertyPDA,
+    authority: admin,
+    systemProgram: SystemProgram.programId,
+  };
+
+  if (teamMemberPDA) {
+    accounts.teamMember = teamMemberPDA;
+  }
+
   const instruction = await program.methods
     .liquidateProperty(new BN(totalSaleAmountLamports))
-    .accounts({
-      factory: factoryPDA,
-      property: propertyPDA,
-      admin,
-      systemProgram: SystemProgram.programId,
-    })
+    .accounts(accounts)
     .instruction();
 
   return new Transaction().add(instruction);
@@ -543,4 +615,25 @@ export async function fetchUserShareNFTs(
     console.error("Error fetching user share NFTs:", err);
     return [];
   }
+}
+async function resolveTeamMemberPDA(
+  program: RealEstateFactoryProgram,
+  factory: PublicKey,
+  authority: PublicKey
+): Promise<PublicKey | null> {
+  const [teamMemberPDA] = getTeamMemberPDA(factory, authority);
+  try {
+    const account = await program.account.teamMember.fetchNullable(teamMemberPDA);
+    if (
+      account &&
+      account.isActive &&
+      account.wallet.equals(authority) &&
+      account.factory.equals(factory)
+    ) {
+      return teamMemberPDA;
+    }
+  } catch (_) {
+    // ignore
+  }
+  return null;
 }

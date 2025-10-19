@@ -3,7 +3,7 @@ const path = require("path");
 const { PublicKey, Connection, Transaction, SystemProgram, clusterApiUrl, TransactionInstruction, Keypair } = require("@solana/web3.js");
 
 async function main() {
-const PROGRAM_ID = new PublicKey("HqAokkcBCp4UNz6Pnimctt2EmWP5g2mhLem9bySCWMhc");
+const PROGRAM_ID = new PublicKey("HZp9dtYNuCC7AUapf8FZmdU83S5UH8AU21ffbpTTXQ6J");
   const factorySeed = Buffer.from("factory");
 
   const walletPath =
