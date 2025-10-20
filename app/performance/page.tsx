@@ -6,8 +6,11 @@ import Navbar from "@/components/organisms/Navbar";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import BlurBackground from "@/components/atoms/BlurBackground";
+import { useTranslations } from "@/components/providers/IntlProvider";
 
 export default function PerformancePage() {
+  const performanceT = useTranslations("performance");
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -21,21 +24,20 @@ export default function PerformancePage() {
             className="mb-12"
           >
             <h1 className="text-5xl font-bold mb-4">
-              <GradientText>Performance Analytics</GradientText>
+              <GradientText>{performanceT("title")}</GradientText>
             </h1>
             <p className="text-muted-foreground text-lg">
-              Track the performance of your investments over time
+              {performanceT("subtitle")}
             </p>
           </motion.div>
 
           <GlassCard className="text-center py-24">
             <BarChart3 className="h-16 w-16 mx-auto mb-6 text-cyan-400" />
             <h2 className="text-3xl font-bold mb-4">
-              <GradientText>Coming Soon</GradientText>
+              <GradientText>{performanceT("comingSoonTitle")}</GradientText>
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Performance analytics and detailed charts will be available soon.
-              We're working on bringing you comprehensive insights into your investments.
+              {performanceT("comingSoonText")}
             </p>
           </GlassCard>
         </div>

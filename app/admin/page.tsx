@@ -25,16 +25,105 @@ import BlurBackground from "@/components/atoms/BlurBackground";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import { useBrickChain, useAllProperties, usePropertyProposals, useFactoryAccount } from "@/lib/solana/hooks";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useRouter } from "next/navigation";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { useSolPrice, usdToLamports } from "@/lib/solana/useSolPrice";
 import { uploadPropertyImage, getIpfsUrl } from "@/lib/pinata/upload";
 import { createPropertyMetadata, uploadPropertyMetadata } from "@/lib/pinata/metadata";
-import { addTeamMember, removeTeamMember, getAllTeamMembers, type TeamMember } from "@/lib/solana/team";
+import { addTeamMember, removeTeamMember, getAllTeamMembers, isTeamMember, type TeamMember } from "@/lib/solana/team";
+import { ADMIN_WALLET } from "@/lib/config/admin";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "properties" | "create" | "team" | "investors" | "dividends" | "governance" | "operations"
   >("overview");
+  const router = useRouter();
+  const wallet = useWallet();
+  const { connection } = useConnection();
+  const { authenticated: privyAuthenticated, user: privyUser } = usePrivy();
+  const privyAddress = privyUser?.wallet?.address ?? null;
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessChecked, setAccessChecked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const enforceAccess = async () => {
+      const solanaWallet = wallet.publicKey?.toBase58() || null;
+      const walletAddress = solanaWallet ?? privyAddress;
+
+      if (!walletAddress) {
+        if (!cancelled) {
+          setHasAccess(false);
+          setAccessChecked(true);
+          router.replace("/");
+        }
+        return;
+      }
+
+      if (walletAddress === ADMIN_WALLET) {
+        if (!cancelled) {
+          setHasAccess(true);
+          setAccessChecked(true);
+        }
+        return;
+      }
+
+      if (solanaWallet) {
+        try {
+          const member = await isTeamMember(connection, solanaWallet);
+          if (!cancelled) {
+            setHasAccess(member);
+            setAccessChecked(true);
+            if (!member) {
+              router.replace("/portfolio");
+            }
+          }
+        } catch (error) {
+          console.error("Failed to verify admin access:", error);
+          if (!cancelled) {
+            setHasAccess(false);
+            setAccessChecked(true);
+            router.replace("/");
+          }
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setHasAccess(false);
+        setAccessChecked(true);
+        router.replace("/");
+      }
+    };
+
+    if (!wallet.connected && !privyAuthenticated) {
+      setHasAccess(false);
+      setAccessChecked(true);
+      router.replace("/");
+      return;
+    }
+
+    enforceAccess();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [wallet.connected, wallet.publicKey, privyAuthenticated, privyAddress, connection, router]);
+
+  if (!accessChecked) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+        <p className="text-sm text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen">

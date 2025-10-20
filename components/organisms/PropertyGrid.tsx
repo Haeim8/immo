@@ -6,16 +6,18 @@ import { propertyToInvestment } from "@/lib/solana/adapters";
 import PropertyCard from "@/components/molecules/PropertyCard";
 import GradientText from "@/components/atoms/GradientText";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "@/components/providers/IntlProvider";
 
 export default function PropertyGrid() {
   const { properties, loading, error } = useAllProperties();
+  const gridT = useTranslations("propertyGrid");
 
   if (loading) {
     return (
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-          <p className="text-muted-foreground">Loading properties from blockchain...</p>
+          <p className="text-muted-foreground">{gridT("loading")}</p>
         </div>
       </section>
     );
@@ -32,10 +34,12 @@ export default function PropertyGrid() {
             className="text-center mb-12"
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              <GradientText>Investment Opportunities</GradientText>
+              <GradientText>{gridT("title")}</GradientText>
             </h2>
             <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 max-w-md mx-auto">
-              Error loading properties: {error}
+              {gridT("errorText", {
+                error: typeof error === "string" ? error : String(error),
+              })}
             </div>
           </motion.div>
         </div>
@@ -54,13 +58,13 @@ export default function PropertyGrid() {
             className="text-center mb-12"
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              <GradientText>Investment Opportunities</GradientText>
+              <GradientText>{gridT("title")}</GradientText>
             </h2>
             <p className="text-muted-foreground text-lg mb-4">
-              No properties available yet. Be the first to create one!
+              {gridT("emptyText")}
             </p>
             <p className="text-sm text-muted-foreground">
-              Connect your wallet and visit the admin panel to create properties
+              {gridT("createHint")}
             </p>
           </motion.div>
         </div>
@@ -78,10 +82,10 @@ export default function PropertyGrid() {
           className="text-center mb-12"
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            <GradientText>Investment Opportunities</GradientText>
+            <GradientText>{gridT("title")}</GradientText>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Explore our curated selection of tokenized real estate properties
+            {gridT("subtitle")}
           </p>
         </motion.div>
 

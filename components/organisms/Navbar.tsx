@@ -20,13 +20,14 @@ import {
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { isTeamMember as checkIsTeamMember } from "@/lib/solana/team";
-
-// Admin wallet address (from factory contract)
-const ADMIN_WALLET = "FMRF9paehrTGB43MLdboekwUpSPbnPW1vKyhKxWRR8DH"; // Your deployed wallet
+import { useTranslations } from "@/components/providers/IntlProvider";
+import { ADMIN_WALLET } from "@/lib/config/admin";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [selectedNetwork, setSelectedNetwork] = useState("devnet");
+  const navT = useTranslations("navbar");
+  const commonT = useTranslations("common");
 
   // Privy for EVM wallets (future)
   const { authenticated: privyAuthenticated, logout: privyLogout, user: privyUser } = usePrivy();
@@ -120,22 +121,22 @@ export default function Navbar() {
             {/* Navigation Links */}
             <div className="hidden md:flex items-center gap-6">
               <NavLink href="/" active={pathname === "/"}>
-                Home
+                {navT("home")}
               </NavLink>
               <NavLink href="/portfolio" active={pathname === "/portfolio"}>
-                Portfolio
+                {navT("portfolio")}
               </NavLink>
               <NavLink href="/leaderboard" active={pathname === "/leaderboard"}>
-                Leaderboard
+                {navT("leaderboard")}
               </NavLink>
               <NavLink href="/performance" active={pathname === "/performance"}>
-                Performance
+                {navT("performance")}
               </NavLink>
               <NavLink href="/waitlist" active={pathname === "/waitlist"}>
                 <span className="relative">
-                  Waitlist
+                  {navT("waitlist")}
                   <span className="absolute -top-1 -right-6 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-purple-500 to-pink-600 rounded-full">
-                    NEW
+                    {navT("waitlistBadge")}
                   </span>
                 </span>
               </NavLink>
@@ -179,7 +180,7 @@ export default function Navbar() {
                       <path fill="url(#solGrad1)" d="M64.6,3.8C67.1,1.4,70.4,0,73.8,0h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,3.8z"/>
                       <path fill="url(#solGrad1)" d="M333.1,120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8,0-8.7,7-4.6,11.1l62.7,62.7c2.4,2.4,5.7,3.8,9.2,3.8h317.4c5.8,0,8.7-7,4.6-11.1L333.1,120.1z"/>
                     </svg>
-                    Mainnet Beta
+                    {commonT("mainnet")}
                   </div>
                 </SelectItem>
                 <SelectItem value="devnet">
@@ -195,7 +196,7 @@ export default function Navbar() {
                       <path fill="url(#solGrad2)" d="M64.6,3.8C67.1,1.4,70.4,0,73.8,0h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,3.8z"/>
                       <path fill="url(#solGrad2)" d="M333.1,120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8,0-8.7,7-4.6,11.1l62.7,62.7c2.4,2.4,5.7,3.8,9.2,3.8h317.4c5.8,0,8.7-7,4.6-11.1L333.1,120.1z"/>
                     </svg>
-                    Devnet
+                    {commonT("devnet")}
                   </div>
                 </SelectItem>
                 <SelectItem value="testnet">
@@ -211,7 +212,7 @@ export default function Navbar() {
                       <path fill="url(#solGrad3)" d="M64.6,3.8C67.1,1.4,70.4,0,73.8,0h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,3.8z"/>
                       <path fill="url(#solGrad3)" d="M333.1,120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8,0-8.7,7-4.6,11.1l62.7,62.7c2.4,2.4,5.7,3.8,9.2,3.8h317.4c5.8,0,8.7-7,4.6-11.1L333.1,120.1z"/>
                     </svg>
-                    Testnet
+                    {commonT("testnet")}
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -232,7 +233,7 @@ export default function Navbar() {
                 className="text-xs sm:text-sm"
               >
                 <Wallet className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Connect</span>
+                <span className="hidden sm:inline">{commonT("connectWallet")}</span>
               </AnimatedButton>
             ) : (
               <div className="flex items-center gap-1 sm:gap-2">
@@ -246,7 +247,7 @@ export default function Navbar() {
                   onClick={handleDisconnect}
                   className="text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  <span className="hidden sm:inline">Disconnect</span>
+                  <span className="hidden sm:inline">{commonT("disconnect")}</span>
                   <span className="sm:hidden">×</span>
                 </AnimatedButton>
               </div>

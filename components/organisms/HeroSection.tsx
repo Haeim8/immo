@@ -8,30 +8,36 @@ import AnimatedButton from "@/components/atoms/AnimatedButton";
 import BlurBackground from "@/components/atoms/BlurBackground";
 import { useAllProperties } from "@/lib/solana/hooks";
 import { calculateGlobalMetrics } from "@/lib/solana/adapters";
+import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 
 export default function HeroSection() {
   const { properties } = useAllProperties();
   const globalMetrics = calculateGlobalMetrics(properties);
+  const heroT = useTranslations("hero");
+  const { formatCurrency } = useCurrencyFormatter();
 
   const metrics = [
     {
       icon: Building2,
-      label: "Projects Funded",
-      value: globalMetrics.totalProjectsFunded,
+      label: heroT("metrics.projects"),
+      value: globalMetrics.totalProjectsFunded.toLocaleString(),
       iconColor: "text-cyan-400",
       delay: 0.2,
     },
     {
       icon: TrendingUp,
-      label: "Dividends Distributed",
-      value: `$${(globalMetrics.totalValueDistributed / 1000000).toFixed(2)}M`,
+      label: heroT("metrics.dividends"),
+      value: formatCurrency(globalMetrics.totalValueDistributed, {
+        notation: "compact",
+        maximumFractionDigits: 2,
+      }),
       iconColor: "text-blue-400",
       delay: 0.4,
     },
     {
       icon: Users,
-      label: "Active Investors",
-      value: globalMetrics.activeInvestors,
+      label: heroT("metrics.investors"),
+      value: globalMetrics.activeInvestors.toLocaleString(),
       iconColor: "text-purple-400",
       delay: 0.6,
     },
@@ -48,39 +54,39 @@ export default function HeroSection() {
             className="text-center space-y-6"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-              <GradientText from="from-cyan-400" to="to-blue-600">
-                Tokenized Real Estate
-              </GradientText>
-              <br />
-              <span className="text-foreground">Investment Platform</span>
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Access premium real estate through blockchain technology. Invest, earn passive income, and track your assets in real-time.
-            </p>
-          </motion.div>
+          transition={{ duration: 0.8 }}
+        >
+          <h1 className="text-5xl md:text-7xl font-bold leading-tight">
+            <GradientText from="from-cyan-400" to="to-blue-600">
+              {heroT("titleLine1")}
+            </GradientText>
+            <br />
+            <span className="text-foreground">{heroT("titleLine2")}</span>
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            {heroT("subtitle")}
+          </p>
+        </motion.div>
 
-          {/* CTA Buttons */}
-          <motion.div
+        {/* CTA Buttons */}
+        <motion.div
             className="flex items-center justify-center gap-4"
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <AnimatedButton variant="primary" size="lg">
+            {heroT("exploreCTA")}
+          </AnimatedButton>
+          <AnimatedButton
+            variant="outline"
+            size="lg"
+            onClick={() => window.open(globalMetrics.blockchainExplorerUrl, "_blank")}
           >
-            <AnimatedButton variant="primary" size="lg">
-              Explore Properties
-            </AnimatedButton>
-            <AnimatedButton
-              variant="outline"
-              size="lg"
-              onClick={() => window.open(globalMetrics.blockchainExplorerUrl, "_blank")}
-            >
-              <ExternalLink className="h-5 w-5 mr-2" />
-              View on Blockchain
-            </AnimatedButton>
-          </motion.div>
+            <ExternalLink className="h-5 w-5 mr-2" />
+            {heroT("explorerCTA")}
+          </AnimatedButton>
+        </motion.div>
 
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -8,6 +8,7 @@ import { ArrowRight, Check, TrendingUp, Shield, Zap, Globe, Mail, Loader2 } from
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
+import { useTranslations, useCurrencyFormatter, useIntl } from "@/components/providers/IntlProvider";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -15,6 +16,56 @@ export default function WaitlistPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const waitlistT = useTranslations("waitlist");
+  const { formatCurrency } = useCurrencyFormatter();
+  const { language } = useIntl();
+  const minInvestment = formatCurrency(1, { maximumFractionDigits: 0 });
+  const stats = [
+    { label: waitlistT("stats.assets"), value: 500, suffix: "+" },
+    { label: waitlistT("stats.investors"), value: 10000, suffix: "+" },
+    { label: waitlistT("stats.returns"), value: 8, suffix: "%" },
+    { label: waitlistT("stats.countries"), value: 25, suffix: "+" },
+  ];
+  const features = [
+    {
+      icon: Shield,
+      title: waitlistT("feature1Title"),
+      description: waitlistT("feature1Text"),
+      color: "from-purple-500 to-pink-600",
+    },
+    {
+      icon: TrendingUp,
+      title: waitlistT("feature2Title"),
+      description: waitlistT("feature2Text"),
+      color: "from-cyan-500 to-blue-600",
+    },
+    {
+      icon: Zap,
+      title: waitlistT("feature3Title"),
+      description: waitlistT("feature3Text"),
+      color: "from-yellow-500 to-orange-600",
+    },
+    {
+      icon: Globe,
+      title: waitlistT("feature4Title"),
+      description: waitlistT("feature4Text"),
+      color: "from-green-500 to-emerald-600",
+    },
+    {
+      icon: Check,
+      title: waitlistT("feature5Title"),
+      description: waitlistT("feature5Text"),
+      color: "from-indigo-500 to-purple-600",
+    },
+    {
+      icon: ArrowRight,
+      title: waitlistT("feature6Title"),
+      description: waitlistT("feature6Text"),
+      color: "from-pink-500 to-rose-600",
+    },
+  ];
+  const subtitleTemplate = waitlistT("subtitle", { amount: "__AMOUNT__" });
+  const [subtitleBefore, subtitleAfter] = subtitleTemplate.split("__AMOUNT__");
 
   const heroRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
@@ -95,7 +146,7 @@ export default function WaitlistPage() {
       setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
       console.error("Error:", err);
-      alert("Error joining waitlist");
+      alert(waitlistT("errorText"));
     } finally {
       setLoading(false);
     }
@@ -121,22 +172,23 @@ export default function WaitlistPage() {
           >
             <div className="px-6 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-cyan-500/20 border border-purple-500/30">
               <span className="text-sm font-semibold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                🚀 Coming Soon
+                {waitlistT("badge")}
               </span>
             </div>
           </motion.div>
 
           <h1 className="hero-element text-6xl md:text-8xl font-bold mb-6">
             <GradientText animate>
-              Investissez dans
+              {waitlistT("titleLine1")}
               <br />
-              l'avenir des actifs
+              {waitlistT("titleLine2")}
             </GradientText>
           </h1>
 
           <p className="hero-element text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12">
-            Tokenisation d'actifs réels sur blockchain. Immobilier, véhicules, entreprises.
-            Diversifiez votre portfolio dès <span className="text-cyan-400 font-semibold">1$</span>.
+            {subtitleBefore}
+            <span className="text-cyan-400 font-semibold">{minInvestment}</span>
+            {subtitleAfter}
           </p>
 
           {/* Waitlist Form */}
@@ -151,16 +203,14 @@ export default function WaitlistPage() {
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
                     <Check className="h-8 w-8 text-green-400" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Vous êtes sur la liste !</h3>
-                  <p className="text-muted-foreground">
-                    Nous vous contacterons dès le lancement.
-                  </p>
+                  <h3 className="text-xl font-semibold mb-2">{waitlistT("successTitle")}</h3>
+                  <p className="text-muted-foreground">{waitlistT("successText")}</p>
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <h3 className="text-2xl font-bold mb-2">Rejoignez la Waitlist</h3>
+                  <h3 className="text-2xl font-bold mb-2">{waitlistT("joinTitle")}</h3>
                   <p className="text-sm text-muted-foreground mb-6">
-                    Soyez parmi les premiers à investir
+                    {waitlistT("joinSubtitle")}
                   </p>
 
                   <div className="relative">
@@ -169,7 +219,7 @@ export default function WaitlistPage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="votre@email.com"
+                      placeholder={waitlistT("emailPlaceholder")}
                       className="w-full pl-12 pr-4 py-4 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none transition-colors"
                       required
                       disabled={loading}
@@ -185,18 +235,18 @@ export default function WaitlistPage() {
                     {loading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Inscription...
+                        {waitlistT("submitting")}
                       </>
                     ) : (
                       <>
-                        Rejoindre la Waitlist
+                        {waitlistT("submit")}
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </>
                     )}
                   </AnimatedButton>
 
                   <p className="text-xs text-muted-foreground text-center">
-                    En vous inscrivant, vous acceptez de recevoir nos communications.
+                    {waitlistT("consent")}
                   </p>
                 </form>
               )}
@@ -207,22 +257,24 @@ export default function WaitlistPage() {
         {/* Stats Section */}
         <div ref={statsRef} className="mb-32">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[
-              { label: "Actifs disponibles", value: 500, suffix: "+" },
-              { label: "Investisseurs", value: 10000, suffix: "+" },
-              { label: "Rendement moyen", value: 8, suffix: "%" },
-              { label: "Pays couverts", value: 25, suffix: "+" },
-            ].map((stat, i) => (
-              <GlassCard key={i} className="p-6 text-center">
-                <div className="text-4xl font-bold mb-2">
-                  <span className="stat-number text-cyan-400" data-value={stat.value}>
-                    0
-                  </span>
-                  <span className="text-cyan-400">{stat.suffix}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </GlassCard>
-            ))}
+            {stats.map((stat, i) => {
+              const formattedValue = new Intl.NumberFormat(language).format(stat.value);
+              return (
+                <GlassCard
+                  key={i}
+                  className="p-6 text-center"
+                  title={`${formattedValue}${stat.suffix ?? ""} ${stat.label}`}
+                >
+                  <div className="text-4xl font-bold mb-2">
+                    <span className="stat-number text-cyan-400" data-value={stat.value}>
+                      0
+                    </span>
+                    <span className="text-cyan-400">{stat.suffix}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </GlassCard>
+              );
+            })}
           </div>
         </div>
 
@@ -230,52 +282,15 @@ export default function WaitlistPage() {
         <div ref={featuresRef} className="mb-32">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              <GradientText>Pourquoi USCI ?</GradientText>
+              <GradientText>{waitlistT("whyTitle")}</GradientText>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Une plateforme complète pour investir dans des actifs réels tokenisés
+              {waitlistT("whySubtitle")}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Shield,
-                title: "100% Sécurisé",
-                description: "Smart contracts audités. Vos actifs sont protégés sur la blockchain.",
-                color: "from-purple-500 to-pink-600",
-              },
-              {
-                icon: TrendingUp,
-                title: "Rendements attractifs",
-                description: "Jusqu'à 10% de rendement annuel avec les dividendes automatiques.",
-                color: "from-cyan-500 to-blue-600",
-              },
-              {
-                icon: Zap,
-                title: "Liquidité instantanée",
-                description: "Achetez et vendez vos parts à tout moment sur notre marketplace.",
-                color: "from-yellow-500 to-orange-600",
-              },
-              {
-                icon: Globe,
-                title: "Multi-actifs",
-                description: "Immobilier, véhicules, entreprises, objets de collection et plus.",
-                color: "from-green-500 to-emerald-600",
-              },
-              {
-                icon: Check,
-                title: "Accès dès 1$",
-                description: "Investissez avec n'importe quel montant. Pas de minimum requis.",
-                color: "from-indigo-500 to-purple-600",
-              },
-              {
-                icon: ArrowRight,
-                title: "Vote & Gouvernance",
-                description: "Participez aux décisions importantes via votre NFT share.",
-                color: "from-pink-500 to-rose-600",
-              },
-            ].map((feature, i) => (
+            {features.map((feature, i) => (
               <GlassCard key={i} className="feature-card p-8 hover:scale-105 transition-transform">
                 <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6`}>
                   <feature.icon className="h-8 w-8 text-white" />
@@ -291,17 +306,17 @@ export default function WaitlistPage() {
         <div className="text-center">
           <GlassCard className="p-12 bg-gradient-to-br from-purple-500/10 to-cyan-500/10 border-purple-500/20">
             <h2 className="text-4xl font-bold mb-4">
-              <GradientText>Prêt à commencer ?</GradientText>
+              <GradientText>{waitlistT("footerCta")}</GradientText>
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Rejoignez des milliers d'investisseurs qui ont déjà choisi USCI
+              {waitlistT("footerText")}
             </p>
             <AnimatedButton
               variant="primary"
               size="lg"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             >
-              Rejoindre maintenant
+              {waitlistT("submit")}
               <ArrowRight className="h-5 w-5 ml-2" />
             </AnimatedButton>
           </GlassCard>

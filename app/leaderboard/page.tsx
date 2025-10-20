@@ -6,8 +6,11 @@ import Navbar from "@/components/organisms/Navbar";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import BlurBackground from "@/components/atoms/BlurBackground";
+import { useTranslations } from "@/components/providers/IntlProvider";
 
 export default function LeaderboardPage() {
+  const leaderboardT = useTranslations("leaderboard");
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -21,21 +24,20 @@ export default function LeaderboardPage() {
             className="mb-12"
           >
             <h1 className="text-5xl font-bold mb-4">
-              <GradientText>Top Investors</GradientText>
+              <GradientText>{leaderboardT("title")}</GradientText>
             </h1>
             <p className="text-muted-foreground text-lg">
-              See the top performers in the BrickChain ecosystem
+              {leaderboardT("subtitle")}
             </p>
           </motion.div>
 
           <GlassCard className="text-center py-24">
             <Trophy className="h-16 w-16 mx-auto mb-6 text-cyan-400" />
             <h2 className="text-3xl font-bold mb-4">
-              <GradientText>Coming Soon</GradientText>
+              <GradientText>{leaderboardT("comingSoonTitle")}</GradientText>
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              The leaderboard will showcase top investors based on their holdings and returns.
-              Check back soon to see where you rank!
+              {leaderboardT("comingSoonText")}
             </p>
           </GlassCard>
         </div>

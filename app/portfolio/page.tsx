@@ -11,12 +11,17 @@ import BlurBackground from "@/components/atoms/BlurBackground";
 import { useUserShareNFTs, useAllProperties } from "@/lib/solana/hooks";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useSolPrice, lamportsToUsd } from "@/lib/solana/useSolPrice";
+import { useTranslations, useIntl, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 
 export default function PortfolioPage() {
   const { connected } = useWallet();
   const { shareNFTs, loading: loadingNFTs, error: errorNFTs } = useUserShareNFTs();
   const { properties, loading: loadingProperties } = useAllProperties();
   const { price: solPrice } = useSolPrice();
+  const portfolioT = useTranslations("portfolio");
+  const metricsT = useTranslations("portfolio.metrics");
+  const { language } = useIntl();
+  const { formatCurrency } = useCurrencyFormatter();
 
   const loading = loadingNFTs || loadingProperties;
   const error = errorNFTs;
@@ -65,6 +70,12 @@ export default function PortfolioPage() {
     }
   }, 0);
 
+  const totalInvestedFormatted = formatCurrency(totalInvested);
+  const totalDividendsEarnedFormatted = formatCurrency(totalDividendsEarned);
+  const totalPendingDividendsFormatted = formatCurrency(totalPendingDividends, {
+    maximumFractionDigits: 2,
+  });
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -79,27 +90,29 @@ export default function PortfolioPage() {
             className="mb-12"
           >
             <h1 className="text-5xl font-bold mb-4">
-              <GradientText>My Portfolio</GradientText>
+              <GradientText>{portfolioT("title")}</GradientText>
             </h1>
             <p className="text-muted-foreground text-lg">
-              Manage your investments and claim your dividends
+              {portfolioT("subtitle")}
             </p>
           </motion.div>
 
           {/* Overview Cards */}
           {!connected ? (
             <GlassCard className="text-center py-12">
-              <p className="text-muted-foreground mb-4">Connect your wallet to view your portfolio</p>
-              <p className="text-sm text-muted-foreground">Click "Connect Wallet" in the header to get started</p>
+              <p className="text-muted-foreground mb-4">{portfolioT("connectMessage")}</p>
+              <p className="text-sm text-muted-foreground">{portfolioT("connectHint")}</p>
             </GlassCard>
           ) : loading ? (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-              <p className="text-muted-foreground">Loading your portfolio from blockchain...</p>
+              <p className="text-muted-foreground">{portfolioT("loading")}</p>
             </div>
           ) : error ? (
             <GlassCard className="text-center py-12">
-              <p className="text-red-400">Error: {error}</p>
+              <p className="text-red-400">
+                {portfolioT("error", { error: typeof error === "string" ? error : String(error) })}
+              </p>
             </GlassCard>
           ) : (
             <>
@@ -107,16 +120,16 @@ export default function PortfolioPage() {
                 <GlassCard hover glow>
                   <MetricDisplay
                     icon={Wallet}
-                    label="Total Invested"
-                    value={`$${totalInvested.toLocaleString()}`}
+                    label={metricsT("invested")}
+                    value={totalInvestedFormatted}
                     iconColor="text-cyan-400"
                   />
                 </GlassCard>
                 <GlassCard hover glow>
                   <MetricDisplay
                     icon={TrendingUp}
-                    label="Total Dividends Earned"
-                    value={`$${totalDividendsEarned.toLocaleString()}`}
+                    label={metricsT("dividendsEarned")}
+                    value={totalDividendsEarnedFormatted}
                     iconColor="text-green-400"
                     delay={0.1}
                   />
@@ -124,8 +137,8 @@ export default function PortfolioPage() {
                 <GlassCard hover glow>
                   <MetricDisplay
                     icon={Gift}
-                    label="Pending Dividends"
-                    value={`$${totalPendingDividends.toFixed(2)}`}
+                    label={metricsT("pendingDividends")}
+                    value={totalPendingDividendsFormatted}
                     iconColor="text-blue-400"
                     delay={0.2}
                   />
@@ -146,10 +159,10 @@ export default function PortfolioPage() {
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <Gift className="h-8 w-8 text-cyan-400" />
-                      <h2 className="text-2xl font-bold">Claim Your Dividends</h2>
+                      <h2 className="text-2xl font-bold">{metricsT("claimTitle")}</h2>
                     </div>
                     <p className="text-muted-foreground">
-                      You have ${totalPendingDividends.toFixed(2)} available to claim
+                      {metricsT("claimSubtitle", { amount: totalPendingDividendsFormatted })}
                     </p>
                   </div>
                   <AnimatedButton
@@ -157,7 +170,7 @@ export default function PortfolioPage() {
                     size="lg"
                     disabled={totalPendingDividends === 0}
                   >
-                    Claim ${totalPendingDividends.toFixed(2)}
+                    {metricsT("claimButton", { amount: totalPendingDividendsFormatted })}
                   </AnimatedButton>
                 </div>
               </div>
@@ -167,13 +180,13 @@ export default function PortfolioPage() {
           {/* Investments */}
           <div>
             <h2 className="text-3xl font-bold mb-6">
-              <GradientText>My Investments</GradientText>
+              <GradientText>{portfolioT("investmentsTitle")}</GradientText>
             </h2>
 
             {shareNFTs.length === 0 ? (
               <GlassCard className="text-center py-12">
-                <p className="text-muted-foreground mb-4">You don't have any investments yet</p>
-                <p className="text-sm text-muted-foreground">Browse properties to start investing</p>
+                <p className="text-muted-foreground mb-4">{portfolioT("noInvestments")}</p>
+                <p className="text-sm text-muted-foreground">{portfolioT("browseHint")}</p>
               </GlassCard>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -184,7 +197,7 @@ export default function PortfolioPage() {
                   let priceInUSD = 0;
                   let earnedInUSD = 0;
                   let pendingUSD = 0;
-                  let propertyName = "Unknown Property";
+                  let propertyName = portfolioT("unknownProperty");
 
                   try {
                     if (property?.account) {
@@ -204,6 +217,22 @@ export default function PortfolioPage() {
                     console.error("Error calculating NFT values:", e);
                   }
 
+                  const mintTimestamp = nft.account.mintTime?.toNumber() || 0;
+                  const mintedDate = mintTimestamp ? new Date(mintTimestamp * 1000) : null;
+                  const mintedDateFormatted = mintedDate
+                    ? new Intl.DateTimeFormat(language).format(mintedDate)
+                    : "—";
+                  const tokenId = nft.account.tokenId?.toString() || "N/A";
+                  const priceFormatted = formatCurrency(priceInUSD, {
+                    maximumFractionDigits: 2,
+                  });
+                  const earnedFormatted = formatCurrency(earnedInUSD, {
+                    maximumFractionDigits: 2,
+                  });
+                  const pendingFormatted = formatCurrency(pendingUSD, {
+                    maximumFractionDigits: 2,
+                  });
+
                   return (
                     <motion.div
                       key={nft.publicKey.toBase58()}
@@ -219,26 +248,30 @@ export default function PortfolioPage() {
                                 {propertyName}
                               </h3>
                               <p className="text-sm text-muted-foreground mb-1">
-                                NFT #{nft.account.tokenId?.toString() || "N/A"}
+                                {portfolioT("tokenLabel", { tokenId })}
                               </p>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Calendar className="h-4 w-4" />
-                                Minted {new Date((nft.account.mintTime?.toNumber() || 0) * 1000).toLocaleDateString()}
+                                {portfolioT("minted", { date: mintedDateFormatted })}
                               </div>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                              <p className="text-xs text-muted-foreground mb-1">Amount Invested</p>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                {portfolioT("amountInvestedLabel")}
+                              </p>
                               <p className="text-2xl font-bold">
-                                ${priceInUSD.toFixed(2)}
+                                {priceFormatted}
                               </p>
                             </div>
                             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                              <p className="text-xs text-muted-foreground mb-1">Total Earned</p>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                {portfolioT("totalEarnedLabel")}
+                              </p>
                               <p className="text-2xl font-bold text-green-400">
-                                ${earnedInUSD.toFixed(2)}
+                                {earnedFormatted}
                               </p>
                             </div>
                           </div>
@@ -246,20 +279,22 @@ export default function PortfolioPage() {
                           <div className="p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="text-xs text-muted-foreground mb-1">Pending Dividends</p>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {portfolioT("pendingLabel")}
+                                </p>
                                 <p className="text-xl font-bold text-cyan-400">
-                                  ${pendingUSD.toFixed(2)}
+                                  {pendingFormatted}
                                 </p>
                               </div>
                               <AnimatedButton variant="outline" size="sm" disabled={pendingUSD === 0}>
-                                Claim
+                                {portfolioT("claimCta")}
                               </AnimatedButton>
                             </div>
                           </div>
 
                           <div className="pt-4 border-t border-white/10">
                             <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">ROI</span>
+                              <span className="text-muted-foreground">{portfolioT("roiLabel")}</span>
                               <span className="font-semibold text-green-400">
                                 +{priceInUSD > 0 ? ((earnedInUSD / priceInUSD) * 100).toFixed(2) : 0}%
                               </span>

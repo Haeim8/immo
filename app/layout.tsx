@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AppPrivyProvider } from "@/components/privy-provider";
 import { SolanaWalletProvider } from "@/components/wallet-provider";
 import MobileNav from "@/components/organisms/MobileNav";
+import { IntlProvider } from "@/components/providers/IntlProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,21 +22,23 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AppPrivyProvider>
-            <SolanaWalletProvider>
-              <div className="pb-20 md:pb-0">
-                {children}
-              </div>
-              <MobileNav />
-            </SolanaWalletProvider>
-          </AppPrivyProvider>
-        </ThemeProvider>
+        <IntlProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AppPrivyProvider>
+              <SolanaWalletProvider>
+                <div className="pb-20 md:pb-0">
+                  {children}
+                </div>
+                <MobileNav />
+              </SolanaWalletProvider>
+            </AppPrivyProvider>
+          </ThemeProvider>
+        </IntlProvider>
       </body>
     </html>
   );

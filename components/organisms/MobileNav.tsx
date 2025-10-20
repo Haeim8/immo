@@ -3,16 +3,18 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Home, TrendingUp, Trophy, BarChart3, Settings } from "lucide-react";
+import { useTranslations } from "@/components/providers/IntlProvider";
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const navT = useTranslations("navbar");
 
   const navItems = [
-    { href: "/", icon: Home, label: "Home" },
-    { href: "/portfolio", icon: TrendingUp, label: "Portfolio" },
-    { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
-    { href: "/performance", icon: BarChart3, label: "Performance" },
-    { href: "/waitlist", icon: Settings, label: "Waitlist" },
+    { href: "/", icon: Home, labelKey: "home" },
+    { href: "/portfolio", icon: TrendingUp, labelKey: "portfolio" },
+    { href: "/leaderboard", icon: Trophy, labelKey: "leaderboard" },
+    { href: "/performance", icon: BarChart3, labelKey: "performance" },
+    { href: "/waitlist", icon: Settings, labelKey: "waitlist" },
   ];
 
   return (
@@ -33,7 +35,7 @@ export default function MobileNav() {
               }`}
             >
               <Icon className={`h-5 w-5 ${isActive ? "scale-110" : ""}`} />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[10px] font-medium">{navT(item.labelKey)}</span>
             </Link>
           );
         })}

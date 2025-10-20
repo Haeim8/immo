@@ -18,6 +18,7 @@ import { buyShareWithNFT } from "@/lib/solana/buy-share-with-nft";
 import { PublicKey } from "@solana/web3.js";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getIpfsUrl } from "@/lib/pinata/upload";
+import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 
 interface PropertyCardProps {
   investment: Investment;
@@ -33,11 +34,26 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
   const { connection } = useConnection();
   const wallet = useWallet();
   const { setVisible } = useWalletModal();
+  const t = useTranslations("propertyCard");
+  const { formatCurrency } = useCurrencyFormatter();
 
   // Get image URL from IPFS if imageCid exists, otherwise use imageUrl
   const displayImageUrl = investment.imageCid
     ? getIpfsUrl(investment.imageCid)
     : investment.imageUrl || "/placeholder-property.jpg";
+  const pricePerShareFormatted = formatCurrency(investment.priceUSD);
+  const estimatedValueFormatted = formatCurrency(investment.estimatedValue);
+  const totalPriceFormatted = formatCurrency(investment.priceUSD * quantity);
+  const actionLabel =
+    investment.fundingProgress >= 100
+      ? t("soldOut")
+      : isBuying
+        ? t("processing", { quantity })
+        : success
+          ? t("purchased")
+          : wallet.connected
+            ? t("buyShares", { quantity })
+            : t("connectWallet");
 
   const handleInvest = async () => {
     if (!wallet.connected || !wallet.publicKey) {
@@ -46,7 +62,12 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
     }
 
     if (quantity < 1 || quantity > investment.sharesAvailable) {
-      setError(`Please select between 1 and ${investment.sharesAvailable} shares`);
+      setError(
+        t("quantityRangeError", {
+          min: 1,
+          max: investment.sharesAvailable,
+        })
+      );
       return;
     }
 
@@ -89,7 +110,12 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
       }, 2000);
     } catch (err: any) {
       console.error("Error buying share:", err);
-      setError(err?.message || "Failed to purchase share. Please try again.");
+      const fallbackMessage = t("purchaseError");
+      setError(
+        typeof err?.message === "string" && err.message.trim().length > 0
+          ? err.message
+          : fallbackMessage
+      );
     } finally {
       setIsBuying(false);
     }
@@ -142,24 +168,26 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 {investment.name}
               </h3>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Price per share</span>
+                <span className="text-muted-foreground">{t("pricePerShare")}</span>
                 <span className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
-                  ${investment.priceUSD.toLocaleString()}
+                  {pricePerShareFormatted}
                 </span>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Est. Total Value</span>
-                <span className="font-semibold">${investment.estimatedValue.toLocaleString()}</span>
+                <span className="text-muted-foreground">{t("estValue")}</span>
+                <span className="font-semibold">{estimatedValueFormatted}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Expected Return</span>
-                <span className="font-semibold text-green-400">{investment.expectedReturn}% /year</span>
+                <span className="text-muted-foreground">{t("expectedReturn")}</span>
+                <span className="font-semibold text-green-400">
+                  {investment.expectedReturn.toFixed(2)}%
+                </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Type</span>
+                <span className="text-muted-foreground">{t("type")}</span>
                 <span className="font-semibold">{investment.type}</span>
               </div>
             </div>
@@ -208,7 +236,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             <div>
               <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-cyan-400" />
-                Description
+                {t("description")}
               </h3>
               <p className="text-muted-foreground">{investment.description}</p>
             </div>
@@ -217,22 +245,22 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <GlassCard className="p-4">
                 <Home className="h-5 w-5 text-cyan-400 mb-2" />
-                <p className="text-xs text-muted-foreground">Surface</p>
+                <p className="text-xs text-muted-foreground">{t("surface")}</p>
                 <p className="text-2xl font-bold">{investment.surface}m²</p>
               </GlassCard>
               <GlassCard className="p-4">
                 <TrendingUp className="h-5 w-5 text-green-400 mb-2" />
-                <p className="text-xs text-muted-foreground">Return</p>
+                <p className="text-xs text-muted-foreground">{t("return")}</p>
                 <p className="text-2xl font-bold">{investment.expectedReturn.toFixed(2)}%</p>
               </GlassCard>
               <GlassCard className="p-4">
                 <Calendar className="h-5 w-5 text-blue-400 mb-2" />
-                <p className="text-xs text-muted-foreground">Built</p>
+                <p className="text-xs text-muted-foreground">{t("built")}</p>
                 <p className="text-2xl font-bold">{investment.details.yearBuilt}</p>
               </GlassCard>
               <GlassCard className="p-4">
                 <Home className="h-5 w-5 text-purple-400 mb-2" />
-                <p className="text-xs text-muted-foreground">Rooms</p>
+                <p className="text-xs text-muted-foreground">{t("rooms")}</p>
                 <p className="text-2xl font-bold">{investment.details.rooms}</p>
               </GlassCard>
             </div>
@@ -240,7 +268,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             {/* Features */}
             {investment.details.features.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold mb-3">Features</h3>
+                <h3 className="text-lg font-semibold mb-3">{t("features")}</h3>
                 <div className="flex flex-wrap gap-2">
                   {investment.details.features.map((feature, index) => (
                     <span
@@ -258,7 +286,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             <GlassCard className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold mb-1">Smart Contract (Solana Devnet)</h3>
+                  <h3 className="text-sm font-semibold mb-1">{t("contract")}</h3>
                   <code className="text-xs text-muted-foreground break-all">{investment.contractAddress}</code>
                 </div>
                 <AnimatedButton
@@ -274,7 +302,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             {/* Success/Error Messages */}
             {success && (
               <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-center">
-                Share purchased successfully! 🎉
+                {t("purchaseSuccess")}
               </div>
             )}
             {error && (
@@ -293,11 +321,14 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                     : "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
               }`}>
                 {investment.fundingProgress >= 100 ? (
-                  <span className="font-semibold">🎉 SOLD OUT - 100% Funded</span>
+                  <span className="font-semibold">{t("soldOut")}</span>
                 ) : (
                   <span className="font-semibold">
-                    {investment.sharesAvailable} / {investment.totalShares} shares available
-                    {investment.sharesAvailable <= 10 && " - Hurry up!"}
+                    {t("sharesAvailable", {
+                      available: investment.sharesAvailable,
+                      total: investment.totalShares,
+                    })}
+                    {investment.sharesAvailable <= 10 && t("lowSharesWarning")}
                   </span>
                 )}
               </div>
@@ -306,7 +337,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             {/* Quantity Selector */}
             {investment.fundingProgress < 100 && investment.sharesAvailable > 0 && (
               <div className="space-y-3">
-                <label className="block text-sm font-medium">Number of shares to buy</label>
+                <label className="block text-sm font-medium">{t("quantityLabel")}</label>
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -337,13 +368,13 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 </div>
                 <div className="p-4 rounded-lg bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">Price per share</span>
-                    <span className="font-semibold">${investment.priceUSD.toLocaleString()}</span>
+                    <span className="text-muted-foreground">{t("pricePerShare")}</span>
+                    <span className="font-semibold">{pricePerShareFormatted}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold">Total price</span>
+                    <span className="text-lg font-semibold">{t("totalPrice")}</span>
                     <span className="text-2xl font-bold text-cyan-400">
-                      ${(investment.priceUSD * quantity).toLocaleString()}
+                      {totalPriceFormatted}
                     </span>
                   </div>
                 </div>
@@ -359,15 +390,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 onClick={handleInvest}
                 disabled={isBuying || success || investment.fundingProgress >= 100}
               >
-                {investment.fundingProgress >= 100
-                  ? "Sold Out"
-                  : isBuying
-                    ? `Processing ${quantity} share${quantity > 1 ? 's' : ''}...`
-                    : success
-                      ? "Purchased!"
-                      : wallet.connected
-                        ? `Buy ${quantity} Share${quantity > 1 ? 's' : ''}`
-                        : "Connect Wallet"}
+                {actionLabel}
               </AnimatedButton>
             </div>
           </div>
