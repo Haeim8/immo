@@ -43,45 +43,46 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="relative min-h-[80vh] flex items-center justify-center py-20">
+    <section className="relative min-h-[60vh] md:min-h-[80vh] flex items-center justify-center py-12 md:py-20">
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-5xl mx-auto space-y-12">
+      <div className="container mx-auto px-4 md:px-6 relative z-10">
+        <div className="max-w-5xl mx-auto space-y-8 md:space-y-12">
           {/* Hero Title */}
           <motion.div
-            className="text-center space-y-6"
+            className="text-center space-y-4 md:space-y-6"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h1 className="text-5xl md:text-7xl font-bold leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold leading-tight px-2">
             <GradientText from="from-cyan-400" to="to-blue-600">
               {heroT("titleLine1")}
             </GradientText>
             <br />
             <span className="text-foreground">{heroT("titleLine2")}</span>
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             {heroT("subtitle")}
           </p>
         </motion.div>
 
         {/* CTA Buttons */}
         <motion.div
-            className="flex items-center justify-center gap-4"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 px-4"
             initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <AnimatedButton variant="primary" size="lg">
+          <AnimatedButton variant="primary" size="lg" className="w-full sm:w-auto text-sm md:text-base">
             {heroT("exploreCTA")}
           </AnimatedButton>
           <AnimatedButton
             variant="outline"
             size="lg"
+            className="w-full sm:w-auto text-sm md:text-base"
             onClick={() => window.open(globalMetrics.blockchainExplorerUrl, "_blank")}
           >
-            <ExternalLink className="h-5 w-5 mr-2" />
+            <ExternalLink className="h-4 w-4 md:h-5 md:w-5 mr-2" />
             {heroT("explorerCTA")}
           </AnimatedButton>
         </motion.div>
