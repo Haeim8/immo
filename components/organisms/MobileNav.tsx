@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, TrendingUp, Trophy, BarChart3, Settings } from "lucide-react";
+import { Home, TrendingUp, Trophy, BarChart3 } from "lucide-react";
 import { useTranslations } from "@/components/providers/IntlProvider";
 
 export default function MobileNav() {
@@ -14,7 +14,6 @@ export default function MobileNav() {
     { href: "/portfolio", icon: TrendingUp, labelKey: "portfolio" },
     { href: "/leaderboard", icon: Trophy, labelKey: "leaderboard" },
     { href: "/performance", icon: BarChart3, labelKey: "performance" },
-    { href: "/waitlist", icon: Settings, labelKey: "waitlist" },
   ];
 
   return (

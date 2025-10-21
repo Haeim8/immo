@@ -104,11 +104,11 @@ export default function HeaderContent() {
   };
 
   return (
-    <div className="w-full h-full px-6 flex items-center">
-      <div className="flex w-full items-center gap-6">
+    <div className="w-full h-full px-2 sm:px-6 flex items-center">
+      <div className="flex w-full items-center gap-2 sm:gap-6">
         {/* Logo */}
         <Link href="/" className="flex items-center flex-none">
-          <span className="relative block h-12 w-12">
+          <span className="relative block h-10 w-10 md:h-12 md:w-12">
             <Image
               src="/logo-light.svg"
               alt="USCI logo dark"
@@ -163,13 +163,13 @@ export default function HeaderContent() {
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center justify-end gap-4 flex-none">
+        <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-4 flex-none">
           {/* Admin Link (only visible for admins or team members) - Hidden on mobile */}
           {isConnected && canAccessAdmin && <AdminLink isAdmin={canAccessAdmin} className="hidden sm:flex" />}
 
           {/* Network Selector - Solana */}
           <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-            <SelectTrigger className="w-auto whitespace-nowrap bg-white/5 border-white/10 px-3">
+            <SelectTrigger className="w-auto whitespace-nowrap bg-white/5 border-white/10 px-2 md:px-3 text-xs md:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -255,10 +255,8 @@ export default function HeaderContent() {
             </div>
           )}
 
-          {/* Settings Dropdown - Hidden on mobile */}
-          <div className="hidden sm:block">
-            <SettingsDropdown />
-          </div>
+          {/* Settings Dropdown - Now visible on mobile */}
+          <SettingsDropdown />
         </div>
       </div>
     </div>

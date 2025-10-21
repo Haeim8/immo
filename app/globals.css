@@ -17,6 +17,31 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Fix mobile viewport - utilise dvh (dynamic viewport height) pour gérer les barres UI mobiles */
+  @supports (height: 100dvh) {
+    @media (max-width: 767px) {
+      .mobile-frame-container {
+        height: 100dvh !important;
+      }
+    }
+  }
+
+  /* Fallback pour navigateurs sans support dvh */
+  @supports not (height: 100dvh) {
+    @media (max-width: 767px) {
+      .mobile-frame-container {
+        height: 100vh !important;
+      }
+    }
+  }
+
+  /* Permet le scroll sur mobile tout en gardant overflow-hidden sur desktop */
+  @media (max-width: 767px) {
+    .mobile-frame-container {
+      overflow-y: auto !important;
+    }
+  }
 }
 
 @layer base {

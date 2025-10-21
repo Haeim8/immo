@@ -33,14 +33,14 @@ export default function RootLayout({
           >
             <AppPrivyProvider>
               <SolanaWalletProvider>
-                <div className="fixed inset-0 border-[10px] border-background rounded-[30px] overflow-hidden flex flex-col" style={{ margin: '10px' }}>
-                  <header className="bg-background flex-shrink-0 z-40 w-full flex items-center" style={{ height: '80px' }}>
+                <div className="mobile-frame-container fixed inset-0 border-[4px] md:border-[10px] border-background rounded-[16px] md:rounded-[30px] overflow-hidden flex flex-col m-[4px] md:m-[10px]">
+                  <header className="bg-background flex-shrink-0 z-40 w-full flex items-center h-[60px] md:h-[80px]">
                     <HeaderContent />
                   </header>
-                  <div className="flex-1 overflow-y-auto scrollbar-hide rounded-tl-[15px] rounded-tr-[15px] rounded-bl-[15px] rounded-br-[15px]" style={{ backgroundColor: 'hsl(var(--muted) / 0.6)' }}>
+                  <div className="flex-1 overflow-y-auto scrollbar-hide rounded-tl-[15px] rounded-tr-[15px] rounded-bl-[15px] rounded-br-[15px] pb-20 md:pb-0" style={{ backgroundColor: 'hsl(var(--muted) / 0.6)' }}>
                     {children}
                   </div>
-                  <footer className="bg-background flex-shrink-0 w-full px-6 py-5">
+                  <footer className="hidden md:block bg-background flex-shrink-0 w-full px-6 py-5">
                     <FooterContent />
                   </footer>
                   <MobileNav />
