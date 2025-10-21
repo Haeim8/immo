@@ -17,11 +17,9 @@ import {
   Gavel,
   Wrench
 } from "lucide-react";
-import Navbar from "@/components/organisms/Navbar";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
-import BlurBackground from "@/components/atoms/BlurBackground";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import { useBrickChain, useAllProperties, usePropertyProposals, useFactoryAccount } from "@/lib/solana/hooks";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
@@ -127,10 +125,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
-      <BlurBackground />
 
-      <main className="pt-24 pb-20">
+      <main className="pb-20">
         <div className="container mx-auto px-4">
           {/* Header */}
           <motion.div

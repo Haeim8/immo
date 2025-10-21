@@ -201,6 +201,19 @@ export interface Dictionary {
     enabled: string;
     disabled: string;
   };
+  footer: {
+    copyright: string;
+    contactLabel: string;
+    contactEmail: string;
+    cgv: string;
+    cgu: string;
+  };
+  legal: {
+    cgvTitle: string;
+    cgvIntro: string;
+    cguTitle: string;
+    cguIntro: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -408,6 +421,19 @@ export const dictionaries: Record<Locale, Dictionary> = {
       enabled: "Activé",
       disabled: "Désactivé",
     },
+    footer: {
+      copyright: "© 2025 USCI - Immobilier sur blockchain",
+      contactLabel: "Contact",
+      contactEmail: "contrat@usci.tech",
+      cgv: "CGV",
+      cgu: "CGU",
+    },
+    legal: {
+      cgvTitle: "Conditions Générales de Vente",
+      cgvIntro: "Nos conditions générales de vente seront bientôt disponibles. Merci pour votre patience tandis que nous finalisons ce contenu.",
+      cguTitle: "Conditions Générales d'Utilisation",
+      cguIntro: "Nos conditions générales d'utilisation seront bientôt disponibles. Nous travaillons à vous fournir des informations claires et complètes.",
+    },
   },
   en: {
     common: {
@@ -613,6 +639,19 @@ export const dictionaries: Record<Locale, Dictionary> = {
       enabled: "Enabled",
       disabled: "Disabled",
     },
+    footer: {
+      copyright: "© 2025 USCI - Blockchain Real Estate",
+      contactLabel: "Contact",
+      contactEmail: "contrat@usci.tech",
+      cgv: "Terms of Sale (CGV)",
+      cgu: "Terms of Use (CGU)",
+    },
+    legal: {
+      cgvTitle: "Terms of Sale (CGV)",
+      cgvIntro: "Our terms of sale will be available soon. Thank you for your patience while we finalize this content.",
+      cguTitle: "Terms of Use (CGU)",
+      cguIntro: "Our terms of use will be available soon. We're working to provide clear and comprehensive information.",
+    },
   },
   es: {
     common: {
@@ -817,6 +856,19 @@ export const dictionaries: Record<Locale, Dictionary> = {
       reportsDescription: "Resumen mensual de tus resultados directamente en tu correo",
       enabled: "Activado",
       disabled: "Desactivado",
+    },
+    footer: {
+      copyright: "© 2025 USCI - Bienes raíces en blockchain",
+      contactLabel: "Contacto",
+      contactEmail: "contrat@usci.tech",
+      cgv: "Condiciones generales de venta (CGV)",
+      cgu: "Condiciones generales de uso (CGU)",
+    },
+    legal: {
+      cgvTitle: "Condiciones Generales de Venta",
+      cgvIntro: "Nuestras condiciones generales de venta estarán disponibles en breve. Gracias por tu paciencia mientras finalizamos este contenido.",
+      cguTitle: "Condiciones Generales de Uso",
+      cguIntro: "Nuestras condiciones generales de uso estarán disponibles en breve. Estamos trabajando para ofrecerte información clara y completa.",
     },
   },
 };

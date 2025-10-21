@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morpho Test - Frame</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-frame {
+            width: 100%;
+            max-width: 1600px;
+            height: 95vh;
+            border: 8px solid #FFD700;
+            border-radius: 30px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, #B8D4F1 0%, #C8DDED 100%);
+        }
+
+        header {
+            height: 70px;
+            background: #FFD700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .logo svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        nav a {
+            padding: 8px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #000;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        nav a.active {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notif-icon {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notif-icon::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 6px;
+            height: 6px;
+            background: #FF4444;
+            border-radius: 50%;
+        }
+
+        .connect-wallet {
+            padding: 10px 24px;
+            background: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #000;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #B8D4F1 0%, #C8DDED 100%);
+        }
+
+        .social-icons {
+            position: absolute;
+            top: 90px;
+            right: 40px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            background: #1a1a1a;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 40px;
+        }
+
+        .stats-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 40px;
+        }
+
+        .hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 80px;
+        }
+
+        .hero-left h1 {
+            font-size: 64px;
+            font-weight: 400;
+            line-height: 1.1;
+            color: #000;
+            margin-bottom: 40px;
+            max-width: 600px;
+        }
+
+        .cta-button {
+            padding: 16px 40px;
+            background: #6B9FCF;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #000;
+        }
+
+        .hero-right {
+            position: relative;
+            width: 400px;
+            height: 400px;
+        }
+
+        .illustration {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .diamond {
+            width: 280px;
+            height: 280px;
+            background: linear-gradient(135deg, #7FB3E8 0%, #A8C9E8 100%);
+            transform: rotate(45deg) perspective(600px) rotateX(20deg);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin: -140px 0 0 -140px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+
+        .sphere {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #B8D9F5, #7FB3E8);
+        }
+
+        .sphere.large {
+            width: 100px;
+            height: 100px;
+            bottom: 60px;
+            right: 20px;
+        }
+
+        .sphere.small-top {
+            width: 60px;
+            height: 60px;
+            top: 40px;
+            right: 80px;
+        }
+
+        .sphere.small-bottom {
+            width: 60px;
+            height: 60px;
+            bottom: 20px;
+            left: 80px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .tab {
+            padding: 12px 0;
+            font-size: 15px;
+            color: #666;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        .tab.active {
+            color: #000;
+            border-bottom-color: #000;
+        }
+
+        .filters {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filters-left {
+            display: flex;
+            gap: 16px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.4);
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filters-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .info-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .search-input {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.4);
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            width: 200px;
+        }
+
+        .search-input::placeholder {
+            color: #999;
+        }
+
+        footer {
+            height: 60px;
+            background: #FFD700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-frame">
+        <header>
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                </svg>
+                Morpho
+                <span>▼</span>
+            </div>
+            <nav>
+                <a href="#">Dashboard</a>
+                <a href="#" class="active">Earn</a>
+                <a href="#">Borrow</a>
+                <a href="#">Explore</a>
+                <a href="#">Migrate</a>
+            </nav>
+            <div class="header-right">
+                <div class="notif-icon">🔔</div>
+                <button class="connect-wallet">Connect Wallet</button>
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            <div class="social-icons">
+                <div class="social-icon">📋</div>
+                <div class="social-icon">🔗</div>
+                <div class="social-icon">💬</div>
+            </div>
+
+            <main>
+                <div class="stats-badge">Total Active Loans: $4,230,611,396</div>
+
+                <div class="hero">
+                    <div class="hero-left">
+                        <h1>Provide collateral to borrow any asset</h1>
+                        <button class="cta-button">Connect Wallet</button>
+                    </div>
+                    <div class="hero-right">
+                        <div class="illustration">
+                            <div class="diamond"></div>
+                            <div class="sphere large"></div>
+                            <div class="sphere small-top"></div>
+                            <div class="sphere small-bottom"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <div class="tab">Your positions</div>
+                    <div class="tab active">Markets</div>
+                </div>
+
+                <div class="filters">
+                    <div class="filters-left">
+                        <button class="filter-btn">☰ Collateral: All</button>
+                        <button class="filter-btn">☰ Loan: All</button>
+                    </div>
+                    <div class="filters-right">
+                        <div class="info-icon">?</div>
+                        <input type="text" class="search-input" placeholder="🔍 Filter markets">
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <footer>
+            Footer Content
+        </footer>
+    </div>
+</body>
+</html>

@@ -5,7 +5,6 @@ import { TrendingUp, Users, Building2, ExternalLink } from "lucide-react";
 import GradientText from "@/components/atoms/GradientText";
 import StatCard from "@/components/molecules/StatCard";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
-import BlurBackground from "@/components/atoms/BlurBackground";
 import { useAllProperties } from "@/lib/solana/hooks";
 import { calculateGlobalMetrics } from "@/lib/solana/adapters";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
@@ -45,7 +44,6 @@ export default function HeroSection() {
 
   return (
     <section className="relative min-h-[80vh] flex items-center justify-center py-20">
-      <BlurBackground />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-5xl mx-auto space-y-12">

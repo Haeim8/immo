@@ -12,10 +12,10 @@ interface NavLinkProps {
 
 export default function NavLink({ href, children, active }: NavLinkProps) {
   return (
-    <Link href={href}>
+    <Link href={href} className="block h-full">
       <motion.span
         className={cn(
-          "relative px-4 py-2 text-sm font-medium transition-colors",
+          "relative inline-flex h-full items-center justify-center text-sm font-medium transition-colors",
           active ? "text-cyan-400" : "text-muted-foreground hover:text-foreground"
         )}
         whileHover={{ scale: 1.05 }}
@@ -24,7 +24,7 @@ export default function NavLink({ href, children, active }: NavLinkProps) {
         {children}
         {active && (
           <motion.div
-            className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600"
+            className="absolute left-2 right-2 bottom-0 h-[6px] bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full"
             layoutId="nav-indicator"
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
           />

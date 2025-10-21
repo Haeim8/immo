@@ -32,7 +32,7 @@ export default function AnimatedButton({
   return (
     <motion.button
       className={cn(
-        "relative rounded-xl font-semibold transition-all duration-300",
+        "relative inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-300",
         "backdrop-blur-sm",
         variants[variant],
         sizes[size],
@@ -42,7 +42,7 @@ export default function AnimatedButton({
       whileTap={{ scale: 0.95 }}
       {...props}
     >
-      <span className="relative z-10">{children}</span>
+      <span className="relative z-10 inline-flex items-center gap-2">{children}</span>
     </motion.button>
   );
 }

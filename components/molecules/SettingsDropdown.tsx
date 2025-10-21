@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings as SettingsIcon, Globe, DollarSign } from "lucide-react";
+import { Settings as SettingsIcon, Globe, DollarSign, Palette } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useIntl, useTranslations } from "@/components/providers/IntlProvider";
 import { currencyMeta, supportedCurrencies, Locale } from "@/lib/intl/dictionaries";
 
@@ -73,6 +74,19 @@ export default function SettingsDropdown() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <DropdownMenuSeparator className="bg-white/10" />
+
+        {/* Theme */}
+        <div className="px-2 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Palette className="h-4 w-4 text-cyan-400" />
+              <span className="text-sm font-medium">Theme</span>
+            </div>
+            <ThemeToggle />
+          </div>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
