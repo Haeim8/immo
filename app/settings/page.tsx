@@ -61,24 +61,25 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
-                  <div>
-                    <p className="font-medium">Theme</p>
-                    <p className="text-sm text-muted-foreground">
-                      Choose between light and dark mode
-                    </p>
+                      <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fr">Français</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="es">Español</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <ThemeToggle />
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
+                    <div>
+                      <p className="font-medium">Theme</p>
+                      <p className="text-sm text-muted-foreground">
+                        Choose between light and dark mode
+                      </p>
+                    </div>
+                    <ThemeToggle />
+                  </div>
                 </div>
               </GlassCard>
             </motion.div>
