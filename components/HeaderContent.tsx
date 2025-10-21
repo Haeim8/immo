@@ -108,7 +108,7 @@ export default function HeaderContent() {
       <div className="flex w-full items-center gap-2 sm:gap-6">
         {/* Logo */}
         <Link href="/" className="flex items-center flex-none">
-          <span className="relative block h-10 w-10 md:h-12 md:w-12">
+          <span className="relative block h-8 w-8 md:h-12 md:w-12">
             <Image
               src="/logo-light.svg"
               alt="USCI logo dark"
@@ -165,13 +165,18 @@ export default function HeaderContent() {
         {/* Right Section */}
         <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-4 flex-none">
           {/* Admin Link (only visible for admins or team members) - Hidden on mobile */}
-          {isConnected && canAccessAdmin && <AdminLink isAdmin={canAccessAdmin} className="hidden sm:flex" />}
+          {isConnected && canAccessAdmin && (
+            <div className="hidden md:block">
+              <AdminLink isAdmin={canAccessAdmin} />
+            </div>
+          )}
 
-          {/* Network Selector - Solana */}
-          <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-            <SelectTrigger className="w-auto whitespace-nowrap bg-white/5 border-white/10 px-2 md:px-3 text-xs md:text-sm">
-              <SelectValue />
-            </SelectTrigger>
+          {/* Network Selector - Solana - Hidden on mobile */}
+          <div className="hidden sm:block">
+            <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+              <SelectTrigger className="w-auto whitespace-nowrap bg-white/5 border-white/10 px-2 md:px-3 text-xs md:text-sm">
+                <SelectValue />
+              </SelectTrigger>
             <SelectContent>
               <SelectItem value="mainnet">
                 <div className="flex items-center gap-2">
@@ -223,6 +228,7 @@ export default function HeaderContent() {
               </SelectItem>
             </SelectContent>
           </Select>
+          </div>
 
 
           {/* Connect Wallet Button - Responsive */}
@@ -255,7 +261,7 @@ export default function HeaderContent() {
             </div>
           )}
 
-          {/* Settings Dropdown - Now visible on mobile */}
+          {/* Settings Dropdown - Visible on mobile */}
           <SettingsDropdown />
         </div>
       </div>
