@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import NavLink from "@/components/molecules/NavLink";
 import SettingsDropdown from "@/components/molecules/SettingsDropdown";
 import AdminLink from "@/components/molecules/AdminLink";
-import { usePrivy } from "@privy-io/react-auth";
 import { Wallet } from "lucide-react";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import {
@@ -29,49 +28,39 @@ export default function HeaderContent() {
   const navT = useTranslations("navbar");
   const commonT = useTranslations("common");
 
-  // Privy for EVM wallets (future)
-  const { authenticated: privyAuthenticated, logout: privyLogout, user: privyUser } = usePrivy();
-
-  // Solana Wallet Adapter for Solana wallets (current)
-  const { publicKey, connected: solanaConnected, disconnect: solanaDisconnect, connecting } = useWallet();
+  // Solana Wallet Adapter
+  const { publicKey, connected, disconnect, connecting } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
   const { connection } = useConnection();
 
   const [isTeamMember, setIsTeamMember] = useState(false);
 
-  // Get wallet addresses
-  const solanaWallet = publicKey?.toBase58();
-  const evmWallet = privyUser?.wallet?.address;
-
-  // Combined connection status
-  const isConnected = solanaConnected || privyAuthenticated;
-  const currentWallet = solanaWallet || evmWallet;
+  // Get wallet address
+  const walletAddress = publicKey?.toBase58();
 
   // Enhanced debug logging
   useEffect(() => {
-    if (isConnected) {
+    if (connected) {
       console.log('🔍 =========================');
-      console.log('🔍 Solana Wallet:', solanaWallet || 'Not connected');
-      console.log('🔍 EVM Wallet (Privy):', evmWallet || 'Not connected');
-      console.log('🔍 Current Wallet:', currentWallet);
+      console.log('🔍 Solana Wallet:', walletAddress || 'Not connected');
       console.log('🔍 Expected ADMIN_WALLET:', ADMIN_WALLET);
-      console.log('🔍 Is admin match?:', currentWallet === ADMIN_WALLET);
+      console.log('🔍 Is admin match?:', walletAddress === ADMIN_WALLET);
       console.log('🔍 =========================');
     }
-  }, [isConnected, solanaWallet, evmWallet, currentWallet]);
+  }, [connected, walletAddress]);
 
-  const isAdmin = currentWallet === ADMIN_WALLET;
+  const isAdmin = walletAddress === ADMIN_WALLET;
 
   // Fetch team member status when wallet connects
   useEffect(() => {
     const checkTeamStatus = async () => {
-      if (!solanaWallet || isAdmin) {
+      if (!walletAddress || isAdmin) {
         setIsTeamMember(false);
         return;
       }
 
       try {
-        const isMember = await checkIsTeamMember(connection, solanaWallet);
+        const isMember = await checkIsTeamMember(connection, walletAddress);
         setIsTeamMember(isMember);
         console.log('🔍 Is team member?', isMember);
       } catch (err) {
@@ -80,27 +69,21 @@ export default function HeaderContent() {
       }
     };
 
-    if (solanaWallet) {
+    if (walletAddress) {
       checkTeamStatus();
     }
-  }, [solanaWallet, isAdmin, connection]);
+  }, [walletAddress, isAdmin, connection]);
 
   const canAccessAdmin = isAdmin || isTeamMember;
 
   // Handle connect button click
   const handleConnect = () => {
-    // Open Solana wallet modal
     setWalletModalVisible(true);
   };
 
   // Handle disconnect
   const handleDisconnect = () => {
-    if (solanaConnected) {
-      solanaDisconnect();
-    }
-    if (privyAuthenticated) {
-      privyLogout();
-    }
+    disconnect();
   };
 
   return (
@@ -165,7 +148,7 @@ export default function HeaderContent() {
         {/* Right Section */}
         <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-4 flex-none">
           {/* Admin Link (only visible for admins or team members) - Hidden on mobile */}
-          {isConnected && canAccessAdmin && (
+          {connected && canAccessAdmin && (
             <div className="hidden md:block">
               <AdminLink isAdmin={canAccessAdmin} />
             </div>
@@ -232,7 +215,7 @@ export default function HeaderContent() {
 
 
           {/* Connect Wallet Button - Responsive */}
-          {!isConnected ? (
+          {!connected ? (
             <AnimatedButton
               variant="primary"
               size="sm"
@@ -247,7 +230,7 @@ export default function HeaderContent() {
             <div className="flex items-center gap-1 sm:gap-2">
               <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs sm:text-sm font-medium">
                 <Wallet className="h-3 w-3 inline mr-1" />
-                {currentWallet ? `${currentWallet.slice(0, 4)}...${currentWallet.slice(-3)}` : "•"}
+                {walletAddress ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-3)}` : "•"}
               </div>
               <AnimatedButton
                 variant="outline"

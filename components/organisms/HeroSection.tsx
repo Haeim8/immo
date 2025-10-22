@@ -68,27 +68,27 @@ export default function HeroSection() {
 
         {/* CTA Buttons */}
         <motion.div
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 px-4"
+            className="flex flex-row items-center justify-center gap-2 md:gap-4 px-4"
             initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <AnimatedButton variant="primary" size="lg" className="w-full sm:w-auto text-sm md:text-base">
+          <AnimatedButton variant="primary" size="lg" className="flex-1 sm:flex-none text-xs sm:text-sm md:text-base">
             {heroT("exploreCTA")}
           </AnimatedButton>
           <AnimatedButton
             variant="outline"
             size="lg"
-            className="w-full sm:w-auto text-sm md:text-base"
+            className="flex-1 sm:flex-none text-xs sm:text-sm md:text-base"
             onClick={() => window.open(globalMetrics.blockchainExplorerUrl, "_blank")}
           >
-            <ExternalLink className="h-4 w-4 md:h-5 md:w-5 mr-2" />
+            <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-2" />
             {heroT("explorerCTA")}
           </AnimatedButton>
         </motion.div>
 
           {/* Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-3 md:gap-6">
             {metrics.map((metric, index) => (
               <StatCard key={index} {...metric} />
             ))}

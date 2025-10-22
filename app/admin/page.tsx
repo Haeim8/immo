@@ -23,7 +23,6 @@ import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import { useBrickChain, useAllProperties, usePropertyProposals, useFactoryAccount } from "@/lib/solana/hooks";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { useSolPrice, usdToLamports } from "@/lib/solana/useSolPrice";
@@ -39,8 +38,6 @@ export default function AdminDashboard() {
   const router = useRouter();
   const wallet = useWallet();
   const { connection } = useConnection();
-  const { authenticated: privyAuthenticated, user: privyUser } = usePrivy();
-  const privyAddress = privyUser?.wallet?.address ?? null;
   const [hasAccess, setHasAccess] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
 
@@ -48,8 +45,7 @@ export default function AdminDashboard() {
     let cancelled = false;
 
     const enforceAccess = async () => {
-      const solanaWallet = wallet.publicKey?.toBase58() || null;
-      const walletAddress = solanaWallet ?? privyAddress;
+      const walletAddress = wallet.publicKey?.toBase58() || null;
 
       if (!walletAddress) {
         if (!cancelled) {
@@ -96,7 +92,7 @@ export default function AdminDashboard() {
       }
     };
 
-    if (!wallet.connected && !privyAuthenticated) {
+    if (!wallet.connected) {
       setHasAccess(false);
       setAccessChecked(true);
       router.replace("/");
@@ -108,7 +104,7 @@ export default function AdminDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [wallet.connected, wallet.publicKey, privyAuthenticated, privyAddress, connection, router]);
+  }, [wallet.connected, wallet.publicKey, connection, router]);
 
   if (!accessChecked) {
     return (

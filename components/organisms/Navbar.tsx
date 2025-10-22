@@ -6,7 +6,6 @@ import GradientText from "@/components/atoms/GradientText";
 import SettingsDropdown from "@/components/molecules/SettingsDropdown";
 import AdminLink from "@/components/molecules/AdminLink";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Wallet } from "lucide-react";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
@@ -29,49 +28,39 @@ export default function Navbar() {
   const navT = useTranslations("navbar");
   const commonT = useTranslations("common");
 
-  // Privy for EVM wallets (future)
-  const { authenticated: privyAuthenticated, logout: privyLogout, user: privyUser } = usePrivy();
-
-  // Solana Wallet Adapter for Solana wallets (current)
-  const { publicKey, connected: solanaConnected, disconnect: solanaDisconnect, connecting } = useWallet();
+  // Solana Wallet Adapter
+  const { publicKey, connected, disconnect, connecting } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
   const { connection } = useConnection();
 
   const [isTeamMember, setIsTeamMember] = useState(false);
 
-  // Get wallet addresses
-  const solanaWallet = publicKey?.toBase58();
-  const evmWallet = privyUser?.wallet?.address;
-
-  // Combined connection status
-  const isConnected = solanaConnected || privyAuthenticated;
-  const currentWallet = solanaWallet || evmWallet;
+  // Get wallet address
+  const walletAddress = publicKey?.toBase58();
 
   // Enhanced debug logging
   useEffect(() => {
-    if (isConnected) {
+    if (connected) {
       console.log('🔍 =========================');
-      console.log('🔍 Solana Wallet:', solanaWallet || 'Not connected');
-      console.log('🔍 EVM Wallet (Privy):', evmWallet || 'Not connected');
-      console.log('🔍 Current Wallet:', currentWallet);
+      console.log('🔍 Solana Wallet:', walletAddress || 'Not connected');
       console.log('🔍 Expected ADMIN_WALLET:', ADMIN_WALLET);
-      console.log('🔍 Is admin match?:', currentWallet === ADMIN_WALLET);
+      console.log('🔍 Is admin match?:', walletAddress === ADMIN_WALLET);
       console.log('🔍 =========================');
     }
-  }, [isConnected, solanaWallet, evmWallet, currentWallet]);
+  }, [connected, walletAddress]);
 
-  const isAdmin = currentWallet === ADMIN_WALLET;
+  const isAdmin = walletAddress === ADMIN_WALLET;
 
   // Fetch team member status when wallet connects
   useEffect(() => {
     const checkTeamStatus = async () => {
-      if (!solanaWallet || isAdmin) {
+      if (!walletAddress || isAdmin) {
         setIsTeamMember(false);
         return;
       }
 
       try {
-        const isMember = await checkIsTeamMember(connection, solanaWallet);
+        const isMember = await checkIsTeamMember(connection, walletAddress);
         setIsTeamMember(isMember);
         console.log('🔍 Is team member?', isMember);
       } catch (err) {
@@ -80,10 +69,10 @@ export default function Navbar() {
       }
     };
 
-    if (solanaWallet) {
+    if (walletAddress) {
       checkTeamStatus();
     }
-  }, [solanaWallet, isAdmin, connection]);
+  }, [walletAddress, isAdmin, connection]);
 
   const canAccessAdmin = isAdmin || isTeamMember;
 
@@ -95,12 +84,7 @@ export default function Navbar() {
 
   // Handle disconnect
   const handleDisconnect = () => {
-    if (solanaConnected) {
-      solanaDisconnect();
-    }
-    if (privyAuthenticated) {
-      privyLogout();
-    }
+    disconnect();
   };
 
   return (
@@ -146,7 +130,7 @@ export default function Navbar() {
           {/* Right Section */}
           <div className="flex items-center gap-2">
             {/* Admin Link (only visible for admins or team members) - Hidden on mobile */}
-            {isConnected && canAccessAdmin && <AdminLink isAdmin={canAccessAdmin} className="hidden sm:flex" />}
+            {connected && canAccessAdmin && <AdminLink isAdmin={canAccessAdmin} className="hidden sm:flex" />}
 
             {/* Network Selector - Solana - Hidden on mobile */}
             <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
@@ -224,7 +208,7 @@ export default function Navbar() {
             </div>
 
             {/* Connect Wallet Button - Compact on mobile */}
-            {!isConnected ? (
+            {!connected ? (
               <AnimatedButton
                 variant="primary"
                 size="sm"
