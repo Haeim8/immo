@@ -154,12 +154,9 @@ export async function createProperty(
     factory: factoryPDA,
     property: propertyPDA,
     authority: admin,
+    teamMember: teamMemberPDA,
     systemProgram: SystemProgram.programId,
   };
-
-  if (teamMemberPDA) {
-    accounts.teamMember = teamMemberPDA;
-  }
 
   const instruction = await program.methods
     .createProperty(
@@ -261,12 +258,9 @@ export async function depositDividends(
     factory: factoryPDA,
     property: propertyPDA,
     authority: admin,
+    teamMember: teamMemberPDA,
     systemProgram: SystemProgram.programId,
   };
-
-  if (teamMemberPDA) {
-    accounts.teamMember = teamMemberPDA;
-  }
 
   const instruction = await program.methods
     .depositDividends(new BN(amount))
@@ -335,11 +329,8 @@ export async function closePropertySale(
     factory: factoryPDA,
     property: propertyPDA,
     authority: admin,
+    teamMember: teamMemberPDA,
   };
-
-  if (teamMemberPDA) {
-    accounts.teamMember = teamMemberPDA;
-  }
 
   const instruction = await program.methods
     .closePropertySale()
@@ -377,12 +368,9 @@ export async function createProposalInstruction(
     property: propertyPDA,
     proposal: proposalPDA,
     authority: admin,
+    teamMember: teamMemberPDA,
     systemProgram: SystemProgram.programId,
   };
-
-  if (teamMemberPDA) {
-    accounts.teamMember = teamMemberPDA;
-  }
 
   const instruction = await program.methods
     .createProposal(title, description, new BN(votingDurationSeconds))
@@ -414,11 +402,8 @@ export async function closeProposalInstruction(
     property: propertyPDA,
     proposal: proposalPDA,
     authority: admin,
+    teamMember: teamMemberPDA,
   };
-
-  if (teamMemberPDA) {
-    accounts.teamMember = teamMemberPDA;
-  }
 
   const instruction = await program.methods
     .closeProposal()
@@ -467,12 +452,9 @@ export async function liquidateProperty(
     factory: factoryPDA,
     property: propertyPDA,
     authority: admin,
+    teamMember: teamMemberPDA,
     systemProgram: SystemProgram.programId,
   };
-
-  if (teamMemberPDA) {
-    accounts.teamMember = teamMemberPDA;
-  }
 
   const instruction = await program.methods
     .liquidateProperty(new BN(totalSaleAmountLamports))

@@ -7,6 +7,18 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        protocol: "https",
+        hostname: "*.mypinata.cloud",
+      },
+      {
+        protocol: "https",
+        hostname: "gateway.pinata.cloud",
+      },
+      {
+        protocol: "https",
+        hostname: "ipfs.io",
+      },
     ],
   },
   typescript: {
