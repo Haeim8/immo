@@ -91,20 +91,20 @@ export default function HeaderContent() {
       <div className="flex w-full items-center gap-2 sm:gap-6">
         {/* Logo */}
         <Link href="/" className="flex items-center flex-none">
-          <span className="relative block h-8 w-8 md:h-12 md:w-12">
+          <span className="relative block h-12 w-12 md:h-16 md:w-16">
             <Image
-              src="/logo-light.svg"
-              alt="USCI logo dark"
+              src="/logo-light.png"
+              alt="USCI logo light theme"
               fill
-              sizes="48px"
+              sizes="64px"
               priority
               className="block dark:hidden object-contain"
             />
             <Image
-              src="/logo-dark.svg"
-              alt="USCI logo light"
+              src="/logo-dark.png"
+              alt="USCI logo dark theme"
               fill
-              sizes="48px"
+              sizes="64px"
               priority
               className="hidden dark:block object-contain"
             />

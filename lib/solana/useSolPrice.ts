@@ -13,9 +13,10 @@ const CACHE_DURATION = 300000; // 5 minutes cache (increased to reduce API calls
 const LOCAL_STORAGE_KEY = "usci:sol-price";
 const LOCAL_STORAGE_TIMESTAMP_KEY = "usci:sol-price-timestamp";
 
-// Initialize from localStorage if available
+// Global cache shared across all instances
 let cachedPrice: SolPriceData | null = null;
 let cacheTimestamp = 0;
+let pendingRequest: Promise<SolPriceData | null> | null = null;
 
 // Try to load from localStorage on module load
 if (typeof window !== 'undefined') {
@@ -34,75 +35,100 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// Global fetch function with deduplication
+async function fetchPriceGlobal(): Promise<SolPriceData | null> {
+  // If there's already a pending request, wait for it
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  // Use cached price if still valid
+  if (cachedPrice && Date.now() - cacheTimestamp < CACHE_DURATION) {
+    return cachedPrice;
+  }
+
+  // Create new request and store as pending
+  pendingRequest = (async () => {
+    try {
+      const response = await fetch(COINGECKO_API, {
+        cache: 'force-cache',
+        next: { revalidate: 300 }
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          console.warn("⚠️ CoinGecko API rate limit - using cached price");
+          return cachedPrice;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.solana) {
+        const priceData: SolPriceData = {
+          usd: data.solana.usd || 150,
+          eur: data.solana.eur || 135,
+          lastUpdated: Date.now(),
+        };
+
+        cachedPrice = priceData;
+        cacheTimestamp = Date.now();
+
+        // Save to localStorage
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(priceData));
+          localStorage.setItem(LOCAL_STORAGE_TIMESTAMP_KEY, cacheTimestamp.toString());
+        } catch (e) {
+          // Ignore
+        }
+
+        return priceData;
+      }
+
+      return cachedPrice;
+    } catch (err: any) {
+      console.error("Error fetching SOL price:", err.message);
+      return cachedPrice;
+    } finally {
+      // Clear pending request after it completes
+      pendingRequest = null;
+    }
+  })();
+
+  return pendingRequest;
+}
+
 export function useSolPrice() {
-  const [price, setPrice] = useState<SolPriceData>({
-    usd: 150, // Updated fallback price (closer to real SOL price)
-    eur: 135,
-    lastUpdated: Date.now(),
+  const [price, setPrice] = useState<SolPriceData>(() => {
+    // Initialize with cached price if available
+    if (cachedPrice) {
+      return cachedPrice;
+    }
+    return {
+      usd: 150,
+      eur: 135,
+      lastUpdated: Date.now(),
+    };
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedPrice);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchPrice() {
-      // Use cached price if still valid
-      if (cachedPrice && Date.now() - cacheTimestamp < CACHE_DURATION) {
-        setPrice(cachedPrice);
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
-        const response = await fetch(COINGECKO_API, {
-          cache: 'force-cache', // Use browser cache
-          next: { revalidate: 300 } // Next.js cache for 5 minutes
-        });
+        const result = await fetchPriceGlobal();
 
-        if (!response.ok) {
-          // If we get rate limited (429), use cached or fallback price
-          if (response.status === 429) {
-            console.warn("CoinGecko API rate limit reached, using cached/fallback price");
-            if (cachedPrice) {
-              setPrice(cachedPrice);
-            }
-            // Don't throw error, just use fallback
-            setError("Rate limited - using cached price");
-            setLoading(false);
-            return;
-          }
-          throw new Error(`Failed to fetch SOL price: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.solana) {
-          const priceData: SolPriceData = {
-            usd: data.solana.usd || 150,
-            eur: data.solana.eur || 135,
-            lastUpdated: Date.now(),
-          };
-
-          cachedPrice = priceData;
-          cacheTimestamp = Date.now();
-          setPrice(priceData);
+        if (result) {
+          setPrice(result);
           setError(null);
-
-          // Save to localStorage for persistence
-          try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(priceData));
-            localStorage.setItem(LOCAL_STORAGE_TIMESTAMP_KEY, cacheTimestamp.toString());
-          } catch (e) {
-            // Ignore localStorage errors
-          }
-        }
-      } catch (err: any) {
-        console.error("Error fetching SOL price:", err);
-        setError(err.message);
-        // Keep using the previous price or default
-        if (cachedPrice) {
+        } else if (cachedPrice) {
           setPrice(cachedPrice);
         }
+      } catch (err: any) {
+        console.error("Error in useSolPrice:", err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -110,7 +136,7 @@ export function useSolPrice() {
 
     fetchPrice();
 
-    // Refresh price every minute
+    // Refresh price every 5 minutes
     const interval = setInterval(fetchPrice, CACHE_DURATION);
 
     return () => clearInterval(interval);

@@ -16,8 +16,16 @@ export const SolanaWalletProvider: FC<{ children: ReactNode }> = ({ children }) 
   // Use devnet
   const network = WalletAdapterNetwork.Devnet;
 
-  // You can also use a custom RPC endpoint
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  // Use custom RPC endpoint from env (Helius for better rate limits)
+  const endpoint = useMemo(() => {
+    const customRpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+    if (customRpc) {
+      console.log('🚀 Using custom RPC endpoint:', customRpc.split('?')[0]); // Log without API key
+      return customRpc;
+    }
+    console.warn('⚠️ No custom RPC configured, using public endpoint (rate limited)');
+    return clusterApiUrl(network);
+  }, [network]);
 
   // Configure wallets including mobile support
   const wallets = useMemo(
@@ -27,7 +35,7 @@ export const SolanaWalletProvider: FC<{ children: ReactNode }> = ({ children }) 
         appIdentity: {
           name: 'USCI',
           uri: typeof window !== 'undefined' ? window.location.origin : '',
-          icon: typeof window !== 'undefined' ? `${window.location.origin}/logo-dark.svg` : '',
+          icon: typeof window !== 'undefined' ? `${window.location.origin}/logo-dark.png` : '',
         },
         authorizationResultCache: {
           get: async () => {

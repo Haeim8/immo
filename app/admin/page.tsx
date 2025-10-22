@@ -21,7 +21,7 @@ import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { useBrickChain, useAllProperties, usePropertyProposals, useFactoryAccount } from "@/lib/solana/hooks";
+import { useBrickChain, useAllProperties, usePropertyProposals, useFactoryAccount, useAllInvestors, InvestorData } from "@/lib/solana/hooks";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
@@ -1496,50 +1496,163 @@ function OperationsTab() {
 }
 
 function InvestorsTab() {
-  const investors: any[] = [];
+  const { investors, loading, error } = useAllInvestors();
+  const { price: solPrice } = useSolPrice();
+  const [selectedInvestor, setSelectedInvestor] = useState<InvestorData | null>(null);
 
   return (
     <div className="space-y-6">
       <h3 className="text-2xl font-bold">Investor Management</h3>
 
-      <GlassCard>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="px-6 py-4 text-left text-sm font-semibold">Wallet</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold">Total Invested</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold">Properties</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold">Joined</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {investors.map((investor, i) => (
-                <motion.tr
-                  key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="border-b border-white/5 hover:bg-white/5"
+      {/* Investor Details Modal */}
+      {selectedInvestor && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-4xl max-h-[80vh] overflow-auto"
+          >
+            <GlassCard>
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold mb-2">Investor Details</h3>
+                  <code className="text-cyan-400 font-mono text-sm">
+                    {selectedInvestor.address}
+                  </code>
+                </div>
+                <AnimatedButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedInvestor(null)}
                 >
-                  <td className="px-6 py-4">
-                    <code className="text-cyan-400 font-mono">{investor.address}</code>
-                  </td>
-                  <td className="px-6 py-4 font-semibold">{investor.invested}</td>
-                  <td className="px-6 py-4">{investor.properties}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{investor.joined}</td>
-                  <td className="px-6 py-4">
-                    <AnimatedButton variant="outline" size="sm">
-                      View Details
-                    </AnimatedButton>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+                  Close
+                </AnimatedButton>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-sm text-muted-foreground mb-1">Total Shares</p>
+                  <p className="text-2xl font-bold text-cyan-400">{selectedInvestor.totalShares}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-sm text-muted-foreground mb-1">Properties</p>
+                  <p className="text-2xl font-bold text-blue-400">{selectedInvestor.propertiesInvested}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-sm text-muted-foreground mb-1">Dividends Claimed</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    ${((selectedInvestor.totalDividendsClaimed / 1e9) * solPrice.usd).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <h4 className="text-lg font-semibold mb-4">All Investments</h4>
+              <div className="space-y-3">
+                {selectedInvestor.investments.map((inv, i) => {
+                  const mintDate = inv.mintTime ? new Date(inv.mintTime * 1000).toLocaleDateString() : "Unknown";
+                  const dividendsUSD = ((inv.dividendsClaimed / 1e9) * solPrice.usd).toFixed(2);
+
+                  return (
+                    <motion.div
+                      key={inv.shareNFTPDA.toBase58()}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-semibold text-cyan-400 mb-1">{inv.propertyName}</p>
+                          <p className="text-xs text-muted-foreground font-mono mb-1">
+                            Share #{inv.tokenId}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Minted: {mintDate}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Dividends Claimed</p>
+                          <p className="text-lg font-semibold text-green-400">${dividendsUSD}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </GlassCard>
+          </motion.div>
         </div>
-      </GlassCard>
+      )}
+
+      {loading ? (
+        <GlassCard>
+          <div className="text-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+            <p className="text-muted-foreground">Loading investors...</p>
+          </div>
+        </GlassCard>
+      ) : error ? (
+        <GlassCard>
+          <div className="text-center py-12">
+            <p className="text-red-400">{error}</p>
+          </div>
+        </GlassCard>
+      ) : investors.length === 0 ? (
+        <GlassCard>
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No investors yet</p>
+          </div>
+        </GlassCard>
+      ) : (
+        <GlassCard>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Wallet</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Total Shares</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Properties</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Dividends Claimed</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {investors.map((investor, i) => {
+                  const dividendsUSD = ((investor.totalDividendsClaimed / 1e9) * solPrice.usd).toFixed(2);
+
+                  return (
+                    <motion.tr
+                      key={investor.address}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="border-b border-white/5 hover:bg-white/5"
+                    >
+                      <td className="px-6 py-4">
+                        <code className="text-cyan-400 font-mono text-sm">
+                          {investor.address.slice(0, 4)}...{investor.address.slice(-4)}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-blue-400">
+                        {investor.totalShares}
+                      </td>
+                      <td className="px-6 py-4">{investor.propertiesInvested}</td>
+                      <td className="px-6 py-4 text-green-400">${dividendsUSD}</td>
+                      <td className="px-6 py-4">
+                        <AnimatedButton
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedInvestor(investor)}
+                        >
+                          View Details
+                        </AnimatedButton>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+      )}
     </div>
   );
 }

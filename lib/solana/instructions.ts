@@ -431,6 +431,36 @@ export async function fetchPropertyProposals(
     }));
 }
 
+// Vote on proposal
+export async function voteOnProposal(
+  connection: Connection,
+  proposalPDA: PublicKey,
+  shareNFTPDA: PublicKey,
+  voteChoice: boolean,
+  voter: PublicKey,
+  propertyPDA: PublicKey
+): Promise<Transaction> {
+  const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+  const program = getProgram(provider);
+
+  // Get vote PDA
+  const [votePDA] = getVotePDA(proposalPDA, shareNFTPDA);
+
+  const instruction = await program.methods
+    .castVote(voteChoice)
+    .accounts({
+      property: propertyPDA,
+      proposal: proposalPDA,
+      shareNft: shareNFTPDA,
+      vote: votePDA,
+      voter: voter,
+      systemProgram: SystemProgram.programId,
+    })
+    .instruction();
+
+  return new Transaction().add(instruction);
+}
+
 // Liquidate property (admin)
 export async function liquidateProperty(
   connection: Connection,
@@ -598,6 +628,25 @@ export async function fetchUserShareNFTs(
     return [];
   }
 }
+
+// Fetch all share NFTs (for admin/analytics)
+export async function fetchAllShareNFTs(
+  connection: Connection
+): Promise<Array<{ publicKey: PublicKey; account: ShareNFT }>> {
+  try {
+    const provider = new AnchorProvider(connection, createReadOnlyWallet(), {});
+    const program = getProgram(provider);
+    const shareNFTs = await program.account.shareNft.all();
+    return shareNFTs.map((s: any) => ({
+      publicKey: s.publicKey,
+      account: s.account as any,
+    }));
+  } catch (err) {
+    console.error("Error fetching all share NFTs:", err);
+    return [];
+  }
+}
+
 async function resolveTeamMemberPDA(
   program: RealEstateFactoryProgram,
   factory: PublicKey,

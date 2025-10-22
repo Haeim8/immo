@@ -1,25 +1,46 @@
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Wallet, TrendingUp, Calendar, Gift, Loader2 } from "lucide-react";
+import { Wallet, TrendingUp, Calendar, Gift, Loader2, Vote, ThumbsUp, ThumbsDown, Clock } from "lucide-react";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { useUserShareNFTs, useAllProperties } from "@/lib/solana/hooks";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useUserShareNFTs, useAllProperties, useBrickChain, usePropertyProposals } from "@/lib/solana/hooks";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useSolPrice, lamportsToUsd } from "@/lib/solana/useSolPrice";
 import { useTranslations, useIntl, useCurrencyFormatter } from "@/components/providers/IntlProvider";
+import { PublicKey } from "@solana/web3.js";
+import { voteOnProposal } from "@/lib/solana/instructions";
+import type { Proposal } from "@/lib/solana/types";
 
 export default function PortfolioPage() {
-  const { connected } = useWallet();
-  const { shareNFTs, loading: loadingNFTs, error: errorNFTs } = useUserShareNFTs();
+  const { connected, publicKey, sendTransaction } = useWallet();
+  const { connection } = useConnection();
+  const { shareNFTs, loading: loadingNFTs, error: errorNFTs, refresh: refreshNFTs } = useUserShareNFTs();
   const { properties, loading: loadingProperties } = useAllProperties();
   const { price: solPrice } = useSolPrice();
+  const { claimShareDividends } = useBrickChain();
   const portfolioT = useTranslations("portfolio");
   const metricsT = useTranslations("portfolio.metrics");
   const { language } = useIntl();
   const { formatCurrency } = useCurrencyFormatter();
+
+  const [claimingAll, setClaimingAll] = useState(false);
+  const [claimingNFT, setClaimingNFT] = useState<string | null>(null);
+  const [votingProposal, setVotingProposal] = useState<string | null>(null);
+  const [allProposals, setAllProposals] = useState<Array<{
+    proposal: { publicKey: PublicKey; account: Proposal };
+    property: { publicKey: PublicKey; account: any };
+  }>>([]);
+  const [loadingProposals, setLoadingProposals] = useState(false);
+
+  // Get unique properties where user has shares
+  const userProperties = useMemo(() => {
+    const uniquePropertyIds = new Set(shareNFTs.map(nft => nft.account.property.toBase58()));
+    return properties.filter(prop => uniquePropertyIds.has(prop.publicKey.toBase58()));
+  }, [shareNFTs, properties]);
 
   const loading = loadingNFTs || loadingProperties;
   const error = errorNFTs;
@@ -73,6 +94,137 @@ export default function PortfolioPage() {
   const totalPendingDividendsFormatted = formatCurrency(totalPendingDividends, {
     maximumFractionDigits: 2,
   });
+
+  // Claim all dividends from all NFTs
+  const handleClaimAll = async () => {
+    if (shareNFTs.length === 0) return;
+
+    setClaimingAll(true);
+    try {
+      // Claim dividends for each NFT sequentially
+      for (const nft of shareNFTs) {
+        try {
+          await claimShareDividends(nft.publicKey);
+          console.log("✅ Claimed dividends for NFT", nft.publicKey.toBase58());
+        } catch (err: any) {
+          console.error("Failed to claim for NFT", nft.publicKey.toBase58(), err);
+          // Continue with next NFT even if one fails
+        }
+      }
+      // Refresh NFTs to update the UI
+      await refreshNFTs();
+      alert("✅ Dividends claimed successfully!");
+    } catch (err: any) {
+      console.error("Error claiming all dividends:", err);
+      alert("❌ Failed to claim dividends: " + err.message);
+    } finally {
+      setClaimingAll(false);
+    }
+  };
+
+  // Claim dividends for a single NFT
+  const handleClaimSingle = async (shareNFTPDA: PublicKey) => {
+    setClaimingNFT(shareNFTPDA.toBase58());
+    try {
+      await claimShareDividends(shareNFTPDA);
+      await refreshNFTs();
+      alert("✅ Dividends claimed successfully!");
+    } catch (err: any) {
+      console.error("Error claiming dividends:", err);
+      alert("❌ Failed to claim dividends: " + err.message);
+    } finally {
+      setClaimingNFT(null);
+    }
+  };
+
+  // Fetch proposals for all user properties
+  useEffect(() => {
+    if (!connected || userProperties.length === 0) {
+      setAllProposals([]);
+      return;
+    }
+
+    const fetchAllProposals = async () => {
+      setLoadingProposals(true);
+      try {
+        const { fetchPropertyProposals } = await import("@/lib/solana/instructions");
+
+        const proposalsPromises = userProperties.map(async (property) => {
+          try {
+            const proposals = await fetchPropertyProposals(connection, property.publicKey);
+            return proposals.map(p => ({ proposal: p, property }));
+          } catch (err) {
+            console.error(`Error fetching proposals for ${property.account.name}:`, err);
+            return [];
+          }
+        });
+
+        const allProposalsArrays = await Promise.all(proposalsPromises);
+        const flatProposals = allProposalsArrays.flat();
+
+        // Filter active proposals only
+        const activeProposals = flatProposals.filter(p => p.proposal.account.isActive);
+        setAllProposals(activeProposals);
+      } catch (err: any) {
+        console.error("Error fetching proposals:", err);
+      } finally {
+        setLoadingProposals(false);
+      }
+    };
+
+    fetchAllProposals();
+  }, [connected, userProperties, connection]);
+
+  // Vote on a proposal
+  const handleVote = async (proposalPDA: PublicKey, voteChoice: boolean, propertyPDA: PublicKey) => {
+    if (!publicKey) {
+      alert("❌ Please connect your wallet");
+      return;
+    }
+
+    // Find user's share NFT for this property
+    const userNFT = shareNFTs.find(nft => nft.account.property.equals(propertyPDA));
+    if (!userNFT) {
+      alert("❌ You must own shares in this property to vote");
+      return;
+    }
+
+    setVotingProposal(proposalPDA.toBase58());
+    try {
+      const transaction = await voteOnProposal(
+        connection,
+        proposalPDA,
+        userNFT.publicKey,
+        voteChoice,
+        publicKey,
+        propertyPDA
+      );
+
+      const signature = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(signature, "confirmed");
+
+      alert(`✅ Vote ${voteChoice ? "YES" : "NO"} submitted successfully!`);
+
+      // Refresh proposals
+      const { fetchPropertyProposals } = await import("@/lib/solana/instructions");
+      const proposals = await fetchPropertyProposals(connection, propertyPDA);
+      const property = properties.find(p => p.publicKey.equals(propertyPDA));
+      if (property) {
+        setAllProposals(prev =>
+          prev.map(p =>
+            p.proposal.publicKey.equals(proposalPDA)
+              ? { proposal: proposals.find(newP => newP.publicKey.equals(proposalPDA))!, property }
+              : p
+          ).filter(p => p.proposal)
+        );
+      }
+    } catch (err: any) {
+      console.error("Error voting:", err);
+      alert("❌ Failed to vote: " + err.message);
+    } finally {
+      setVotingProposal(null);
+    }
+  };
 
   return (
     <div className="min-h-screen px-2 md:px-0">
@@ -164,14 +316,159 @@ export default function PortfolioPage() {
                   <AnimatedButton
                     variant="primary"
                     size="lg"
-                    disabled={totalPendingDividends === 0}
+                    disabled={totalPendingDividends === 0 || claimingAll}
+                    onClick={handleClaimAll}
                   >
-                    {metricsT("claimButton", { amount: totalPendingDividendsFormatted })}
+                    {claimingAll ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Claiming...
+                      </>
+                    ) : (
+                      metricsT("claimButton", { amount: totalPendingDividendsFormatted })
+                    )}
                   </AnimatedButton>
                 </div>
               </div>
             </GlassCard>
           </motion.div>
+
+          {/* Governance Section */}
+          {allProposals.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mb-12"
+            >
+              <h2 className="text-3xl font-bold mb-6">
+                <GradientText>Active Governance Proposals</GradientText>
+              </h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {allProposals.map((item, index) => {
+                  const { proposal, property } = item;
+                  const totalVotes = proposal.account.yesVotes.toNumber() + proposal.account.noVotes.toNumber();
+                  const yesPercentage = totalVotes > 0 ? (proposal.account.yesVotes.toNumber() / totalVotes) * 100 : 0;
+                  const noPercentage = totalVotes > 0 ? (proposal.account.noVotes.toNumber() / totalVotes) * 100 : 0;
+
+                  const votingEndsTimestamp = proposal.account.votingEndsAt.toNumber();
+                  const votingEndsDate = new Date(votingEndsTimestamp * 1000);
+                  const isVotingEnded = Date.now() > votingEndsDate.getTime();
+                  const timeLeft = votingEndsDate.getTime() - Date.now();
+                  const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+
+                  const isVoting = votingProposal === proposal.publicKey.toBase58();
+
+                  return (
+                    <motion.div
+                      key={proposal.publicKey.toBase58()}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
+                    >
+                      <GlassCard hover glow>
+                        <div className="space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="text-xl font-bold mb-1 text-cyan-400">
+                                {proposal.account.title}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mb-2">
+                                Property: {property.account.name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {proposal.account.description}
+                              </p>
+                            </div>
+                            <Vote className="h-6 w-6 text-purple-400" />
+                          </div>
+
+                          {/* Voting Stats */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-green-400 flex items-center gap-1">
+                                <ThumbsUp className="h-4 w-4" />
+                                Yes: {proposal.account.yesVotes.toNumber()}
+                              </span>
+                              <span className="text-red-400 flex items-center gap-1">
+                                <ThumbsDown className="h-4 w-4" />
+                                No: {proposal.account.noVotes.toNumber()}
+                              </span>
+                            </div>
+
+                            {/* Progress bars */}
+                            <div className="space-y-1">
+                              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-green-500"
+                                  style={{ width: `${yesPercentage}%` }}
+                                />
+                              </div>
+                              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-red-500"
+                                  style={{ width: `${noPercentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Time left */}
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            {isVotingEnded ? (
+                              <span className="text-red-400">Voting Ended</span>
+                            ) : (
+                              <span>{daysLeft} day{daysLeft !== 1 ? 's' : ''} left to vote</span>
+                            )}
+                          </div>
+
+                          {/* Vote Buttons */}
+                          {!isVotingEnded && (
+                            <div className="flex gap-3">
+                              <AnimatedButton
+                                variant="outline"
+                                className="flex-1 border-green-500/30 hover:bg-green-500/10"
+                                disabled={isVoting}
+                                onClick={() => handleVote(proposal.publicKey, true, property.publicKey)}
+                              >
+                                {isVoting ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <ThumbsUp className="mr-2 h-4 w-4" />
+                                )}
+                                Vote Yes
+                              </AnimatedButton>
+                              <AnimatedButton
+                                variant="outline"
+                                className="flex-1 border-red-500/30 hover:bg-red-500/10"
+                                disabled={isVoting}
+                                onClick={() => handleVote(proposal.publicKey, false, property.publicKey)}
+                              >
+                                {isVoting ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <ThumbsDown className="mr-2 h-4 w-4" />
+                                )}
+                                Vote No
+                              </AnimatedButton>
+                            </div>
+                          )}
+
+                          {proposal.account.isExecuted && (
+                            <div className="mt-2 p-2 rounded bg-purple-500/10 border border-purple-500/30 text-sm text-purple-400">
+                              ✓ Proposal Executed
+                            </div>
+                          )}
+                        </div>
+                      </GlassCard>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
 
           {/* Investments */}
           <div>
@@ -282,8 +579,20 @@ export default function PortfolioPage() {
                                   {pendingFormatted}
                                 </p>
                               </div>
-                              <AnimatedButton variant="outline" size="sm" disabled={pendingUSD === 0}>
-                                {portfolioT("claimCta")}
+                              <AnimatedButton
+                                variant="outline"
+                                size="sm"
+                                disabled={pendingUSD === 0 || claimingNFT === nft.publicKey.toBase58()}
+                                onClick={() => handleClaimSingle(nft.publicKey)}
+                              >
+                                {claimingNFT === nft.publicKey.toBase58() ? (
+                                  <>
+                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                    Claiming...
+                                  </>
+                                ) : (
+                                  portfolioT("claimCta")
+                                )}
                               </AnimatedButton>
                             </div>
                           </div>
