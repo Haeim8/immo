@@ -48,6 +48,33 @@ export interface Dictionary {
     emptyText: string;
     createHint: string;
   };
+  propertyContainer: {
+    searchPlaceholder: string;
+    filters: string;
+    filterBy: string;
+    sortBy: string;
+    sortNameAsc: string;
+    sortPriceAsc: string;
+    sortPriceDesc: string;
+    sortReturnDesc: string;
+    propertyType: string;
+    fundingStatus: string;
+    clearFilters: string;
+    clearFiltersToSeeAll: string;
+    showingResults: (data: { start: number; end: number; total: number }) => string;
+    noResults: string;
+    type: {
+      all: string;
+      residential: string;
+      commercial: string;
+      mixed: string;
+    };
+    status: {
+      all: string;
+      funding: string;
+      funded: string;
+    };
+  };
   propertyCard: {
     description: string;
     surface: string;
@@ -263,6 +290,34 @@ export const dictionaries: Record<Locale, Dictionary> = {
       errorText: "Erreur lors du chargement des propriétés : {{error}}",
       emptyText: "Aucune propriété disponible pour le moment. Soyez le premier à en créer une !",
       createHint: "Connectez votre wallet et allez dans l'admin pour créer des propriétés.",
+    },
+    propertyContainer: {
+      searchPlaceholder: "Rechercher par nom ou localisation...",
+      filters: "Filtres",
+      filterBy: "Filtrer par",
+      sortBy: "Trier par",
+      sortNameAsc: "Nom (A-Z)",
+      sortPriceAsc: "Prix croissant",
+      sortPriceDesc: "Prix décroissant",
+      sortReturnDesc: "Rendement décroissant",
+      propertyType: "Type de propriété",
+      fundingStatus: "Statut de financement",
+      clearFilters: "Effacer les filtres",
+      clearFiltersToSeeAll: "Effacer les filtres pour voir toutes les propriétés",
+      showingResults: ({ start, end, total }) =>
+        `Affichage de ${start} à ${end} sur ${total} propriété${total > 1 ? "s" : ""}`,
+      noResults: "Aucune propriété ne correspond à vos critères.",
+      type: {
+        all: "Tous types",
+        residential: "Résidentiel",
+        commercial: "Commercial",
+        mixed: "Mixte",
+      },
+      status: {
+        all: "Tous",
+        funding: "En financement",
+        funded: "Financé",
+      },
     },
     propertyCard: {
       description: "Description",
@@ -482,6 +537,34 @@ export const dictionaries: Record<Locale, Dictionary> = {
       emptyText: "No properties available yet. Be the first to create one!",
       createHint: "Connect your wallet and open the admin panel to create properties.",
     },
+    propertyContainer: {
+      searchPlaceholder: "Search by name or location...",
+      filters: "Filters",
+      filterBy: "Filter by",
+      sortBy: "Sort by",
+      sortNameAsc: "Name (A-Z)",
+      sortPriceAsc: "Price (Low to High)",
+      sortPriceDesc: "Price (High to Low)",
+      sortReturnDesc: "Return (High to Low)",
+      propertyType: "Property type",
+      fundingStatus: "Funding status",
+      clearFilters: "Clear filters",
+      clearFiltersToSeeAll: "Clear filters to see all properties",
+      showingResults: ({ start, end, total }) =>
+        `Showing ${start} to ${end} of ${total} propert${total > 1 ? "ies" : "y"}`,
+      noResults: "No properties match your criteria.",
+      type: {
+        all: "All types",
+        residential: "Residential",
+        commercial: "Commercial",
+        mixed: "Mixed",
+      },
+      status: {
+        all: "All",
+        funding: "Funding",
+        funded: "Funded",
+      },
+    },
     propertyCard: {
       description: "Description",
       surface: "Surface area",
@@ -699,6 +782,34 @@ export const dictionaries: Record<Locale, Dictionary> = {
       errorText: "Error al cargar las propiedades: {{error}}",
       emptyText: "Aún no hay propiedades disponibles. ¡Sé el primero en crear una!",
       createHint: "Conecta tu wallet y ve al panel de administración para crear propiedades.",
+    },
+    propertyContainer: {
+      searchPlaceholder: "Buscar por nombre o ubicación...",
+      filters: "Filtros",
+      filterBy: "Filtrar por",
+      sortBy: "Ordenar por",
+      sortNameAsc: "Nombre (A-Z)",
+      sortPriceAsc: "Precio (Menor a Mayor)",
+      sortPriceDesc: "Precio (Mayor a Menor)",
+      sortReturnDesc: "Rentabilidad (Mayor a Menor)",
+      propertyType: "Tipo de propiedad",
+      fundingStatus: "Estado de financiación",
+      clearFilters: "Limpiar filtros",
+      clearFiltersToSeeAll: "Limpiar filtros para ver todas las propiedades",
+      showingResults: ({ start, end, total }) =>
+        `Mostrando ${start} a ${end} de ${total} propiedad${total > 1 ? "es" : ""}`,
+      noResults: "No hay propiedades que coincidan con tus criterios.",
+      type: {
+        all: "Todos los tipos",
+        residential: "Residencial",
+        commercial: "Comercial",
+        mixed: "Mixto",
+      },
+      status: {
+        all: "Todos",
+        funding: "En financiación",
+        funded: "Financiado",
+      },
     },
     propertyCard: {
       description: "Descripción",

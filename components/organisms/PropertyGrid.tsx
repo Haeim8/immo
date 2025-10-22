@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useAllProperties } from "@/lib/solana/hooks";
 import { propertyToInvestment } from "@/lib/solana/adapters";
-import PropertyCard from "@/components/molecules/PropertyCard";
+import PropertyContainer from "@/components/organisms/PropertyContainer";
 import GradientText from "@/components/atoms/GradientText";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "@/components/providers/IntlProvider";
@@ -72,8 +72,11 @@ export default function PropertyGrid() {
     );
   }
 
+  // Convertir les propriétés blockchain en format UI
+  const investments = properties.map((property) => propertyToInvestment(property));
+
   return (
-    <section className="py-12 md:py-20">
+    <section className="py-6 md:py-10">
       <div className="container mx-auto px-4 md:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -89,22 +92,8 @@ export default function PropertyGrid() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
-          {properties.map((property, index) => {
-            const investment = propertyToInvestment(property);
-
-            return (
-              <motion.div
-                key={property.publicKey.toBase58()}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <PropertyCard investment={investment} />
-              </motion.div>
-            );
-          })}
-        </div>
+        {/* Nouveau conteneur avec pagination et filtres */}
+        <PropertyContainer properties={investments} />
       </div>
     </section>
   );

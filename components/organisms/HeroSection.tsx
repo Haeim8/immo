@@ -43,7 +43,7 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="relative min-h-[60vh] md:min-h-[80vh] flex items-center justify-center py-12 md:py-20">
+    <section className="relative min-h-[55vh] md:min-h-[65vh] flex items-center justify-center py-8 md:py-12">
 
       <div className="container mx-auto px-4 md:px-6 relative z-10">
         <div className="max-w-5xl mx-auto space-y-8 md:space-y-12">

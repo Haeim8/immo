@@ -17,7 +17,7 @@ export default function PerformancePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 md:mb-12 pt-4 md:pt-0"
+            className="mb-8 md:mb-12 pt-6 md:pt-12"
           >
             <h1 className="text-3xl md:text-5xl font-bold mb-3 md:mb-4">
               <GradientText>{performanceT("title")}</GradientText>
