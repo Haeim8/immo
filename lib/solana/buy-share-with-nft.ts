@@ -27,27 +27,11 @@ function generateNFTSvg(params: {
   assetType: string;
   votingPower: number;
 }): string {
-  const { propertyName, shareNumber, totalShares, city, province, country, assetType, votingPower } = params;
+  const { shareNumber, totalShares, assetType } = params;
 
-  return `<svg width="400" height="600" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="400" height="600" fill="url(#bg)"/>
-  <text x="200" y="50" font-family="Arial" font-size="24" fill="#f5f5f5" text-anchor="middle" font-weight="bold">${assetType}</text>
-  <text x="200" y="100" font-family="Arial" font-size="18" fill="#00d4ff" text-anchor="middle">${propertyName}</text>
-  <text x="200" y="140" font-family="Arial" font-size="14" fill="#a0a0a0" text-anchor="middle">${city}, ${province}</text>
-  <text x="200" y="160" font-family="Arial" font-size="14" fill="#a0a0a0" text-anchor="middle">${country}</text>
-  <rect x="50" y="200" width="300" height="150" fill="#0f3460" rx="10"/>
-  <text x="200" y="240" font-family="Arial" font-size="16" fill="#f5f5f5" text-anchor="middle">Share Number</text>
-  <text x="200" y="280" font-family="Arial" font-size="48" fill="#00d4ff" text-anchor="middle" font-weight="bold">#${shareNumber}</text>
-  <text x="200" y="320" font-family="Arial" font-size="14" fill="#a0a0a0" text-anchor="middle">of ${totalShares} shares</text>
-  ${votingPower > 0 ? `<text x="200" y="400" font-family="Arial" font-size="14" fill="#00ff88" text-anchor="middle">🗳️ Voting Power: ${votingPower}</text>` : ''}
-  <text x="200" y="550" font-family="Arial" font-size="12" fill="#666" text-anchor="middle">Powered by Solana</text>
-</svg>`;
+  // Compact SVG to fit in Solana instruction size limits (~400 chars)
+  // NOTE: Full metadata (name, city, etc.) is stored in property account
+  return `<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a192f"/><stop offset="1" stop-color="#112240"/></linearGradient></defs><rect width="400" height="400" fill="url(#g)"/><text x="200" y="120" font-size="18" fill="#64ffda" text-anchor="middle" font-weight="bold">${assetType}</text><text x="200" y="220" font-size="72" fill="#64ffda" text-anchor="middle" font-weight="bold">#${shareNumber}</text><text x="200" y="260" font-size="16" fill="#8892b0" text-anchor="middle">/ ${totalShares}</text></svg>`;
 }
 
 /**

@@ -428,7 +428,11 @@ function PropertiesTab() {
                     </div>
 
                     <div className="flex gap-2">
-                      <AnimatedButton variant="outline" size="sm">
+                      <AnimatedButton
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`https://explorer.solana.com/address/${property.publicKey.toBase58()}?cluster=devnet`, '_blank')}
+                      >
                         View Details
                       </AnimatedButton>
                       <AnimatedButton variant="outline" size="sm">
@@ -1785,11 +1789,150 @@ function TeamTab() {
 }
 
 function DividendsTab() {
+  const [isDistributeOpen, setIsDistributeOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+  const [isDistributing, setIsDistributing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const { properties, loading: loadingProperties } = useAllProperties();
+  const { connection } = useConnection();
+  const wallet = useWallet();
+  const { price: solPrice } = useSolPrice();
+
+  const handleDistribute = async () => {
+    if (!wallet.publicKey || !selectedProperty || !amount) {
+      setError("Please select a property and enter an amount");
+      return;
+    }
+
+    setIsDistributing(true);
+    setError(null);
+
+    try {
+      const amountUSD = parseFloat(amount);
+      const amountLamports = usdToLamports(amountUSD, solPrice.usd);
+      const propertyPDA = new PublicKey(selectedProperty);
+
+      const { depositDividends } = await import("@/lib/solana/instructions");
+      const transaction = await depositDividends(
+        connection,
+        propertyPDA,
+        amountLamports,
+        wallet.publicKey
+      );
+
+      const signature = await wallet.sendTransaction(transaction, connection);
+      await connection.confirmTransaction(signature, "confirmed");
+
+      setSuccess(true);
+      setTimeout(() => {
+        setIsDistributeOpen(false);
+        setSuccess(false);
+        setSelectedProperty("");
+        setAmount("");
+      }, 2000);
+    } catch (err: any) {
+      console.error("Error distributing dividends:", err);
+      setError(err.message || "Failed to distribute dividends");
+    } finally {
+      setIsDistributing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Distribute Dividends Modal */}
+      {isDistributeOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md"
+          >
+            <GlassCard>
+              <h3 className="text-2xl font-bold mb-6">Distribute Dividends</h3>
+
+              <div className="space-y-4">
+                {/* Property Selector */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Select Property</label>
+                  <select
+                    value={selectedProperty}
+                    onChange={(e) => setSelectedProperty(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
+                    disabled={isDistributing || loadingProperties}
+                  >
+                    <option value="">Select a property...</option>
+                    {properties.map((prop) => (
+                      <option key={prop.publicKey.toBase58()} value={prop.publicKey.toBase58()}>
+                        {prop.account.name} - {prop.account.city}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Amount Input */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Amount (USD)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
+                    disabled={isDistributing}
+                  />
+                </div>
+
+                {error && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/50 text-green-400 text-sm">
+                    ✅ Dividends distributed successfully!
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <AnimatedButton
+                    variant="outline"
+                    onClick={() => setIsDistributeOpen(false)}
+                    disabled={isDistributing}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </AnimatedButton>
+                  <AnimatedButton
+                    variant="primary"
+                    onClick={handleDistribute}
+                    disabled={isDistributing || !selectedProperty || !amount}
+                    className="flex-1"
+                  >
+                    {isDistributing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Distributing...
+                      </>
+                    ) : (
+                      "Distribute"
+                    )}
+                  </AnimatedButton>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h3 className="text-2xl font-bold">Dividend Management</h3>
-        <AnimatedButton variant="primary">
+        <AnimatedButton variant="primary" onClick={() => setIsDistributeOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Distribute Dividends
         </AnimatedButton>
