@@ -9,6 +9,7 @@ import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import { useUserShareNFTs, useAllProperties, useBrickChain, usePropertyProposals } from "@/lib/solana/hooks";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useSolPrice, lamportsToUsd } from "@/lib/solana/useSolPrice";
 import { useTranslations, useIntl, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 import { PublicKey } from "@solana/web3.js";
@@ -17,6 +18,7 @@ import type { Proposal } from "@/lib/solana/types";
 
 export default function PortfolioPage() {
   const { connected, publicKey, sendTransaction } = useWallet();
+  const { setVisible } = useWalletModal();
   const { connection } = useConnection();
   const { shareNFTs, loading: loadingNFTs, error: errorNFTs, refresh: refreshNFTs } = useUserShareNFTs();
   const { properties, loading: loadingProperties } = useAllProperties();
@@ -247,10 +249,77 @@ export default function PortfolioPage() {
 
           {/* Overview Cards */}
           {!connected ? (
-            <GlassCard className="text-center py-12">
-              <p className="text-muted-foreground mb-4">{portfolioT("connectMessage")}</p>
-              <p className="text-sm text-muted-foreground">{portfolioT("connectHint")}</p>
-            </GlassCard>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <GlassCard className="text-center py-16 md:py-24 relative overflow-hidden">
+                {/* Gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-purple-500/10" />
+
+                <div className="relative z-10 max-w-2xl mx-auto px-4">
+                  {/* Icon */}
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                    className="mb-6"
+                  >
+                    <div className="inline-flex p-6 rounded-full bg-gradient-to-br from-cyan-400/20 to-blue-600/20 border border-cyan-400/30">
+                      <Wallet className="h-16 w-16 text-cyan-400" />
+                    </div>
+                  </motion.div>
+
+                  {/* Title */}
+                  <motion.h2
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-2xl md:text-4xl font-bold mb-4"
+                  >
+                    <GradientText>{portfolioT("connectTitle")}</GradientText>
+                  </motion.h2>
+
+                  {/* Message */}
+                  <motion.p
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="text-muted-foreground text-base md:text-lg mb-8 max-w-md mx-auto"
+                  >
+                    {portfolioT("connectMessage")}
+                  </motion.p>
+
+                  {/* Button */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                  >
+                    <AnimatedButton
+                      variant="primary"
+                      size="lg"
+                      onClick={() => setVisible(true)}
+                      className="text-lg px-8 py-6"
+                    >
+                      <Wallet className="mr-2 h-5 w-5" />
+                      {portfolioT("connectButton")}
+                    </AnimatedButton>
+                  </motion.div>
+
+                  {/* Hint */}
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    className="text-sm text-muted-foreground mt-6"
+                  >
+                    {portfolioT("connectHint")}
+                  </motion.p>
+                </div>
+              </GlassCard>
+            </motion.div>
           ) : loading ? (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />

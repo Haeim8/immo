@@ -104,7 +104,9 @@ export interface Dictionary {
   portfolio: {
     title: string;
     subtitle: string;
+    connectTitle: string;
     connectMessage: string;
+    connectButton: string;
     connectHint: string;
     loading: string;
     error: string;
@@ -134,12 +136,41 @@ export interface Dictionary {
     subtitle: string;
     comingSoonTitle: string;
     comingSoonText: string;
+    loading: string;
+    error: string;
+    noInvestors: string;
+    noInvestorsText: string;
+    rank: string;
+    investor: string;
+    investments: string;
+    totalInvested: string;
+    dividends: string;
+    performance: string;
   };
   performance: {
     title: string;
     subtitle: string;
     comingSoonTitle: string;
     comingSoonText: string;
+    loading: string;
+    error: string;
+    noProperties: string;
+    noPropertiesText: string;
+    rank: string;
+    property: string;
+    totalRaised: string;
+    dividends: string;
+    funding: string;
+    performance: string;
+    location: string;
+    expectedReturn: string;
+    sharesSold: string;
+    sharePrice: string;
+    totalDividends: string;
+    active: string;
+    inactive: string;
+    liquidated: string;
+    smartContract: string;
   };
   waitlist: {
     badge: string;
@@ -349,8 +380,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
     portfolio: {
       title: "Mon portfolio",
       subtitle: "Gérez vos investissements et réclamez vos dividendes",
-      connectMessage: "Connectez votre wallet pour consulter votre portfolio",
-      connectHint: "Cliquez sur « Connecter le wallet » dans l'en-tête pour commencer.",
+      connectTitle: "Commencez à investir dès maintenant",
+      connectMessage: "Connectez votre wallet pour accéder à votre portfolio et commencer à investir dans des biens immobiliers tokenisés.",
+      connectButton: "Connecter mon wallet",
+      connectHint: "Sécurisé par la blockchain Solana • Investissements à partir de quelques SOL",
       loading: "Chargement de votre portfolio depuis la blockchain...",
       error: "Erreur : {{error}}",
       metrics: {
@@ -380,6 +413,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       comingSoonTitle: "Bientôt disponible",
       comingSoonText:
         "Le classement mettra en avant les investisseurs selon leurs portefeuilles et leurs rendements. Revenez vite voir votre position !",
+      loading: "Chargement du classement...",
+      error: "Erreur",
+      noInvestors: "Aucun investisseur pour le moment",
+      noInvestorsText: "Soyez le premier investisseur à apparaître dans le classement !",
+      rank: "Rang",
+      investor: "Investisseur",
+      investments: "Investissements",
+      totalInvested: "Total investi",
+      dividends: "Dividendes",
+      performance: "Performance",
     },
     performance: {
       title: "Analyses de performance",
@@ -387,6 +430,25 @@ export const dictionaries: Record<Locale, Dictionary> = {
       comingSoonTitle: "Bientôt disponible",
       comingSoonText:
         "Les analyses et graphiques détaillés seront bientôt accessibles. Nous travaillons à vous apporter des insights complets.",
+      loading: "Chargement des données de performance...",
+      error: "Erreur",
+      noProperties: "Aucune propriété pour le moment",
+      noPropertiesText: "Aucune propriété tokenisée disponible pour afficher les données de performance.",
+      rank: "Rang",
+      property: "Propriété",
+      totalRaised: "Total levé",
+      dividends: "Dividendes",
+      funding: "Financement",
+      performance: "Performance",
+      location: "Localisation",
+      expectedReturn: "Rendement attendu",
+      sharesSold: "Parts vendues",
+      sharePrice: "Prix par part",
+      totalDividends: "Total dividendes",
+      active: "Actif",
+      inactive: "Inactif",
+      liquidated: "Liquidé",
+      smartContract: "Smart Contract",
     },
     waitlist: {
       badge: "🚀 Bientôt disponible",
@@ -595,8 +657,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
     portfolio: {
       title: "My portfolio",
       subtitle: "Manage your investments and claim your dividends",
-      connectMessage: "Connect your wallet to view your portfolio",
-      connectHint: "Click “Connect wallet” in the header to get started.",
+      connectTitle: "Start investing now",
+      connectMessage: "Connect your wallet to access your portfolio and start investing in tokenized real estate.",
+      connectButton: "Connect my wallet",
+      connectHint: "Secured by Solana blockchain • Invest from a few SOL",
       loading: "Loading your portfolio from the blockchain...",
       error: "Error: {{error}}",
       metrics: {
@@ -626,6 +690,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       comingSoonTitle: "Coming soon",
       comingSoonText:
         "The leaderboard will showcase top investors based on holdings and returns. Check back soon to see where you rank!",
+      loading: "Loading leaderboard...",
+      error: "Error",
+      noInvestors: "No investors yet",
+      noInvestorsText: "Be the first investor to appear on the leaderboard!",
+      rank: "Rank",
+      investor: "Investor",
+      investments: "Investments",
+      totalInvested: "Total Invested",
+      dividends: "Dividends",
+      performance: "Performance",
     },
     performance: {
       title: "Performance analytics",
@@ -633,6 +707,25 @@ export const dictionaries: Record<Locale, Dictionary> = {
       comingSoonTitle: "Coming soon",
       comingSoonText:
         "Detailed analytics and charts are coming soon. We're working on bringing you comprehensive insights.",
+      loading: "Loading performance data...",
+      error: "Error",
+      noProperties: "No properties yet",
+      noPropertiesText: "No tokenized properties available to display performance data.",
+      rank: "Rank",
+      property: "Property",
+      totalRaised: "Total Raised",
+      dividends: "Dividends",
+      funding: "Funding",
+      performance: "Performance",
+      location: "Location",
+      expectedReturn: "Expected Return",
+      sharesSold: "Shares Sold",
+      sharePrice: "Share Price",
+      totalDividends: "Total Dividends",
+      active: "Active",
+      inactive: "Inactive",
+      liquidated: "Liquidated",
+      smartContract: "Smart Contract",
     },
     waitlist: {
       badge: "🚀 Coming soon",
@@ -841,8 +934,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
     portfolio: {
       title: "Mi portafolio",
       subtitle: "Gestiona tus inversiones y cobra tus dividendos",
-      connectMessage: "Conecta tu wallet para ver tu portafolio",
-      connectHint: "Haz clic en «Connect wallet» en la cabecera para comenzar.",
+      connectTitle: "Comienza a invertir ahora",
+      connectMessage: "Conecta tu wallet para acceder a tu portafolio y empezar a invertir en bienes raíces tokenizados.",
+      connectButton: "Conectar mi wallet",
+      connectHint: "Protegido por blockchain Solana • Invierte desde pocos SOL",
       loading: "Cargando tu portafolio desde la blockchain...",
       error: "Error: {{error}}",
       metrics: {
@@ -872,6 +967,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       comingSoonTitle: "Próximamente",
       comingSoonText:
         "La clasificación mostrará a los principales inversores según sus tenencias y sus rendimientos. ¡Vuelve pronto para ver tu posición!",
+      loading: "Cargando clasificación...",
+      error: "Error",
+      noInvestors: "Aún no hay inversores",
+      noInvestorsText: "¡Sé el primer inversor en aparecer en la clasificación!",
+      rank: "Posición",
+      investor: "Inversor",
+      investments: "Inversiones",
+      totalInvested: "Total invertido",
+      dividends: "Dividendos",
+      performance: "Rendimiento",
     },
     performance: {
       title: "Analítica de rendimiento",
@@ -879,6 +984,25 @@ export const dictionaries: Record<Locale, Dictionary> = {
       comingSoonTitle: "Próximamente",
       comingSoonText:
         "Muy pronto tendrás análisis detallados y gráficos completos. Estamos trabajando para ofrecerte toda la información que necesitas.",
+      loading: "Cargando datos de rendimiento...",
+      error: "Error",
+      noProperties: "Aún no hay propiedades",
+      noPropertiesText: "No hay propiedades tokenizadas disponibles para mostrar datos de rendimiento.",
+      rank: "Posición",
+      property: "Propiedad",
+      totalRaised: "Total recaudado",
+      dividends: "Dividendos",
+      funding: "Financiación",
+      performance: "Rendimiento",
+      location: "Ubicación",
+      expectedReturn: "Rentabilidad esperada",
+      sharesSold: "Participaciones vendidas",
+      sharePrice: "Precio por participación",
+      totalDividends: "Total dividendos",
+      active: "Activo",
+      inactive: "Inactivo",
+      liquidated: "Liquidado",
+      smartContract: "Smart Contract",
     },
     waitlist: {
       badge: "🚀 Próximamente",

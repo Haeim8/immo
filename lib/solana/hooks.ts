@@ -19,6 +19,7 @@ import {
   liquidateProperty,
   initializeFactoryInstruction,
   fetchFactory,
+  lamportsToSOL,
 } from "./instructions";
 import { buyShareWithNFT } from "./buy-share-with-nft";
 import {
@@ -798,4 +799,226 @@ export function useAllInvestors() {
   }, [fetchInvestors]);
 
   return { investors, loading, error, refresh: fetchInvestors };
+}
+
+// Leaderboard data interface
+export interface LeaderboardInvestor {
+  address: string;
+  displayAddress: string; // Shortened address (0x1234...5678)
+  numberOfInvestments: number; // Number of unique properties
+  totalInvested: number; // Total amount invested in lamports
+  totalInvestedSOL: number; // Total amount invested in SOL
+  totalInvestedUSD: number; // Total amount invested in USD (estimated)
+  totalDividends: number; // Total dividends claimed in lamports
+  totalDividendsSOL: number; // Total dividends claimed in SOL
+  totalDividendsUSD: number; // Total dividends claimed in USD (estimated)
+  performance: number; // Performance as a percentage (dividends / invested * 100)
+}
+
+// Hook for leaderboard data (investors ranked by performance)
+export function useLeaderboardData() {
+  const { connection } = useConnection();
+  const [leaderboard, setLeaderboard] = useState<LeaderboardInvestor[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchLeaderboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch all ShareNFTs and properties
+      const [shareNFTs, properties] = await Promise.all([
+        fetchAllShareNFTs(connection),
+        fetchAllProperties(connection),
+      ]);
+
+      // Create a map of property PDA to property data
+      const propertyMap = new Map(
+        properties.map((p) => [p.publicKey.toBase58(), p])
+      );
+
+      // Aggregate data by investor address
+      const investorMap = new Map<string, {
+        totalInvestedLamports: number;
+        totalDividendsLamports: number;
+        uniqueProperties: Set<string>;
+      }>();
+
+      for (const nft of shareNFTs) {
+        const ownerAddress = nft.account.owner.toBase58();
+        const property = propertyMap.get(nft.account.property.toBase58());
+
+        if (!property) continue;
+
+        if (!investorMap.has(ownerAddress)) {
+          investorMap.set(ownerAddress, {
+            totalInvestedLamports: 0,
+            totalDividendsLamports: 0,
+            uniqueProperties: new Set(),
+          });
+        }
+
+        const investor = investorMap.get(ownerAddress)!;
+        const sharePrice = property.account.sharePrice?.toNumber ? property.account.sharePrice.toNumber() : 0;
+        const dividendsClaimed = nft.account.dividendsClaimed?.toNumber ? nft.account.dividendsClaimed.toNumber() : 0;
+
+        investor.totalInvestedLamports += sharePrice;
+        investor.totalDividendsLamports += dividendsClaimed;
+        investor.uniqueProperties.add(nft.account.property.toBase58());
+      }
+
+      const SOL_TO_USD = 150; // Rough estimate
+
+      // Convert to leaderboard format and calculate performance
+      const leaderboardData: LeaderboardInvestor[] = Array.from(investorMap.entries()).map(([address, data]) => {
+        const totalInvestedSOL = lamportsToSOL(data.totalInvestedLamports);
+        const totalDividendsSOL = lamportsToSOL(data.totalDividendsLamports);
+        const performance = data.totalInvestedLamports > 0
+          ? (data.totalDividendsLamports / data.totalInvestedLamports) * 100
+          : 0;
+
+        // Format address as 0x1234...5678
+        const displayAddress = address.length > 12
+          ? `${address.slice(0, 6)}...${address.slice(-4)}`
+          : address;
+
+        return {
+          address,
+          displayAddress,
+          numberOfInvestments: data.uniqueProperties.size,
+          totalInvested: data.totalInvestedLamports,
+          totalInvestedSOL,
+          totalInvestedUSD: totalInvestedSOL * SOL_TO_USD,
+          totalDividends: data.totalDividendsLamports,
+          totalDividendsSOL,
+          totalDividendsUSD: totalDividendsSOL * SOL_TO_USD,
+          performance,
+        };
+      });
+
+      // Sort by performance (highest first)
+      leaderboardData.sort((a, b) => b.performance - a.performance);
+
+      setLeaderboard(leaderboardData);
+    } catch (err: any) {
+      console.error("Error fetching leaderboard:", err);
+      setError(err.message || "Failed to fetch leaderboard");
+    } finally {
+      setLoading(false);
+    }
+  }, [connection]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
+
+  return { leaderboard, loading, error, refresh: fetchLeaderboard };
+}
+
+// Performance data interface
+export interface PropertyPerformance {
+  propertyPDA: PublicKey;
+  propertyId: string;
+  name: string;
+  city: string;
+  province: string;
+  country: string;
+  totalShares: number;
+  sharesSold: number;
+  sharePrice: number; // in lamports
+  sharePriceSOL: number;
+  sharePriceUSD: number;
+  totalRaised: number; // in lamports
+  totalRaisedSOL: number;
+  totalRaisedUSD: number;
+  totalDividendsDeposited: number; // in lamports
+  totalDividendsDepositedSOL: number;
+  totalDividendsDepositedUSD: number;
+  performance: number; // dividends / totalRaised * 100
+  expectedReturn: number; // basis points
+  fundingProgress: number; // percentage
+  imageCid: string;
+  metadataCid: string;
+  isActive: boolean;
+  isLiquidated: boolean;
+}
+
+// Hook for performance data (properties ranked by performance)
+export function usePerformanceData() {
+  const { connection } = useConnection();
+  const [performance, setPerformance] = useState<PropertyPerformance[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPerformance = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch all properties
+      const properties = await fetchAllProperties(connection);
+
+      const SOL_TO_USD = 150; // Rough estimate
+
+      // Convert to performance format
+      const performanceData: PropertyPerformance[] = properties.map((property) => {
+        const totalShares = property.account.totalShares?.toNumber ? property.account.totalShares.toNumber() : 0;
+        const sharesSold = property.account.sharesSold?.toNumber ? property.account.sharesSold.toNumber() : 0;
+        const sharePrice = property.account.sharePrice?.toNumber ? property.account.sharePrice.toNumber() : 0;
+        const totalDividendsDeposited = property.account.totalDividendsDeposited?.toNumber
+          ? property.account.totalDividendsDeposited.toNumber()
+          : 0;
+
+        const totalRaised = sharesSold * sharePrice;
+        const performance = totalRaised > 0 ? (totalDividendsDeposited / totalRaised) * 100 : 0;
+        const fundingProgress = totalShares > 0 ? (sharesSold / totalShares) * 100 : 0;
+
+        const sharePriceSOL = lamportsToSOL(sharePrice);
+        const totalRaisedSOL = lamportsToSOL(totalRaised);
+        const totalDividendsDepositedSOL = lamportsToSOL(totalDividendsDeposited);
+
+        return {
+          propertyPDA: property.publicKey,
+          propertyId: property.account.propertyId.toString(),
+          name: property.account.name,
+          city: property.account.city,
+          province: property.account.province,
+          country: property.account.country,
+          totalShares,
+          sharesSold,
+          sharePrice,
+          sharePriceSOL,
+          sharePriceUSD: sharePriceSOL * SOL_TO_USD,
+          totalRaised,
+          totalRaisedSOL,
+          totalRaisedUSD: totalRaisedSOL * SOL_TO_USD,
+          totalDividendsDeposited,
+          totalDividendsDepositedSOL,
+          totalDividendsDepositedUSD: totalDividendsDepositedSOL * SOL_TO_USD,
+          performance,
+          expectedReturn: property.account.expectedReturn,
+          fundingProgress,
+          imageCid: property.account.imageCid,
+          metadataCid: property.account.metadataCid,
+          isActive: property.account.isActive,
+          isLiquidated: property.account.isLiquidated,
+        };
+      });
+
+      // Sort by performance (highest first)
+      performanceData.sort((a, b) => b.performance - a.performance);
+
+      setPerformance(performanceData);
+    } catch (err: any) {
+      console.error("Error fetching performance:", err);
+      setError(err.message || "Failed to fetch performance");
+    } finally {
+      setLoading(false);
+    }
+  }, [connection]);
+
+  useEffect(() => {
+    fetchPerformance();
+  }, [fetchPerformance]);
+
+  return { performance, loading, error, refresh: fetchPerformance };
 }
