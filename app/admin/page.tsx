@@ -64,9 +64,9 @@ export default function AdminDashboard() {
         return;
       }
 
-      if (solanaWallet) {
+      if (walletAddress) {
         try {
-          const member = await isTeamMember(connection, solanaWallet);
+          const member = await isTeamMember(connection, walletAddress);
           if (!cancelled) {
             setHasAccess(member);
             setAccessChecked(true);
