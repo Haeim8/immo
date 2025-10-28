@@ -7,7 +7,7 @@ import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { usePrivy } from "@privy-io/react-auth";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useWalletAddress, useAllPlaces, useAllUserPuzzles, useEthPrice } from "@/lib/evm/hooks";
 import { useClaimRewards } from "@/lib/evm/write-hooks";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
@@ -15,7 +15,7 @@ import { formatEther } from "viem";
 
 export default function PortfolioPage() {
   const { address, isConnected } = useWalletAddress();
-  const { login } = usePrivy();
+  const { openConnectModal } = useConnectModal();
   const { places, isLoading: loadingPlaces } = useAllPlaces();
   const { puzzles: userNFTs, isLoading: loadingNFTs } = useAllUserPuzzles(address);
   const { price: ethPrice } = useEthPrice();
@@ -139,7 +139,7 @@ export default function PortfolioPage() {
                     <AnimatedButton
                       variant="primary"
                       size="lg"
-                      onClick={login}
+                      onClick={() => openConnectModal?.()}
                       className="text-lg px-8 py-6"
                     >
                       <Wallet className="mr-2 h-5 w-5" />

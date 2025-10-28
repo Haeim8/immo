@@ -22,7 +22,6 @@ import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import { useRouter } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
 import {
   useWalletAddress,
   useAllPlaces,
@@ -49,7 +48,6 @@ export default function AdminDashboard() {
   >("overview");
   const router = useRouter();
   const { address, isConnected } = useWalletAddress();
-  const { authenticated } = usePrivy();
   const [hasAccess, setHasAccess] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
 
@@ -57,7 +55,7 @@ export default function AdminDashboard() {
   const { isTeamMember, isLoading: isLoadingTeam } = useIsTeamMember(address);
 
   useEffect(() => {
-    if (!isConnected || !authenticated) {
+    if (!isConnected) {
       setHasAccess(false);
       setAccessChecked(true);
       router.replace("/");
@@ -75,7 +73,7 @@ export default function AdminDashboard() {
     if (!canAccess) {
       router.replace("/portfolio");
     }
-  }, [isConnected, authenticated, isAdmin, isTeamMember, isLoadingAdmin, isLoadingTeam, router]);
+  }, [isConnected, isAdmin, isTeamMember, isLoadingAdmin, isLoadingTeam, router]);
 
   if (!accessChecked || isLoadingAdmin || isLoadingTeam) {
     return (

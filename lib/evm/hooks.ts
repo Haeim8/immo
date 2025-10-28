@@ -1,9 +1,9 @@
 /**
- * EVM Hooks sans Wagmi - Utilise ethers + Privy directement
+ * EVM Hooks avec Wagmi
  */
 
 import { useState, useEffect } from 'react';
-import { useWallets } from '@privy-io/react-auth';
+import { useAccount } from 'wagmi';
 import { createPublicClient, http, formatEther } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { FACTORY_ADDRESS, BLOCK_EXPLORER_URL } from './constants';
@@ -26,18 +26,8 @@ const publicClient = createPublicClient({
  * Hook pour obtenir l'adresse du wallet connecté
  */
 export function useWalletAddress() {
-  const { wallets } = useWallets();
-  const [address, setAddress] = useState<`0x${string}` | undefined>();
-
-  useEffect(() => {
-    if (wallets && wallets.length > 0) {
-      setAddress(wallets[0].address as `0x${string}`);
-    } else {
-      setAddress(undefined);
-    }
-  }, [wallets]);
-
-  return { address, isConnected: !!address };
+  const { address, isConnected } = useAccount();
+  return { address, isConnected };
 }
 
 /**

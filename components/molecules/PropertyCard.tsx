@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { getIpfsUrl } from "@/lib/pinata/upload";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
-import { usePrivy } from "@privy-io/react-auth";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { BLOCK_EXPLORER_URL, useWalletAddress } from "@/lib/evm/hooks";
 import { useBuyPuzzle } from "@/lib/evm/write-hooks";
 
@@ -31,7 +31,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
   const [quantity, setQuantity] = useState(1);
 
   const { address, isConnected } = useWalletAddress();
-  const { login } = usePrivy();
+  const { openConnectModal } = useConnectModal();
   const { buyPuzzle, isPending: isTxPending } = useBuyPuzzle();
   const t = useTranslations("propertyCard");
   const { formatCurrency } = useCurrencyFormatter();
@@ -76,7 +76,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
 
   const handleInvest = async () => {
     if (!isConnected || !address) {
-      await login();
+      openConnectModal?.();
       return;
     }
 

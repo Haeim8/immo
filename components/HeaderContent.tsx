@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePrivy } from "@privy-io/react-auth";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useWalletAddress, useIsAdmin, useIsTeamMember } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
 
@@ -26,8 +26,6 @@ export default function HeaderContent() {
   const navT = useTranslations("navbar");
   const commonT = useTranslations("common");
 
-  // Privy Wallet
-  const { login, logout, ready } = usePrivy();
   const { address, isConnected } = useWalletAddress();
 
   // Check admin and team status
@@ -35,16 +33,6 @@ export default function HeaderContent() {
   const { isTeamMember } = useIsTeamMember(address);
 
   const canAccessAdmin = isAdmin || (isTeamMember ?? false);
-
-  // Handle connect button click
-  const handleConnect = () => {
-    login();
-  };
-
-  // Handle disconnect
-  const handleDisconnect = () => {
-    logout();
-  };
 
   return (
     <div className="w-full h-full px-2 sm:px-6 flex items-center">
@@ -143,35 +131,66 @@ export default function HeaderContent() {
           </div>
 
 
-          {/* Connect Wallet Button - Responsive */}
-          {!isConnected || !ready ? (
-            <AnimatedButton
-              variant="primary"
-              size="sm"
-              onClick={handleConnect}
-              disabled={!ready}
-              className="text-sm whitespace-nowrap flex-shrink-0 !px-3 !py-2"
-            >
-              <Wallet className="h-4 w-4 flex-shrink-0" />
-              <span className="flex-shrink-0">{commonT("connectWallet")}</span>
-            </AnimatedButton>
-          ) : (
-            <div className="flex items-center gap-1 sm:gap-2">
-              <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs sm:text-sm font-medium">
-                <Wallet className="h-3 w-3 inline mr-1" />
-                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "•"}
-              </div>
-              <AnimatedButton
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnect}
-                className="text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <span className="hidden sm:inline">{commonT("disconnect")}</span>
-                <span className="sm:hidden">×</span>
-              </AnimatedButton>
-            </div>
-          )}
+          {/* Connect Wallet Button - RainbowKit */}
+          <ConnectButton.Custom>
+            {({
+              account,
+              chain,
+              openAccountModal,
+              openConnectModal,
+              authenticationStatus,
+              mounted,
+            }) => {
+              const ready = mounted && authenticationStatus !== 'loading';
+              const connected =
+                ready &&
+                account &&
+                chain &&
+                (!authenticationStatus ||
+                  authenticationStatus === 'authenticated');
+
+              return (
+                <div
+                  {...(!ready && {
+                    'aria-hidden': true,
+                    'style': {
+                      opacity: 0,
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    },
+                  })}
+                >
+                  {(() => {
+                    if (!connected) {
+                      return (
+                        <AnimatedButton
+                          onClick={openConnectModal}
+                          variant="primary"
+                          size="sm"
+                          className="text-sm whitespace-nowrap flex-shrink-0 !px-3 !py-2"
+                        >
+                          <Wallet className="h-4 w-4 flex-shrink-0" />
+                          <span className="flex-shrink-0">{commonT("connectWallet")}</span>
+                        </AnimatedButton>
+                      );
+                    }
+
+                    return (
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <button
+                          onClick={openAccountModal}
+                          className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs sm:text-sm font-medium hover:bg-white/10 transition-colors"
+                        >
+                          <Wallet className="h-3 w-3 inline mr-1" />
+                          {account.displayName || `${account.address.slice(0, 6)}...${account.address.slice(-4)}`}
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            }}
+          </ConnectButton.Custom>
 
           {/* Settings Dropdown - Visible on mobile */}
           <SettingsDropdown />

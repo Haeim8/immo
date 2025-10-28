@@ -1,71 +1,19 @@
 /**
- * Write hooks pour les transactions - Utilise Privy directement
+ * Write hooks pour les transactions - Utilise Wagmi
  */
 
-import { useState } from 'react';
-import { useWallets } from '@privy-io/react-auth';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { FACTORY_ADDRESS } from './constants';
 import { USCIFactoryABI, USCIABI } from './abis';
-
-/**
- * Hook générique pour écrire sur un contrat
- */
-function useContractWrite() {
-  const { wallets } = useWallets();
-  const [isPending, setIsPending] = useState(false);
-  const [hash, setHash] = useState<string | undefined>();
-  const [error, setError] = useState<Error | null>(null);
-
-  const writeContract = async (params: {
-    address: `0x${string}`;
-    abi: any;
-    functionName: string;
-    args?: any[];
-    value?: bigint;
-  }) => {
-    setIsPending(true);
-    setError(null);
-
-    try {
-      if (!wallets || wallets.length === 0) {
-        throw new Error('No wallet connected');
-      }
-
-      const wallet = wallets[0];
-      await wallet.switchChain(84532); // Base Sepolia
-
-      const provider = await wallet.getEthersProvider();
-      const signer = provider.getSigner();
-
-      const { ethers } = await import('ethers');
-      const contract = new ethers.Contract(params.address, params.abi, await signer);
-
-      const tx = await contract[params.functionName](...(params.args || []), {
-        value: params.value || 0,
-      });
-
-      setHash(tx.hash);
-      await tx.wait();
-
-      return tx;
-    } catch (err: any) {
-      setError(err);
-      throw err;
-    } finally {
-      setIsPending(false);
-    }
-  };
-
-  return { writeContract, isPending, hash, error };
-}
 
 /**
  * Hook pour créer une place
  */
 export function useCreatePlace() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const createPlace = async (params: {
+  const createPlace = (params: {
     name: string;
     city: string;
     province: string;
@@ -81,7 +29,7 @@ export function useCreatePlace() {
     metadataCid: string;
     votingEnabled: boolean;
   }) => {
-    return writeContract({
+    writeContract({
       address: FACTORY_ADDRESS,
       abi: USCIFactoryABI,
       functionName: 'createPlace',
@@ -104,17 +52,18 @@ export function useCreatePlace() {
     });
   };
 
-  return { createPlace, isPending, hash, error };
+  return { createPlace, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour ajouter un team member
  */
 export function useAddTeamMember() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const addTeamMember = async (memberAddress: `0x${string}`) => {
-    return writeContract({
+  const addTeamMember = (memberAddress: `0x${string}`) => {
+    writeContract({
       address: FACTORY_ADDRESS,
       abi: USCIFactoryABI,
       functionName: 'addTeamMember',
@@ -122,17 +71,18 @@ export function useAddTeamMember() {
     });
   };
 
-  return { addTeamMember, isPending, hash, error };
+  return { addTeamMember, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour retirer un team member
  */
 export function useRemoveTeamMember() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const removeTeamMember = async (memberAddress: `0x${string}`) => {
-    return writeContract({
+  const removeTeamMember = (memberAddress: `0x${string}`) => {
+    writeContract({
       address: FACTORY_ADDRESS,
       abi: USCIFactoryABI,
       functionName: 'removeTeamMember',
@@ -140,17 +90,18 @@ export function useRemoveTeamMember() {
     });
   };
 
-  return { removeTeamMember, isPending, hash, error };
+  return { removeTeamMember, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour déposer des rewards
  */
 export function useDepositRewards() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const depositRewards = async (placeAddress: `0x${string}`, amount: bigint) => {
-    return writeContract({
+  const depositRewards = (placeAddress: `0x${string}`, amount: bigint) => {
+    writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'depositRewards',
@@ -158,34 +109,36 @@ export function useDepositRewards() {
     });
   };
 
-  return { depositRewards, isPending, hash, error };
+  return { depositRewards, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour fermer la vente
  */
 export function useCloseSale() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const closeSale = async (placeAddress: `0x${string}`) => {
-    return writeContract({
+  const closeSale = (placeAddress: `0x${string}`) => {
+    writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'closeSale',
     });
   };
 
-  return { closeSale, isPending, hash, error };
+  return { closeSale, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour compléter une place (liquidation)
  */
 export function useCompletPlace() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const completPlace = async (placeAddress: `0x${string}`, amount: bigint) => {
-    return writeContract({
+  const completPlace = (placeAddress: `0x${string}`, amount: bigint) => {
+    writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'complete',
@@ -193,17 +146,18 @@ export function useCompletPlace() {
     });
   };
 
-  return { completPlace, isPending, hash, error };
+  return { completPlace, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour claim rewards
  */
 export function useClaimRewards() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const claimRewards = async (placeAddress: `0x${string}`, tokenId: bigint) => {
-    return writeContract({
+  const claimRewards = (placeAddress: `0x${string}`, tokenId: bigint) => {
+    writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'claimRewards',
@@ -211,17 +165,18 @@ export function useClaimRewards() {
     });
   };
 
-  return { claimRewards, isPending, hash, error };
+  return { claimRewards, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour acheter un puzzle
  */
 export function useBuyPuzzle() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const buyPuzzle = async (placeAddress: `0x${string}`, puzzlePrice: bigint) => {
-    return writeContract({
+  const buyPuzzle = (placeAddress: `0x${string}`, puzzlePrice: bigint) => {
+    writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'takePuzzle',
@@ -229,22 +184,23 @@ export function useBuyPuzzle() {
     });
   };
 
-  return { buyPuzzle, isPending, hash, error };
+  return { buyPuzzle, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour créer une proposition
  */
 export function useCreateProposal() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const createProposal = async (
+  const createProposal = (
     placeAddress: `0x${string}`,
     title: string,
     description: string,
     votingDuration: bigint
   ) => {
-    return writeContract({
+    writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'createProposal',
@@ -252,22 +208,23 @@ export function useCreateProposal() {
     });
   };
 
-  return { createProposal, isPending, hash, error };
+  return { createProposal, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour voter
  */
 export function useCastVote() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const castVote = async (
+  const castVote = (
     placeAddress: `0x${string}`,
     proposalId: bigint,
     tokenId: bigint,
     vote: boolean
   ) => {
-    return writeContract({
+    writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'castVote',
@@ -275,17 +232,18 @@ export function useCastVote() {
     });
   };
 
-  return { castVote, isPending, hash, error };
+  return { castVote, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
 
 /**
  * Hook pour fermer une proposition
  */
 export function useCloseProposal() {
-  const { writeContract, isPending, hash, error } = useContractWrite();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const closeProposal = async (placeAddress: `0x${string}`, proposalId: bigint) => {
-    return writeContract({
+  const closeProposal = (placeAddress: `0x${string}`, proposalId: bigint) => {
+    writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'closeProposal',
@@ -293,5 +251,5 @@ export function useCloseProposal() {
     });
   };
 
-  return { closeProposal, isPending, hash, error };
+  return { closeProposal, isPending: isPending || isConfirming, hash, error, isSuccess };
 }

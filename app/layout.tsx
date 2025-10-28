@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { EVMWalletProvider } from "@/components/privy-provider";
+import { EVMWalletProvider } from "@/components/wagmi-provider";
 import MobileNav from "@/components/organisms/MobileNav";
 import { IntlProvider } from "@/components/providers/IntlProvider";
 import HeaderContent from "@/components/HeaderContent";
@@ -21,13 +21,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="dark" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <body className={inter.className}>
         <IntlProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
-            forcedTheme="dark"
+            enableSystem
             disableTransitionOnChange
           >
             <EVMWalletProvider>

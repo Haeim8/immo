@@ -71,7 +71,7 @@ export default function LeaderboardPage() {
           {isLoading ? (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-              <p className="text-muted-foreground">Loading leaderboard...</p>
+              <p className="text-muted-foreground">{leaderboardT("loading")}</p>
             </div>
           ) : leaderboardData.length === 0 ? (
             <GlassCard className="text-center py-24">
@@ -80,17 +80,11 @@ export default function LeaderboardPage() {
                   <Trophy className="h-12 w-12 text-yellow-400" />
                 </div>
                 <h2 className="text-2xl font-bold mb-4">
-                  <GradientText>No Investors Yet</GradientText>
+                  <GradientText>{leaderboardT("noInvestors")}</GradientText>
                 </h2>
                 <p className="text-muted-foreground mb-6">
-                  The leaderboard will show top investors once properties are purchased.
+                  {leaderboardT("noInvestorsText")}
                 </p>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>🏆 Rankings by total invested</p>
-                  <p>💰 Dividends earned tracking</p>
-                  <p>📈 Performance metrics</p>
-                  <p>🔄 Real-time updates</p>
-                </div>
               </div>
             </GlassCard>
           ) : (
@@ -132,7 +126,7 @@ export default function LeaderboardPage() {
                                 </span>
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {investor.nftCount} NFT{investor.nftCount !== 1 ? "s" : ""} • {investor.investments.length} investment{investor.investments.length !== 1 ? "s" : ""}
+                                {investor.nftCount} NFT{investor.nftCount !== 1 ? "s" : ""} • {investor.investments.length} {leaderboardT("investments")}
                               </p>
                             </div>
                           </div>
@@ -142,7 +136,7 @@ export default function LeaderboardPage() {
                             <div className="text-right">
                               <div className="flex items-center gap-2 mb-1">
                                 <Wallet className="h-4 w-4 text-cyan-400" />
-                                <p className="text-xs text-muted-foreground">Total Invested</p>
+                                <p className="text-xs text-muted-foreground">{leaderboardT("totalInvested")}</p>
                               </div>
                               <p className="text-xl font-bold">{totalInvestedFormatted}</p>
                             </div>
@@ -150,7 +144,7 @@ export default function LeaderboardPage() {
                             <div className="text-right">
                               <div className="flex items-center gap-2 mb-1">
                                 <TrendingUp className="h-4 w-4 text-green-400" />
-                                <p className="text-xs text-muted-foreground">Dividends Earned</p>
+                                <p className="text-xs text-muted-foreground">{leaderboardT("dividends")}</p>
                               </div>
                               <p className="text-xl font-bold text-green-400">{totalDividendsFormatted}</p>
                             </div>
@@ -160,7 +154,7 @@ export default function LeaderboardPage() {
                         {/* Investments detail (collapsible preview) */}
                         {rank <= 3 && investor.investments.length > 0 && (
                           <div className="mt-4 pt-4 border-t border-white/10">
-                            <p className="text-xs text-muted-foreground mb-2">Recent Investments:</p>
+                            <p className="text-xs text-muted-foreground mb-2">{leaderboardT("investments")}:</p>
                             <div className="flex flex-wrap gap-2">
                               {investor.investments.slice(0, 3).map((inv, i) => (
                                 <div
