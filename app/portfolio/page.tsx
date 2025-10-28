@@ -7,14 +7,14 @@ import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { useAccount } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
-import { useAllPlaces, useAllUserPuzzles, useEthPrice, useClaimRewards } from "@/lib/evm";
+import { useWalletAddress, useAllPlaces, useAllUserPuzzles, useEthPrice } from "@/lib/evm/hooks";
+import { useClaimRewards } from "@/lib/evm/write-hooks";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 import { formatEther } from "viem";
 
 export default function PortfolioPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWalletAddress();
   const { login } = usePrivy();
   const { places, isLoading: loadingPlaces } = useAllPlaces();
   const { puzzles: userNFTs, isLoading: loadingNFTs } = useAllUserPuzzles(address);
@@ -63,7 +63,7 @@ export default function PortfolioPage() {
   const handleClaimSingle = async (placeAddress: `0x${string}`, tokenId: bigint) => {
     setClaimingNFT(`${placeAddress}-${tokenId.toString()}`);
     try {
-      await claimRewards(placeAddress, Number(tokenId));
+      await claimRewards(placeAddress, tokenId);
       alert("✅ Rewards claimed successfully!");
     } catch (err: any) {
       console.error("Error claiming rewards:", err);

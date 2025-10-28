@@ -88,6 +88,9 @@ export function IntlProvider({ children }: { children: React.ReactNode }) {
 
   // Load preferences from storage / detection
   useEffect(() => {
+    // Skip during SSR/build
+    if (typeof window === 'undefined') return;
+
     const storedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Locale | null;
     const storedCurrency = localStorage.getItem(CURRENCY_STORAGE_KEY) as CurrencyCode | null;
 
@@ -118,7 +121,12 @@ export function IntlProvider({ children }: { children: React.ReactNode }) {
             }
           }
         })
-        .catch((err) => console.error("Geolocation detection failed:", err));
+        .catch((err) => {
+          // Silent fail during build/SSR
+          if (typeof window !== 'undefined') {
+            console.error("Geolocation detection failed:", err);
+          }
+        });
     }
   }, []);
 
@@ -127,6 +135,9 @@ export function IntlProvider({ children }: { children: React.ReactNode }) {
   }, [language]);
 
   useEffect(() => {
+    // Skip during SSR/build
+    if (typeof window === 'undefined') return;
+
     fetchRates().then(setRates);
   }, []);
 

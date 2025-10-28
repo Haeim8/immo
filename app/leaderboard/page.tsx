@@ -5,7 +5,7 @@ import { Trophy, Medal, Crown, Wallet, TrendingUp, Loader2 } from "lucide-react"
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
-import { useLeaderboardData } from "@/lib/evm";
+import { useLeaderboardData } from "@/lib/evm/hooks";
 
 export default function LeaderboardPage() {
   const leaderboardT = useTranslations("leaderboard");

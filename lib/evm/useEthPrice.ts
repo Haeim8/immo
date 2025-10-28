@@ -4,11 +4,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 
-interface EthPriceData {
-  usd: number;
-  lastUpdated: number;
-}
-
 export function useEthPrice() {
   const [priceUsd, setPriceUsd] = useState<number>(3000);
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
@@ -40,8 +35,4 @@ export function useEthPrice() {
   const price = useMemo(() => ({ usd: priceUsd, lastUpdated }), [priceUsd, lastUpdated]);
 
   return { price };
-}
-
-export function usdToEth(usd: number, ethPrice: number): string {
-  return (usd / ethPrice).toFixed(6);
 }

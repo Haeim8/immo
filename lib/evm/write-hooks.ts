@@ -1,58 +1,102 @@
 /**
- * EVM Write Hooks for admin functions
+ * Write hooks pour les transactions - Utilise Privy directement
  */
 
-import { useWriteContract } from 'wagmi';
-import { parseEther } from 'viem';
+import { useState } from 'react';
+import { useWallets } from '@privy-io/react-auth';
 import { FACTORY_ADDRESS } from './constants';
 import { USCIFactoryABI, USCIABI } from './abis';
 
 /**
- * Hook to create a new place
+ * Hook générique pour écrire sur un contrat
+ */
+function useContractWrite() {
+  const { wallets } = useWallets();
+  const [isPending, setIsPending] = useState(false);
+  const [hash, setHash] = useState<string | undefined>();
+  const [error, setError] = useState<Error | null>(null);
+
+  const writeContract = async (params: {
+    address: `0x${string}`;
+    abi: any;
+    functionName: string;
+    args?: any[];
+    value?: bigint;
+  }) => {
+    setIsPending(true);
+    setError(null);
+
+    try {
+      if (!wallets || wallets.length === 0) {
+        throw new Error('No wallet connected');
+      }
+
+      const wallet = wallets[0];
+      await wallet.switchChain(84532); // Base Sepolia
+
+      const provider = await wallet.getEthersProvider();
+      const signer = provider.getSigner();
+
+      const { ethers } = await import('ethers');
+      const contract = new ethers.Contract(params.address, params.abi, await signer);
+
+      const tx = await contract[params.functionName](...(params.args || []), {
+        value: params.value || 0,
+      });
+
+      setHash(tx.hash);
+      await tx.wait();
+
+      return tx;
+    } catch (err: any) {
+      setError(err);
+      throw err;
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return { writeContract, isPending, hash, error };
+}
+
+/**
+ * Hook pour créer une place
  */
 export function useCreatePlace() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
   const createPlace = async (params: {
-    assetType: string;
     name: string;
     city: string;
     province: string;
-    country: string;
-    totalPuzzles: number;
-    puzzlePrice: string; // in ETH
-    saleDuration: number; // in days
     surface: number;
     rooms: number;
-    expectedReturn: number; // percentage (5.5 = 5.5%)
     propertyType: string;
     yearBuilt: number;
+    totalPuzzles: number;
+    puzzlePrice: bigint;
+    expectedReturn: number;
+    saleDuration: number;
     imageCid: string;
     metadataCid: string;
     votingEnabled: boolean;
   }) => {
-    const puzzlePriceWei = parseEther(params.puzzlePrice);
-    const saleDurationSeconds = params.saleDuration * 24 * 60 * 60;
-    const expectedReturnBasisPoints = Math.floor(params.expectedReturn * 100);
-
-    return await writeContract({
+    return writeContract({
       address: FACTORY_ADDRESS,
       abi: USCIFactoryABI,
       functionName: 'createPlace',
       args: [
-        params.assetType,
         params.name,
         params.city,
         params.province,
-        params.country,
-        BigInt(params.totalPuzzles),
-        puzzlePriceWei,
-        BigInt(saleDurationSeconds),
         params.surface,
         params.rooms,
-        expectedReturnBasisPoints,
         params.propertyType,
         params.yearBuilt,
+        params.totalPuzzles,
+        params.puzzlePrice,
+        params.expectedReturn,
+        params.saleDuration,
         params.imageCid,
         params.metadataCid,
         params.votingEnabled,
@@ -60,17 +104,17 @@ export function useCreatePlace() {
     });
   };
 
-  return { createPlace, hash, isPending, error };
+  return { createPlace, isPending, hash, error };
 }
 
 /**
- * Hook to add team member
+ * Hook pour ajouter un team member
  */
 export function useAddTeamMember() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
   const addTeamMember = async (memberAddress: `0x${string}`) => {
-    return await writeContract({
+    return writeContract({
       address: FACTORY_ADDRESS,
       abi: USCIFactoryABI,
       functionName: 'addTeamMember',
@@ -78,17 +122,17 @@ export function useAddTeamMember() {
     });
   };
 
-  return { addTeamMember, hash, isPending, error };
+  return { addTeamMember, isPending, hash, error };
 }
 
 /**
- * Hook to remove team member
+ * Hook pour retirer un team member
  */
 export function useRemoveTeamMember() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
   const removeTeamMember = async (memberAddress: `0x${string}`) => {
-    return await writeContract({
+    return writeContract({
       address: FACTORY_ADDRESS,
       abi: USCIFactoryABI,
       functionName: 'removeTeamMember',
@@ -96,238 +140,158 @@ export function useRemoveTeamMember() {
     });
   };
 
-  return { removeTeamMember, hash, isPending, error };
+  return { removeTeamMember, isPending, hash, error };
 }
 
 /**
- * Hook to deposit rewards to a place
+ * Hook pour déposer des rewards
  */
 export function useDepositRewards() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
-  const depositRewards = async (placeAddress: `0x${string}`, amountEth: string) => {
-    const amountWei = parseEther(amountEth);
-
-    return await writeContract({
+  const depositRewards = async (placeAddress: `0x${string}`, amount: bigint) => {
+    return writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'depositRewards',
-      value: amountWei,
+      value: amount,
     });
   };
 
-  return { depositRewards, hash, isPending, error };
+  return { depositRewards, isPending, hash, error };
 }
 
 /**
- * Hook to create governance proposal
- */
-export function useCreateProposal() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-
-  const createProposal = async (
-    placeAddress: `0x${string}`,
-    title: string,
-    description: string,
-    durationHours: number
-  ) => {
-    const durationSeconds = durationHours * 60 * 60;
-
-    return await writeContract({
-      address: placeAddress,
-      abi: USCIABI,
-      functionName: 'createProposal',
-      args: [title, description, BigInt(durationSeconds)],
-    });
-  };
-
-  return { createProposal, hash, isPending, error };
-}
-
-/**
- * Hook to close proposal
- */
-export function useCloseProposal() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-
-  const closeProposal = async (
-    placeAddress: `0x${string}`,
-    proposalId: number | bigint
-  ) => {
-    const id = typeof proposalId === 'bigint' ? proposalId : BigInt(proposalId);
-
-    return await writeContract({
-      address: placeAddress,
-      abi: USCIABI,
-      functionName: 'closeProposal',
-      args: [id],
-    });
-  };
-
-  return { closeProposal, hash, isPending, error };
-}
-
-/**
- * Hook to close sale manually
+ * Hook pour fermer la vente
  */
 export function useCloseSale() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
   const closeSale = async (placeAddress: `0x${string}`) => {
-    return await writeContract({
+    return writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'closeSale',
     });
   };
 
-  return { closeSale, hash, isPending, error };
+  return { closeSale, isPending, hash, error };
 }
 
 /**
- * Hook to complete place (final distribution)
+ * Hook pour compléter une place (liquidation)
  */
 export function useCompletPlace() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
-  const completePlace = async (placeAddress: `0x${string}`, amountEth: string) => {
-    const amountWei = parseEther(amountEth);
-
-    return await writeContract({
+  const completPlace = async (placeAddress: `0x${string}`, amount: bigint) => {
+    return writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'complete',
-      value: amountWei,
+      value: amount,
     });
   };
 
-  return { completePlace, hash, isPending, error };
+  return { completPlace, isPending, hash, error };
 }
 
 /**
- * Hook to pause/unpause factory
- */
-export function usePauseFactory() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-
-  const pauseFactory = async () => {
-    return await writeContract({
-      address: FACTORY_ADDRESS,
-      abi: USCIFactoryABI,
-      functionName: 'pause',
-    });
-  };
-
-  const unpauseFactory = async () => {
-    return await writeContract({
-      address: FACTORY_ADDRESS,
-      abi: USCIFactoryABI,
-      functionName: 'unpause',
-    });
-  };
-
-  return { pauseFactory, unpauseFactory, hash, isPending, error };
-}
-
-/**
- * Hook to pause/unpause place
- */
-export function usePausePlace() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-
-  const pausePlace = async (placeAddress: `0x${string}`) => {
-    return await writeContract({
-      address: placeAddress,
-      abi: USCIABI,
-      functionName: 'pause',
-    });
-  };
-
-  const unpausePlace = async (placeAddress: `0x${string}`) => {
-    return await writeContract({
-      address: placeAddress,
-      abi: USCIABI,
-      functionName: 'unpause',
-    });
-  };
-
-  return { pausePlace, unpausePlace, hash, isPending, error };
-}
-
-/**
- * Hook to claim rewards for a specific token
+ * Hook pour claim rewards
  */
 export function useClaimRewards() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
-  const claimRewards = async (placeAddress: `0x${string}`, tokenId: number) => {
-    return await writeContract({
+  const claimRewards = async (placeAddress: `0x${string}`, tokenId: bigint) => {
+    return writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'claimRewards',
-      args: [BigInt(tokenId)],
+      args: [tokenId],
     });
   };
 
-  return { claimRewards, hash, isPending, error };
+  return { claimRewards, isPending, hash, error };
 }
 
 /**
- * Hook to buy a puzzle
+ * Hook pour acheter un puzzle
  */
 export function useBuyPuzzle() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
   const buyPuzzle = async (placeAddress: `0x${string}`, puzzlePrice: bigint) => {
-    const result = await writeContract({
+    return writeContract({
       address: placeAddress,
       abi: USCIABI,
       functionName: 'takePuzzle',
       value: puzzlePrice,
     });
-    return result;
   };
 
-  return { buyPuzzle, hash, isPending, error };
-}
-
-export function useClaimCompletion() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-
-  const claimCompletion = async (placeAddress: `0x${string}`, tokenId: number) => {
-    return await writeContract({
-      address: placeAddress,
-      abi: USCIABI,
-      functionName: 'claimCompletion',
-      args: [BigInt(tokenId)],
-    });
-  };
-
-  return { claimCompletion, hash, isPending, error };
+  return { buyPuzzle, isPending, hash, error };
 }
 
 /**
- * Hook to cast a vote on a proposal
+ * Hook pour créer une proposition
  */
-export function useCastVote() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+export function useCreateProposal() {
+  const { writeContract, isPending, hash, error } = useContractWrite();
 
-  const castVote = async (
+  const createProposal = async (
     placeAddress: `0x${string}`,
-    proposalId: number | bigint,
-    tokenId: number | bigint,
-    vote: boolean
+    title: string,
+    description: string,
+    votingDuration: bigint
   ) => {
-    const proposal = typeof proposalId === 'bigint' ? proposalId : BigInt(proposalId);
-    const token = typeof tokenId === 'bigint' ? tokenId : BigInt(tokenId);
-
-    return await writeContract({
+    return writeContract({
       address: placeAddress,
       abi: USCIABI,
-      functionName: 'castVote',
-      args: [proposal, token, vote],
+      functionName: 'createProposal',
+      args: [title, description, votingDuration],
     });
   };
 
-  return { castVote, hash, isPending, error };
+  return { createProposal, isPending, hash, error };
+}
+
+/**
+ * Hook pour voter
+ */
+export function useCastVote() {
+  const { writeContract, isPending, hash, error } = useContractWrite();
+
+  const castVote = async (
+    placeAddress: `0x${string}`,
+    proposalId: bigint,
+    tokenId: bigint,
+    vote: boolean
+  ) => {
+    return writeContract({
+      address: placeAddress,
+      abi: USCIABI,
+      functionName: 'castVote',
+      args: [proposalId, tokenId, vote],
+    });
+  };
+
+  return { castVote, isPending, hash, error };
+}
+
+/**
+ * Hook pour fermer une proposition
+ */
+export function useCloseProposal() {
+  const { writeContract, isPending, hash, error } = useContractWrite();
+
+  const closeProposal = async (placeAddress: `0x${string}`, proposalId: bigint) => {
+    return writeContract({
+      address: placeAddress,
+      abi: USCIABI,
+      functionName: 'closeProposal',
+      args: [proposalId],
+    });
+  };
+
+  return { closeProposal, isPending, hash, error };
 }

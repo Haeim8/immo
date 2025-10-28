@@ -5,7 +5,7 @@ import { BarChart3, TrendingUp, MapPin } from "lucide-react";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
-import { useAllPlaces, useEthPrice } from "@/lib/evm";
+import { useAllPlaces, useEthPrice } from "@/lib/evm/hooks";
 import { formatEther } from "viem";
 
 export default function PerformancePage() {

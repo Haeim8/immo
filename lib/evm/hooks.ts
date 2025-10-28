@@ -1,272 +1,228 @@
 /**
- * EVM Hooks for reading contract data
+ * EVM Hooks sans Wagmi - Utilise ethers + Privy directement
  */
 
-import { useReadContract, useReadContracts } from 'wagmi';
-import { useState, useEffect, useMemo } from 'react';
-import { FACTORY_ADDRESS } from './constants';
+import { useState, useEffect } from 'react';
+import { useWallets } from '@privy-io/react-auth';
+import { createPublicClient, http, formatEther } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { FACTORY_ADDRESS, BLOCK_EXPLORER_URL } from './constants';
 import { USCIFactoryABI, USCIABI } from './abis';
 import { PlaceData, PlaceInfo } from './adapters';
 import { useEthPrice } from './useEthPrice';
 
+// Re-export useEthPrice
+export { useEthPrice };
+// Re-export constants
+export { BLOCK_EXPLORER_URL };
+
+// Client Viem public pour lecture
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http(),
+});
+
 /**
- * Hook to get total number of places created
+ * Hook pour obtenir l'adresse du wallet connecté
+ */
+export function useWalletAddress() {
+  const { wallets } = useWallets();
+  const [address, setAddress] = useState<`0x${string}` | undefined>();
+
+  useEffect(() => {
+    if (wallets && wallets.length > 0) {
+      setAddress(wallets[0].address as `0x${string}`);
+    } else {
+      setAddress(undefined);
+    }
+  }, [wallets]);
+
+  return { address, isConnected: !!address };
+}
+
+/**
+ * Hook pour obtenir le nombre de places
  */
 export function usePlaceCount() {
-  const { data, isLoading, error } = useReadContract({
-    address: FACTORY_ADDRESS,
-    abi: USCIFactoryABI,
-    functionName: 'placeCount',
-  });
-
-  return {
-    placeCount: data ? Number(data) : 0,
-    isLoading,
-    error,
-  };
-}
-
-/**
- * Hook to get address of a place by ID
- */
-export function usePlaceAddress(placeId: number) {
-  const { data, isLoading, error } = useReadContract({
-    address: FACTORY_ADDRESS,
-    abi: USCIFactoryABI,
-    functionName: 'getPlaceAddress',
-    args: [BigInt(placeId)],
-  });
-
-  return {
-    placeAddress: data as `0x${string}` | undefined,
-    isLoading,
-    error,
-  };
-}
-
-/**
- * Hook to get info of a specific place
- */
-export function usePlaceInfo(placeAddress: `0x${string}` | undefined) {
-  const { data, isLoading, error } = useReadContract({
-    address: placeAddress,
-    abi: USCIABI,
-    functionName: 'getPlaceInfo',
-    query: {
-      enabled: !!placeAddress,
-    },
-  });
-
-  return {
-    placeInfo: data as PlaceInfo | undefined,
-    isLoading,
-    error,
-  };
-}
-
-/**
- * Hook to get all places with their info
- */
-export function useAllPlaces() {
-  const { placeCount, isLoading: isLoadingCount } = usePlaceCount();
-
-  // Create array of place IDs
-  const placeIds = Array.from({ length: placeCount }, (_, i) => i);
-
-  // Batch read all place addresses
-  const addressContracts = placeIds.map((id) => ({
-    address: FACTORY_ADDRESS,
-    abi: USCIFactoryABI,
-    functionName: 'getPlaceAddress' as const,
-    args: [BigInt(id)],
-  }));
-
-  const { data: addresses, isLoading: isLoadingAddresses } = useReadContracts({
-    contracts: addressContracts,
-    query: {
-      enabled: placeCount > 0,
-    },
-  });
-
-  // Extract place addresses
-  const placeAddresses = addresses
-    ?.map((result) => result.result as `0x${string}`)
-    .filter(Boolean) || [];
-
-  // Batch read all place infos
-  const infoContracts = placeAddresses.map((address) => ({
-    address,
-    abi: USCIABI,
-    functionName: 'getPlaceInfo' as const,
-  }));
-
-  const { data: infos, isLoading: isLoadingInfos } = useReadContracts({
-    contracts: infoContracts,
-    query: {
-      enabled: placeAddresses.length > 0,
-    },
-  });
-
-  // Combine addresses and infos - Stabiliser avec useMemo
-  const places = useMemo(() => {
-    return placeAddresses
-      .map((address, index) => {
-        const infoResult = infos?.[index];
-        if (!infoResult || infoResult.status === 'failure') return null;
-
-        return {
-          address,
-          info: infoResult.result as PlaceInfo,
-        };
-      })
-      .filter((p): p is PlaceData => p !== null);
-  }, [placeAddresses.length, infos]);
-
-  return {
-    places,
-    isLoading: isLoadingCount || isLoadingAddresses || isLoadingInfos,
-  };
-}
-
-/**
- * Hook to check if connected wallet is admin
- */
-export function useIsAdmin(address: `0x${string}` | undefined) {
-  const { data, isLoading } = useReadContract({
-    address: FACTORY_ADDRESS,
-    abi: USCIFactoryABI,
-    functionName: 'admin',
-  });
-
-  const adminAddress = data as `0x${string}` | undefined;
-
-  return {
-    isAdmin: address && adminAddress ? address.toLowerCase() === adminAddress.toLowerCase() : false,
-    adminAddress,
-    isLoading,
-  };
-}
-
-/**
- * Hook to check if connected wallet is team member
- */
-export function useIsTeamMember(address: `0x${string}` | undefined) {
-  const { data, isLoading } = useReadContract({
-    address: FACTORY_ADDRESS,
-    abi: USCIFactoryABI,
-    functionName: 'isTeamMember',
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address,
-    },
-  });
-
-  return {
-    isTeamMember: data as boolean | undefined,
-    isLoading,
-  };
-}
-
-/**
- * Hook to get user's puzzle NFTs by reading Transfer events
- */
-export function useUserPuzzles(
-  userAddress: `0x${string}` | undefined,
-  placeAddress: `0x${string}` | undefined
-) {
-  const [puzzles, setPuzzles] = useState<Array<{ tokenId: bigint; placeAddress: `0x${string}` }>>([]);
+  const [placeCount, setPlaceCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!userAddress || !placeAddress) {
-      setPuzzles([]);
-      setIsLoading(false);
-      return;
+    async function fetchCount() {
+      try {
+        const count = await publicClient.readContract({
+          address: FACTORY_ADDRESS,
+          abi: USCIFactoryABI,
+          functionName: 'placeCount',
+        });
+        setPlaceCount(Number(count));
+      } catch (error) {
+        console.error('Error fetching place count:', error);
+        setPlaceCount(0);
+      } finally {
+        setIsLoading(false);
+      }
     }
+    fetchCount();
+  }, []);
 
-    async function fetchNFTs() {
+  return { placeCount, isLoading };
+}
+
+/**
+ * Hook pour obtenir toutes les places
+ */
+export function useAllPlaces() {
+  const [places, setPlaces] = useState<PlaceData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchPlaces() {
       setIsLoading(true);
       try {
-        const { createPublicClient, http } = await import('viem');
-        const { baseSepolia } = await import('viem/chains');
-
-        const client = createPublicClient({
-          chain: baseSepolia,
-          transport: http(),
+        // Get place count
+        const count = await publicClient.readContract({
+          address: FACTORY_ADDRESS,
+          abi: USCIFactoryABI,
+          functionName: 'placeCount',
         });
 
-        // Read Transfer events to this user
-        const logs = await client.getLogs({
-          address: placeAddress,
-          event: {
-            type: 'event',
-            name: 'Transfer',
-            inputs: [
-              { indexed: true, name: 'from', type: 'address' },
-              { indexed: true, name: 'to', type: 'address' },
-              { indexed: true, name: 'tokenId', type: 'uint256' },
-            ],
-          },
-          args: {
-            to: userAddress,
-          },
-          fromBlock: 0n,
-          toBlock: 'latest',
-        });
-
-        // Get current owner for each token (in case user transferred it)
-        const nfts: Array<{ tokenId: bigint; placeAddress: `0x${string}` }> = [];
-
-        for (const log of logs) {
-          const tokenId = log.args.tokenId as bigint;
-
-          try {
-            // Check if user still owns this token
-            const owner = await client.readContract({
-              address: placeAddress,
-              abi: USCIABI,
-              functionName: 'ownerOf',
-              args: [tokenId],
-            }) as `0x${string}`;
-
-            if (owner.toLowerCase() === userAddress.toLowerCase()) {
-              nfts.push({ tokenId, placeAddress });
-            }
-          } catch {
-            // Token might not exist or burned, skip
-            continue;
-          }
+        const placeCount = Number(count);
+        if (placeCount === 0) {
+          setPlaces([]);
+          setIsLoading(false);
+          return;
         }
 
-        setPuzzles(nfts);
+        // Get all place addresses
+        const addressPromises = Array.from({ length: placeCount }, (_, i) =>
+          publicClient.readContract({
+            address: FACTORY_ADDRESS,
+            abi: USCIFactoryABI,
+            functionName: 'getPlaceAddress',
+            args: [BigInt(i)],
+          })
+        );
+
+        const addresses = await Promise.all(addressPromises);
+
+        // Get all place infos
+        const infoPromises = addresses.map((addr) =>
+          publicClient.readContract({
+            address: addr as `0x${string}`,
+            abi: USCIABI,
+            functionName: 'getPlaceInfo',
+          })
+        );
+
+        const infos = await Promise.all(infoPromises);
+
+        // Combine
+        const placesData: PlaceData[] = addresses
+          .map((address, index) => ({
+            address: address as `0x${string}`,
+            info: infos[index] as PlaceInfo,
+          }))
+          .filter((p) => p.info !== null);
+
+        setPlaces(placesData);
       } catch (error) {
-        console.error('Error fetching user NFTs:', error);
-        setPuzzles([]);
+        console.error('Error fetching places:', error);
+        setPlaces([]);
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchNFTs();
-  }, [userAddress, placeAddress]);
+    fetchPlaces();
+  }, []);
 
-  return { puzzles, isLoading };
+  return { places, isLoading };
 }
 
 /**
- * Hook to get ALL user's puzzle NFTs across all places
+ * Hook pour vérifier si l'adresse est admin
+ */
+export function useIsAdmin(address: `0x${string}` | undefined) {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!address) {
+      setIsAdmin(false);
+      setIsLoading(false);
+      return;
+    }
+
+    async function checkAdmin() {
+      try {
+        const admin = await publicClient.readContract({
+          address: FACTORY_ADDRESS,
+          abi: USCIFactoryABI,
+          functionName: 'admin',
+        });
+        setIsAdmin((admin as string).toLowerCase() === address.toLowerCase());
+      } catch (error) {
+        console.error('Error checking admin:', error);
+        setIsAdmin(false);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    checkAdmin();
+  }, [address]);
+
+  return { isAdmin, isLoading };
+}
+
+/**
+ * Hook pour vérifier si l'adresse est team member
+ */
+export function useIsTeamMember(address: `0x${string}` | undefined) {
+  const [isTeamMember, setIsTeamMember] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!address) {
+      setIsTeamMember(false);
+      setIsLoading(false);
+      return;
+    }
+
+    async function checkTeamMember() {
+      try {
+        const isMember = await publicClient.readContract({
+          address: FACTORY_ADDRESS,
+          abi: USCIFactoryABI,
+          functionName: 'isTeamMember',
+          args: [address],
+        });
+        setIsTeamMember(isMember as boolean);
+      } catch (error) {
+        console.error('Error checking team member:', error);
+        setIsTeamMember(false);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    checkTeamMember();
+  }, [address]);
+
+  return { isTeamMember, isLoading };
+}
+
+/**
+ * Hook pour obtenir tous les NFTs d'un utilisateur
  */
 export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
   const { places, isLoading: isLoadingPlaces } = useAllPlaces();
   const [allPuzzles, setAllPuzzles] = useState<Array<{ tokenId: bigint; placeAddress: `0x${string}` }>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Stabiliser places.length au lieu de places
-  const placesCount = places.length;
-  const placeAddresses = useMemo(() => places.map(p => p.address), [placesCount]);
-
   useEffect(() => {
-    if (!userAddress || placesCount === 0) {
+    if (!userAddress || places.length === 0) {
       setAllPuzzles([]);
       setIsLoading(false);
       return;
@@ -275,22 +231,13 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
     async function fetchAllNFTs() {
       setIsLoading(true);
       try {
-        const { createPublicClient, http } = await import('viem');
-        const { baseSepolia } = await import('viem/chains');
-
-        const client = createPublicClient({
-          chain: baseSepolia,
-          transport: http(),
-        });
-
         const allNfts: Array<{ tokenId: bigint; placeAddress: `0x${string}` }> = [];
 
-        // Query all places in parallel
         await Promise.all(
-          placeAddresses.map(async (placeAddress) => {
+          places.map(async (place) => {
             try {
-              const logs = await client.getLogs({
-                address: placeAddress,
+              const logs = await publicClient.getLogs({
+                address: place.address,
                 event: {
                   type: 'event',
                   name: 'Transfer',
@@ -300,33 +247,30 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
                     { indexed: true, name: 'tokenId', type: 'uint256' },
                   ],
                 },
-                args: {
-                  to: userAddress,
-                },
+                args: { to: userAddress },
                 fromBlock: 0n,
                 toBlock: 'latest',
               });
 
               for (const log of logs) {
                 const tokenId = log.args.tokenId as bigint;
-
                 try {
-                  const owner = await client.readContract({
-                    address: placeAddress,
+                  const owner = (await publicClient.readContract({
+                    address: place.address,
                     abi: USCIABI,
                     functionName: 'ownerOf',
                     args: [tokenId],
-                  }) as `0x${string}`;
+                  })) as `0x${string}`;
 
                   if (owner.toLowerCase() === userAddress.toLowerCase()) {
-                    allNfts.push({ tokenId, placeAddress });
+                    allNfts.push({ tokenId, placeAddress: place.address });
                   }
                 } catch {
                   continue;
                 }
               }
             } catch (error) {
-              console.error(`Error fetching NFTs for place ${placeAddress}:`, error);
+              console.error(`Error fetching NFTs for place ${place.address}:`, error);
             }
           })
         );
@@ -343,75 +287,31 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
     if (!isLoadingPlaces) {
       fetchAllNFTs();
     }
-  }, [userAddress, placesCount, placeAddresses, isLoadingPlaces]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userAddress, places.length, isLoadingPlaces]);
 
   return { puzzles: allPuzzles, isLoading: isLoading || isLoadingPlaces };
 }
 
 /**
- * Hook to get pending rewards for a token
- */
-export function usePendingRewards(
-  placeAddress: `0x${string}` | undefined,
-  tokenId: bigint | undefined
-) {
-  const { data, isLoading } = useReadContract({
-    address: placeAddress,
-    abi: USCIABI,
-    functionName: 'calculateClaimable',
-    args: tokenId !== undefined ? [tokenId] : undefined,
-    query: {
-      enabled: !!placeAddress && tokenId !== undefined,
-    },
-  });
-
-  return {
-    pendingRewards: data as bigint | undefined,
-    isLoading,
-  };
-}
-
-/**
- * Hook to get total rewards deposited to a place
- */
-export function useTotalRewardsDeposited(placeAddress: `0x${string}` | undefined) {
-  const { data, isLoading } = useReadContract({
-    address: placeAddress,
-    abi: USCIABI,
-    functionName: 'totalRewardsDeposited',
-    query: {
-      enabled: !!placeAddress,
-    },
-  });
-
-  return {
-    totalRewardsDeposited: data as bigint | undefined,
-    isLoading,
-  };
-}
-
-/**
- * Hook to get leaderboard data (all investors ranked by total invested)
+ * Hook leaderboard data
  */
 export function useLeaderboardData() {
   const { places, isLoading: isLoadingPlaces } = useAllPlaces();
   const { price: ethPrice } = useEthPrice();
-  const [leaderboardData, setLeaderboardData] = useState<Array<{
-    address: string;
-    totalInvestedUSD: number;
-    totalDividendsEarned: number;
-    nftCount: number;
-    investments: Array<{ placeName: string; tokenId: string }>;
-  }>>([]);
+  const [leaderboardData, setLeaderboardData] = useState<
+    Array<{
+      address: string;
+      totalInvestedUSD: number;
+      totalDividendsEarned: number;
+      nftCount: number;
+      investments: Array<{ placeName: string; tokenId: string }>;
+    }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Stabiliser les dépendances
-  const placesCount = places.length;
-  const ethPriceUsd = ethPrice.usd;
-  const placesData = useMemo(() => places.map(p => ({ address: p.address, name: p.info.name, puzzlePrice: p.info.puzzlePrice })), [placesCount]);
-
   useEffect(() => {
-    if (placesCount === 0 || isLoadingPlaces) {
+    if (places.length === 0 || isLoadingPlaces) {
       setLeaderboardData([]);
       setIsLoading(false);
       return;
@@ -420,28 +320,20 @@ export function useLeaderboardData() {
     async function fetchLeaderboardData() {
       setIsLoading(true);
       try {
-        const { createPublicClient, http } = await import('viem');
-        const { baseSepolia } = await import('viem/chains');
-        const { formatEther } = await import('viem');
+        const investorMap = new Map<
+          string,
+          {
+            totalInvestedUSD: number;
+            totalDividendsEarned: number;
+            nftCount: number;
+            investments: Array<{ placeName: string; tokenId: string }>;
+          }
+        >();
 
-        const client = createPublicClient({
-          chain: baseSepolia,
-          transport: http(),
-        });
-
-        // Map to aggregate investor data
-        const investorMap = new Map<string, {
-          totalInvestedUSD: number;
-          totalDividendsEarned: number;
-          nftCount: number;
-          investments: Array<{ placeName: string; tokenId: string }>;
-        }>();
-
-        // Query all places in parallel
         await Promise.all(
-          placesData.map(async (place) => {
+          places.map(async (place) => {
             try {
-              const logs = await client.getLogs({
+              const logs = await publicClient.getLogs({
                 address: place.address,
                 event: {
                   type: 'event',
@@ -456,25 +348,20 @@ export function useLeaderboardData() {
                 toBlock: 'latest',
               });
 
-              // Get current owners for all tokens
               for (const log of logs) {
                 const tokenId = log.args.tokenId as bigint;
-
                 try {
-                  const owner = await client.readContract({
+                  const owner = (await publicClient.readContract({
                     address: place.address,
                     abi: USCIABI,
                     functionName: 'ownerOf',
                     args: [tokenId],
-                  }) as `0x${string}`;
+                  })) as `0x${string}`;
 
                   const ownerLower = owner.toLowerCase();
+                  const puzzlePriceETH = parseFloat(formatEther(place.info.puzzlePrice));
+                  const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
 
-                  // Calculate investment value
-                  const puzzlePriceETH = parseFloat(formatEther(place.puzzlePrice));
-                  const puzzlePriceUSD = puzzlePriceETH * ethPriceUsd;
-
-                  // Add to investor map
                   if (!investorMap.has(ownerLower)) {
                     investorMap.set(ownerLower, {
                       totalInvestedUSD: 0,
@@ -488,11 +375,10 @@ export function useLeaderboardData() {
                   investorData.totalInvestedUSD += puzzlePriceUSD;
                   investorData.nftCount += 1;
                   investorData.investments.push({
-                    placeName: place.name,
+                    placeName: place.info.name,
                     tokenId: tokenId.toString(),
                   });
                 } catch {
-                  // Token might not exist or burned, skip
                   continue;
                 }
               }
@@ -502,7 +388,6 @@ export function useLeaderboardData() {
           })
         );
 
-        // Convert map to array and sort by totalInvestedUSD descending
         const leaderboard = Array.from(investorMap.entries())
           .map(([address, data]) => ({
             address,
@@ -520,7 +405,8 @@ export function useLeaderboardData() {
     }
 
     fetchLeaderboardData();
-  }, [placesCount, placesData, ethPriceUsd, isLoadingPlaces]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places.length, ethPrice.usd, isLoadingPlaces]);
 
   return { leaderboardData, isLoading: isLoading || isLoadingPlaces };
 }

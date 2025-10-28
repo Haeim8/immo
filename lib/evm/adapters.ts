@@ -182,3 +182,12 @@ export function getPlaceById(
 ): PlaceData | undefined {
   return places.find((p) => p.info.placeId.toString() === placeId);
 }
+
+/**
+ * Convert USD to ETH
+ */
+export function usdToEth(usd: number, ethPrice: number): bigint {
+  const eth = usd / ethPrice;
+  const wei = eth * 1e18;
+  return BigInt(Math.floor(wei));
+}

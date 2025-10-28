@@ -22,21 +22,23 @@ import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
 import {
+  useWalletAddress,
   useAllPlaces,
   useIsAdmin,
   useIsTeamMember,
+  useEthPrice,
+  BLOCK_EXPLORER_URL
+} from "@/lib/evm/hooks";
+import {
   useCreatePlace,
   useAddTeamMember,
   useDepositRewards,
   useCloseSale,
   useCompletPlace,
-  useEthPrice,
-  usdToEth,
-  BLOCK_EXPLORER_URL
-} from "@/lib/evm";
+} from "@/lib/evm/write-hooks";
+import { usdToEth } from "@/lib/evm/adapters";
 import { uploadPropertyImage } from "@/lib/pinata/upload";
 import { createPropertyMetadata, uploadPropertyMetadata } from "@/lib/pinata/metadata";
 import { formatEther } from "viem";
@@ -46,7 +48,7 @@ export default function AdminDashboard() {
     "overview" | "properties" | "create" | "team" | "dividends" | "governance" | "operations"
   >("overview");
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWalletAddress();
   const { authenticated } = usePrivy();
   const [hasAccess, setHasAccess] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
@@ -371,7 +373,7 @@ function PropertiesTab() {
 }
 
 function CreatePropertyTab() {
-  const { isConnected } = useAccount();
+  const { isConnected } = useWalletAddress();
   const { price: ethPrice } = useEthPrice();
   const { createPlace, isPending: isCreating } = useCreatePlace();
 
@@ -493,19 +495,17 @@ function CreatePropertyTab() {
 
       // 4. Create on-chain
       await createPlace({
-        assetType: formData.assetType,
         name: formData.name,
         city: formData.city,
         province: formData.province,
-        country: formData.country,
-        totalPuzzles: parseInt(formData.shares),
-        puzzlePrice: pricePerShareETH,
-        saleDuration: parseInt(formData.duration),
         surface: parseInt(formData.surface),
         rooms: parseInt(formData.rooms),
-        expectedReturn: expectedReturnPercentage,
         propertyType: formData.propertyType,
         yearBuilt: parseInt(formData.yearBuilt),
+        totalPuzzles: parseInt(formData.shares),
+        puzzlePrice: pricePerShareETH,
+        expectedReturn: expectedReturnPercentage,
+        saleDuration: parseInt(formData.duration),
         imageCid: uploadedImageCid,
         metadataCid: metadataCid,
         votingEnabled: formData.votingEnabled,

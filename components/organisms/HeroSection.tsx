@@ -5,7 +5,7 @@ import { TrendingUp, Users, Building2, ExternalLink } from "lucide-react";
 import GradientText from "@/components/atoms/GradientText";
 import StatCard from "@/components/molecules/StatCard";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
-import { useAllPlaces } from "@/lib/evm";
+import { useAllPlaces } from "@/lib/evm/hooks";
 import { useMemo } from "react";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 

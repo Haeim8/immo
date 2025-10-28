@@ -17,8 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePrivy } from "@privy-io/react-auth";
-import { useAccount } from "wagmi";
-import { useIsAdmin, useIsTeamMember } from "@/lib/evm/hooks";
+import { useWalletAddress, useIsAdmin, useIsTeamMember } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
 
 export default function HeaderContent() {
@@ -29,7 +28,7 @@ export default function HeaderContent() {
 
   // Privy Wallet
   const { login, logout, ready } = usePrivy();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWalletAddress();
 
   // Check admin and team status
   const { isAdmin } = useIsAdmin(address);

@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { getIpfsUrl } from "@/lib/pinata/upload";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
-import { useAccount } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
-import { BLOCK_EXPLORER_URL, useBuyPuzzle } from "@/lib/evm";
+import { BLOCK_EXPLORER_URL, useWalletAddress } from "@/lib/evm/hooks";
+import { useBuyPuzzle } from "@/lib/evm/write-hooks";
 
 interface PropertyCardProps {
   investment: Investment;
@@ -30,7 +30,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
   const [success, setSuccess] = useState(false);
   const [quantity, setQuantity] = useState(1);
 
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWalletAddress();
   const { login } = usePrivy();
   const { buyPuzzle, isPending: isTxPending } = useBuyPuzzle();
   const t = useTranslations("propertyCard");
