@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, ReactNode } from 'react';
+import { FC, ReactNode, useEffect, useState } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { createConfig, WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -12,7 +12,6 @@ const wagmiConfig = createConfig({
   transports: {
     [baseSepolia.id]: http(),
   },
-  autoConnect: true,
 });
 
 declare module 'wagmi' {
@@ -21,10 +20,32 @@ declare module 'wagmi' {
   }
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 30000,
+    },
+  },
+});
 
 export const EVMWalletProvider: FC<{ children: ReactNode }> = ({ children }) => {
+  const [mounted, setMounted] = useState(false);
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
+  if (!appId) {
+    console.error('NEXT_PUBLIC_PRIVY_APP_ID is not set');
+    return <>{children}</>;
+  }
 
   return (
     <PrivyProvider
@@ -35,9 +56,9 @@ export const EVMWalletProvider: FC<{ children: ReactNode }> = ({ children }) => 
           accentColor: '#667eea',
         },
         embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
+          createOnLogin: 'off',
         },
-        loginMethods: ['email', 'wallet'],
+        loginMethods: ['wallet'],
         supportedChains: [baseSepolia],
         defaultChain: baseSepolia,
       }}

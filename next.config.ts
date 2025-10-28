@@ -25,14 +25,16 @@ const nextConfig: NextConfig = {
     // Temporary workaround for Next.js 15 metadata-interface bug
     ignoreBuildErrors: true,
   },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      buffer: require.resolve('buffer/'),
-      crypto: false,
-      stream: false,
-      process: false,
-    };
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    config.externals.push('pino-pretty', 'lokijs', 'encoding');
     return config;
   },
 };
