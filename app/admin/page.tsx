@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -9,7 +10,6 @@ import {
   Users,
   Building2,
   DollarSign,
-  Settings as SettingsIcon,
   BarChart3,
   Clock,
   CheckCircle2,
@@ -21,96 +21,65 @@ import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { useBrickChain, useAllProperties, usePropertyProposals, useFactoryAccount, useAllInvestors, InvestorData } from "@/lib/solana/hooks";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
-import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { useSolPrice, usdToLamports } from "@/lib/solana/useSolPrice";
-import { uploadPropertyImage, getIpfsUrl } from "@/lib/pinata/upload";
+import { useAccount } from "wagmi";
+import { usePrivy } from "@privy-io/react-auth";
+import {
+  useAllPlaces,
+  useIsAdmin,
+  useIsTeamMember,
+  useCreatePlace,
+  useAddTeamMember,
+  useDepositRewards,
+  useCloseSale,
+  useCompletPlace,
+  useEthPrice,
+  usdToEth,
+  BLOCK_EXPLORER_URL
+} from "@/lib/evm";
+import { uploadPropertyImage } from "@/lib/pinata/upload";
 import { createPropertyMetadata, uploadPropertyMetadata } from "@/lib/pinata/metadata";
-import { addTeamMember, removeTeamMember, getAllTeamMembers, isTeamMember, type TeamMember } from "@/lib/solana/team";
-import { ADMIN_WALLET } from "@/lib/config/admin";
+import { formatEther } from "viem";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "properties" | "create" | "team" | "investors" | "dividends" | "governance" | "operations"
+    "overview" | "properties" | "create" | "team" | "dividends" | "governance" | "operations"
   >("overview");
   const router = useRouter();
-  const wallet = useWallet();
-  const { connection } = useConnection();
+  const { address, isConnected } = useAccount();
+  const { authenticated } = usePrivy();
   const [hasAccess, setHasAccess] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
 
+  const { isAdmin, isLoading: isLoadingAdmin } = useIsAdmin(address);
+  const { isTeamMember, isLoading: isLoadingTeam } = useIsTeamMember(address);
+
   useEffect(() => {
-    let cancelled = false;
-
-    const enforceAccess = async () => {
-      const walletAddress = wallet.publicKey?.toBase58() || null;
-
-      if (!walletAddress) {
-        if (!cancelled) {
-          setHasAccess(false);
-          setAccessChecked(true);
-          router.replace("/");
-        }
-        return;
-      }
-
-      if (walletAddress === ADMIN_WALLET) {
-        if (!cancelled) {
-          setHasAccess(true);
-          setAccessChecked(true);
-        }
-        return;
-      }
-
-      if (walletAddress) {
-        try {
-          const member = await isTeamMember(connection, walletAddress);
-          if (!cancelled) {
-            setHasAccess(member);
-            setAccessChecked(true);
-            if (!member) {
-              router.replace("/portfolio");
-            }
-          }
-        } catch (error) {
-          console.error("Failed to verify admin access:", error);
-          if (!cancelled) {
-            setHasAccess(false);
-            setAccessChecked(true);
-            router.replace("/");
-          }
-        }
-        return;
-      }
-
-      if (!cancelled) {
-        setHasAccess(false);
-        setAccessChecked(true);
-        router.replace("/");
-      }
-    };
-
-    if (!wallet.connected) {
+    if (!isConnected || !authenticated) {
       setHasAccess(false);
       setAccessChecked(true);
       router.replace("/");
       return;
     }
 
-    enforceAccess();
+    if (isLoadingAdmin || isLoadingTeam) {
+      return;
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [wallet.connected, wallet.publicKey, connection, router]);
+    const canAccess = isAdmin || (isTeamMember ?? false);
+    setHasAccess(canAccess);
+    setAccessChecked(true);
 
-  if (!accessChecked) {
+    if (!canAccess) {
+      router.replace("/portfolio");
+    }
+  }, [isConnected, authenticated, isAdmin, isTeamMember, isLoadingAdmin, isLoadingTeam, router]);
+
+  if (!accessChecked || isLoadingAdmin || isLoadingTeam) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
-        <p className="text-sm text-muted-foreground">Chargement...</p>
+        <p className="text-sm text-muted-foreground">Vérification des accès...</p>
       </div>
     );
   }
@@ -121,7 +90,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen">
-
       <main className="pb-20">
         <div className="container mx-auto px-4">
           {/* Header */}
@@ -161,8 +129,7 @@ export default function AdminDashboard() {
                   { id: "properties", label: "Properties", icon: Building2 },
                   { id: "create", label: "Create New", icon: Plus },
                   { id: "team", label: "Team", icon: Users },
-                  { id: "investors", label: "Investors", icon: Users },
-                  { id: "dividends", label: "Dividends", icon: DollarSign },
+                  { id: "dividends", label: "Rewards", icon: DollarSign },
                   { id: "governance", label: "Governance", icon: Gavel },
                   { id: "operations", label: "Operations", icon: Wrench },
                 ].map((tab) => (
@@ -188,7 +155,6 @@ export default function AdminDashboard() {
           {activeTab === "properties" && <PropertiesTab />}
           {activeTab === "create" && <CreatePropertyTab />}
           {activeTab === "team" && <TeamTab />}
-          {activeTab === "investors" && <InvestorsTab />}
           {activeTab === "dividends" && <DividendsTab />}
           {activeTab === "governance" && <GovernanceTab />}
           {activeTab === "operations" && <OperationsTab />}
@@ -199,38 +165,23 @@ export default function AdminDashboard() {
 }
 
 function OverviewTab() {
-  const { properties, loading } = useAllProperties();
-  const { price: solPrice } = useSolPrice();
+  const { places, isLoading } = useAllPlaces();
+  const { price: ethPrice } = useEthPrice();
 
-  // Calculate real metrics from blockchain
-  const totalProperties = properties.length;
-  const totalValue = properties.reduce((sum, p) => {
-    try {
-      if (!p?.account?.totalShares || !p?.account?.sharePrice) return sum;
-      const totalShares = p.account.totalShares.toNumber();
-      const sharePrice = p.account.sharePrice.toNumber();
-      const totalLamports = totalShares * sharePrice;
-      return sum + (totalLamports / 1e9) * solPrice.usd;
-    } catch (e) {
-      console.error("Error calculating property value:", e);
-      return sum;
-    }
+  const totalProperties = places.length;
+  const totalValue = places.reduce((sum, p) => {
+    const totalPuzzles = Number(p.info.totalPuzzles);
+    const puzzlePrice = parseFloat(formatEther(p.info.puzzlePrice));
+    return sum + (totalPuzzles * puzzlePrice * ethPrice.usd);
   }, 0);
 
-  const avgReturn = properties.length > 0
-    ? properties.reduce((sum, p) => {
-        try {
-          return sum + (p?.account?.expectedReturn || 0);
-        } catch (e) {
-          return sum;
-        }
-      }, 0) / properties.length / 100
+  const avgReturn = places.length > 0
+    ? places.reduce((sum, p) => sum + (p.info.expectedReturn / 100), 0) / places.length
     : 0;
 
   return (
     <div className="space-y-6">
-      {/* Key Metrics */}
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-12">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
           <p className="text-muted-foreground">Loading metrics...</p>
@@ -275,29 +226,28 @@ function OverviewTab() {
             </GlassCard>
           </div>
 
-          {/* Recent Properties */}
           <GlassCard>
             <h3 className="text-xl font-bold mb-4 text-purple-400">Recent Properties</h3>
-            {properties.length === 0 ? (
+            {places.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">No properties created yet</p>
             ) : (
               <div className="space-y-3">
-                {properties.slice(0, 5).map((property, i) => (
+                {places.slice(0, 5).map((place, i) => (
                   <motion.div
-                    key={property.publicKey.toBase58()}
+                    key={place.address}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 + i * 0.1 }}
                     className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
                   >
                     <div>
-                      <p className="font-medium">{property.account.name}</p>
+                      <p className="font-medium">{place.info.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {property.account.city}, {property.account.province}
+                        {place.info.city}, {place.info.province}
                       </p>
                     </div>
                     <span className="text-sm text-cyan-400 font-semibold">
-                      {property.account.sharesSold.toNumber()}/{property.account.totalShares.toNumber()} sold
+                      {Number(place.info.puzzlesSold)}/{Number(place.info.totalPuzzles)} sold
                     </span>
                   </motion.div>
                 ))}
@@ -311,10 +261,10 @@ function OverviewTab() {
 }
 
 function PropertiesTab() {
-  const { properties, loading, error, refresh } = useAllProperties();
-  const { price: solPrice } = useSolPrice();
+  const { places, isLoading } = useAllPlaces();
+  const { price: ethPrice } = useEthPrice();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="text-center py-12">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
@@ -323,32 +273,13 @@ function PropertiesTab() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 max-w-md mx-auto">
-          Error loading properties: {error}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Manage Properties ({properties.length})</h3>
-        <div className="flex gap-2">
-          <AnimatedButton variant="outline" onClick={refresh}>
-            Refresh
-          </AnimatedButton>
-          <AnimatedButton variant="primary">
-            <Plus className="h-4 w-4 mr-2" />
-            Add New
-          </AnimatedButton>
-        </div>
+        <h3 className="text-2xl font-bold">Manage Properties ({places.length})</h3>
       </div>
 
-      {properties.length === 0 ? (
+      {places.length === 0 ? (
         <GlassCard>
           <div className="text-center py-12">
             <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -358,14 +289,16 @@ function PropertiesTab() {
         </GlassCard>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {properties.map((property, index) => {
-            const fundingProgress = (property.account.sharesSold.toNumber() / property.account.totalShares.toNumber()) * 100;
-            const pricePerShareSOL = property.account.sharePrice.toNumber() / 1e9;
-            const pricePerShareUSD = pricePerShareSOL * solPrice.usd;
+          {places.map((place, index) => {
+            const totalPuzzles = Number(place.info.totalPuzzles);
+            const puzzlesSold = Number(place.info.puzzlesSold);
+            const fundingProgress = (puzzlesSold / totalPuzzles) * 100;
+            const puzzlePriceETH = parseFloat(formatEther(place.info.puzzlePrice));
+            const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
 
             return (
               <motion.div
-                key={property.publicKey.toBase58()}
+                key={place.address}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -373,43 +306,33 @@ function PropertiesTab() {
                 <GlassCard hover>
                   <div className="flex items-start justify-between flex-wrap gap-4">
                     <div className="flex-1">
-                      <h4 className="text-xl font-bold text-cyan-400 mb-2">{property.account.name}</h4>
+                      <h4 className="text-xl font-bold text-cyan-400 mb-2">{place.info.name}</h4>
                       <p className="text-sm text-muted-foreground mb-2">
-                        {property.account.city}, {property.account.province}
+                        {place.info.city}, {place.info.province}
                       </p>
                       <p className="text-xs text-muted-foreground font-mono mb-4">
-                        {property.publicKey.toBase58().slice(0, 8)}...{property.publicKey.toBase58().slice(-8)}
+                        {place.address.slice(0, 10)}...{place.address.slice(-8)}
                       </p>
 
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                          <p className="text-xs text-muted-foreground">Price per Share</p>
-                          <p className="font-semibold">${pricePerShareUSD.toFixed(2)}</p>
-                          <p className="text-xs text-muted-foreground">{pricePerShareSOL.toFixed(4)} SOL</p>
+                          <p className="text-xs text-muted-foreground">Price per Puzzle</p>
+                          <p className="font-semibold">${puzzlePriceUSD.toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">{puzzlePriceETH.toFixed(4)} ETH</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Proposals</p>
-                          <p className="font-semibold text-purple-400">
-                            {property.account.proposalCount.toNumber()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Shares Sold</p>
-                          <p className="font-semibold text-green-400">{property.account.sharesSold.toNumber()} / {property.account.totalShares.toNumber()}</p>
+                          <p className="text-xs text-muted-foreground">Puzzles Sold</p>
+                          <p className="font-semibold text-green-400">{puzzlesSold} / {totalPuzzles}</p>
                           <p className="text-xs text-muted-foreground">{fundingProgress.toFixed(1)}%</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Expected Return</p>
-                          <p className="font-semibold text-cyan-400">{(property.account.expectedReturn / 100).toFixed(2)}%</p>
+                          <p className="font-semibold text-cyan-400">{(place.info.expectedReturn / 100).toFixed(2)}%</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Status</p>
                           <p className="font-semibold">
-                            {property.account.isLiquidated ? (
-                              <span className="text-purple-400 flex items-center gap-1">
-                                <CheckCircle2 className="h-4 w-4" /> Liquidated
-                              </span>
-                            ) : property.account.isActive ? (
+                            {place.info.isActive ? (
                               fundingProgress === 100 ? (
                                 <span className="text-green-400 flex items-center gap-1">
                                   <CheckCircle2 className="h-4 w-4" /> Funded
@@ -431,12 +354,9 @@ function PropertiesTab() {
                       <AnimatedButton
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(`https://explorer.solana.com/address/${property.publicKey.toBase58()}?cluster=devnet`, '_blank')}
+                        onClick={() => window.open(`${BLOCK_EXPLORER_URL}/address/${place.address}`, '_blank')}
                       >
-                        View Details
-                      </AnimatedButton>
-                      <AnimatedButton variant="outline" size="sm">
-                        <SettingsIcon className="h-4 w-4" />
+                        View on Explorer
                       </AnimatedButton>
                     </div>
                   </div>
@@ -451,9 +371,10 @@ function PropertiesTab() {
 }
 
 function CreatePropertyTab() {
-  const { createNewProperty, loading, error } = useBrickChain();
-  const { connected } = useWallet();
-  const { price: solPrice } = useSolPrice();
+  const { isConnected } = useAccount();
+  const { price: ethPrice } = useEthPrice();
+  const { createPlace, isPending: isCreating } = useCreatePlace();
+
   const [formData, setFormData] = useState({
     assetType: "real_estate",
     name: "",
@@ -476,11 +397,10 @@ function CreatePropertyTab() {
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageCid, setImageCid] = useState("");
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
-  // Calcul automatique du prix par part
+  // Auto-calculate price per share
   useEffect(() => {
     const totalPrice = parseFloat(formData.price);
     const totalShares = parseFloat(formData.shares);
@@ -506,7 +426,7 @@ function CreatePropertyTab() {
   };
 
   const handleSubmit = async () => {
-    if (!connected) {
+    if (!isConnected) {
       alert("Please connect your wallet first!");
       return;
     }
@@ -518,21 +438,21 @@ function CreatePropertyTab() {
 
     try {
       setSuccess(false);
+      setError("");
 
-      // 1. Upload image to IPFS first
-      setUploadingImage(true);
-      let imageCid = "";
+      // 1. Upload image to IPFS
+      console.log("⏳ Uploading property image...");
+      let uploadedImageCid = "";
       try {
-        imageCid = await uploadPropertyImage(selectedImage, formData.name);
-        setImageCid(imageCid);
-        console.log("✅ Image uploaded to IPFS:", imageCid);
-      } catch (err) {
-        alert("Failed to upload image to IPFS. Please check your Pinata configuration.");
-        setUploadingImage(false);
+        uploadedImageCid = await uploadPropertyImage(selectedImage, formData.name);
+        console.log("✅ Image uploaded to IPFS:", uploadedImageCid);
+      } catch (error) {
+        console.error("Upload image failed:", error);
+        setError("Failed to upload image to IPFS");
         return;
       }
 
-      // 2. Create and upload property metadata JSON to IPFS
+      // 2. Create and upload metadata
       const pricePerShareUSD = parseFloat(formData.pricePerShare);
       const expectedReturnPercentage = parseFloat(formData.expectedReturn);
 
@@ -544,7 +464,7 @@ function CreatePropertyTab() {
         country: formData.country,
         description: formData.description,
         longDescription: formData.longDescription,
-        imageCid: imageCid,
+        imageCid: uploadedImageCid,
         surface: parseInt(formData.surface),
         rooms: parseInt(formData.rooms),
         propertyType: formData.propertyType,
@@ -560,48 +480,39 @@ function CreatePropertyTab() {
       let metadataCid = "";
       try {
         metadataCid = await uploadPropertyMetadata(metadata);
-        console.log("✅ Property metadata uploaded to IPFS:", metadataCid);
-      } catch (err) {
-        alert("Failed to upload metadata to IPFS. Please check your Pinata configuration.");
-        setUploadingImage(false);
+        console.log("✅ Metadata uploaded to IPFS:", metadataCid);
+      } catch (error) {
+        console.error("Upload metadata failed:", error);
+        setError("Failed to upload metadata to IPFS");
         return;
       }
-      setUploadingImage(false);
+      console.log("✅ Finished uploading assets");
 
-      // 3. Convert USD to lamports using real SOL price
-      const pricePerShareLamports = usdToLamports(pricePerShareUSD, solPrice.usd);
+      // 3. Convert USD to ETH
+      const pricePerShareETH = usdToEth(pricePerShareUSD, ethPrice.usd);
 
-      // 4. Convert expected return to basis points (5.5% -> 550)
-      const expectedReturnBasisPoints = Math.floor(expectedReturnPercentage * 100);
-
-      // 5. Convert duration days to seconds
-      const durationSeconds = parseInt(formData.duration) * 24 * 60 * 60;
-
-      // 6. Prepare params with IPFS CIDs (minimal onchain data)
-      const params = {
+      // 4. Create on-chain
+      await createPlace({
         assetType: formData.assetType,
         name: formData.name,
         city: formData.city,
         province: formData.province,
         country: formData.country,
-        totalShares: parseInt(formData.shares),
-        sharePrice: pricePerShareLamports,
-        saleDuration: durationSeconds,
+        totalPuzzles: parseInt(formData.shares),
+        puzzlePrice: pricePerShareETH,
+        saleDuration: parseInt(formData.duration),
         surface: parseInt(formData.surface),
         rooms: parseInt(formData.rooms),
-        expectedReturn: expectedReturnBasisPoints,
+        expectedReturn: expectedReturnPercentage,
         propertyType: formData.propertyType,
         yearBuilt: parseInt(formData.yearBuilt),
-        imageCid: imageCid,  // IPFS CID only
-        metadataCid: metadataCid,  // IPFS CID for full metadata JSON
+        imageCid: uploadedImageCid,
+        metadataCid: metadataCid,
         votingEnabled: formData.votingEnabled,
-      };
-
-      // 7. Create property on-chain
-      const result = await createNewProperty(params);
+      });
 
       setSuccess(true);
-      alert(`Property created successfully!\nProperty PDA: ${result.propertyPDA.toBase58()}`);
+      alert("Property created successfully!");
 
       // Reset form
       setFormData({
@@ -626,10 +537,9 @@ function CreatePropertyTab() {
       });
       setSelectedImage(null);
       setImagePreview("");
-      setImageCid("");
-    } catch (err: any) {
-      console.error("Error creating property:", err);
-      alert(`Error: ${err.message || "Failed to create property"}`);
+    } catch (error: any) {
+      console.error("Error creating property:", error);
+      setError(error.message || "Failed to create property");
     }
   };
 
@@ -693,6 +603,16 @@ function CreatePropertyTab() {
                   placeholder="e.g., 120"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Rooms</label>
+                <input
+                  type="number"
+                  value={formData.rooms}
+                  onChange={(e) => setFormData({ ...formData, rooms: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
+                  placeholder="e.g., 4"
+                />
+              </div>
             </div>
           </div>
 
@@ -701,52 +621,36 @@ function CreatePropertyTab() {
             <h4 className="text-lg font-semibold mb-4">Financial Details</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Total Amount to Raise (USD)
-                  <span className="text-xs text-muted-foreground ml-2">Montant total à collecter</span>
-                </label>
+                <label className="block text-sm font-medium mb-2">Total Amount to Raise (USD)</label>
                 <input
                   type="number"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., 500000"
-                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Number of Shares to Sell
-                  <span className="text-xs text-muted-foreground ml-2">Nombre de parts à vendre</span>
-                </label>
+                <label className="block text-sm font-medium mb-2">Number of Puzzles</label>
                 <input
                   type="number"
                   value={formData.shares}
                   onChange={(e) => setFormData({ ...formData, shares: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., 1000"
-                  required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Price per Share (USD)
-                  <span className="text-xs text-cyan-400 ml-2">✨ Calculé automatiquement</span>
+                  Price per Puzzle (USD)
+                  <span className="text-xs text-cyan-400 ml-2">✨ Auto-calculated</span>
                 </label>
                 <input
                   type="text"
-                  value={formData.pricePerShare ? `$${parseFloat(formData.pricePerShare).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
+                  value={formData.pricePerShare ? `$${parseFloat(formData.pricePerShare).toLocaleString()}` : ""}
                   disabled
                   className="w-full px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-semibold cursor-not-allowed"
-                  placeholder="Enter total price and shares first"
                 />
-                {formData.pricePerShare && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formData.price && formData.shares && (
-                      <>💡 ${formData.price} ÷ {formData.shares} shares = ${formData.pricePerShare} per share</>
-                    )}
-                  </p>
-                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Expected Return (%)</label>
@@ -760,30 +664,6 @@ function CreatePropertyTab() {
                 />
               </div>
             </div>
-
-            {/* Calculation Summary */}
-            {formData.price && formData.shares && (
-              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-cyan-400">💰</span>
-                  <h5 className="font-semibold text-cyan-400">Calculation Summary</h5>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Total to raise</p>
-                    <p className="text-lg font-bold">${parseFloat(formData.price).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Number of shares</p>
-                    <p className="text-lg font-bold">{parseFloat(formData.shares).toLocaleString()} shares</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Price per share</p>
-                    <p className="text-lg font-bold text-cyan-400">${formData.pricePerShare}</p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Duration and Property Details */}
@@ -798,18 +678,6 @@ function CreatePropertyTab() {
                   onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., 30"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Rooms</label>
-                <input
-                  type="number"
-                  value={formData.rooms}
-                  onChange={(e) => setFormData({ ...formData, rooms: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 4"
-                  required
                 />
               </div>
               <div>
@@ -820,7 +688,6 @@ function CreatePropertyTab() {
                   onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., Résidentiel, Commercial"
-                  required
                 />
               </div>
               <div>
@@ -831,7 +698,6 @@ function CreatePropertyTab() {
                   onChange={(e) => setFormData({ ...formData, yearBuilt: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
                   placeholder="e.g., 2020"
-                  required
                 />
               </div>
             </div>
@@ -839,7 +705,7 @@ function CreatePropertyTab() {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-2">Description (courte - max 512 caractères)</label>
+            <label className="block text-sm font-medium mb-2">Description (max 512 caractères)</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -853,15 +719,14 @@ function CreatePropertyTab() {
 
           {/* Long Description */}
           <div>
-            <label className="block text-sm font-medium mb-2">Description détaillée pour investisseurs (max 2000 caractères)</label>
+            <label className="block text-sm font-medium mb-2">Description détaillée (max 2000 caractères)</label>
             <textarea
               value={formData.longDescription}
               onChange={(e) => setFormData({ ...formData, longDescription: e.target.value })}
               rows={8}
               maxLength={2000}
               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none resize-none"
-              placeholder="Description complète avec tous les détails pour les investisseurs..."
-              required
+              placeholder="Description complète..."
             />
             <p className="text-xs text-muted-foreground mt-1">{formData.longDescription.length}/2000 caractères</p>
           </div>
@@ -869,25 +734,25 @@ function CreatePropertyTab() {
           {/* Image Upload */}
           <div>
             <label className="block text-sm font-medium mb-2">Image de la propriété</label>
-            <div className="space-y-4">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
-                required
-              />
-              {imagePreview && (
-                <div className="relative rounded-xl overflow-hidden border border-white/10">
-                  <img src={imagePreview} alt="Preview" className="w-full h-64 object-cover" />
-                  {imageCid && (
-                    <div className="absolute top-2 right-2 px-3 py-1 rounded-lg bg-green-500/80 text-white text-xs font-mono">
-                      CID: {imageCid.substring(0, 8)}...
-                    </div>
-                  )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
+            />
+            {imagePreview && (
+              <div className="mt-4 relative rounded-xl overflow-hidden border border-white/10">
+                <div className="relative w-full h-64">
+                  <Image
+                    src={imagePreview}
+                    alt="Preview"
+                    fill
+                    className="object-cover rounded-xl"
+                    sizes="(max-width: 768px) 100vw, 400px"
+                  />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Features */}
@@ -902,12 +767,12 @@ function CreatePropertyTab() {
             />
           </div>
 
-          {/* SOL Price Display */}
+          {/* ETH Price Display */}
           <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
             <p className="text-sm text-muted-foreground">
-              Current SOL Price: <span className="text-cyan-400 font-semibold">${solPrice.usd.toFixed(2)} USD</span>
+              Current ETH Price: <span className="text-cyan-400 font-semibold">${ethPrice.usd.toFixed(2)} USD</span>
               {" • "}
-              <span className="text-xs">Updated: {new Date(solPrice.lastUpdated).toLocaleTimeString()}</span>
+              <span className="text-xs">Updated: {new Date(ethPrice.lastUpdated).toLocaleTimeString()}</span>
             </p>
           </div>
 
@@ -924,7 +789,7 @@ function CreatePropertyTab() {
           )}
 
           {/* Wallet Warning */}
-          {!connected && (
+          {!isConnected && (
             <div className="p-4 rounded-xl bg-yellow-500/20 border border-yellow-500/50 text-yellow-400">
               Please connect your wallet to create a property
             </div>
@@ -958,7 +823,6 @@ function CreatePropertyTab() {
                 });
                 setSelectedImage(null);
                 setImagePreview("");
-                setImageCid("");
               }}
             >
               Reset Form
@@ -967,14 +831,9 @@ function CreatePropertyTab() {
               variant="primary"
               className="flex-1"
               onClick={handleSubmit}
-              disabled={loading || uploadingImage || !connected}
+              disabled={isCreating || !isConnected}
             >
-              {uploadingImage ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading to IPFS...
-                </>
-              ) : loading ? (
+              {isCreating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Creating on-chain...
@@ -990,697 +849,9 @@ function CreatePropertyTab() {
   );
 }
 
-function GovernanceTab() {
-  const { properties, loading: loadingProperties, error: propertiesError, refresh } = useAllProperties();
-  const { createGovernanceProposal, closeGovernanceProposal, loading, error } = useBrickChain();
-  const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [durationHours, setDurationHours] = useState("24");
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const propertyPubkey = selectedProperty ? new PublicKey(selectedProperty) : null;
-  const {
-    proposals,
-    loading: proposalsLoading,
-    error: proposalsError,
-    refresh: refreshProposals,
-  } = usePropertyProposals(propertyPubkey);
-
-  const handleCreateProposal = async () => {
-    if (!propertyPubkey) {
-      alert("Please select a property first.");
-      return;
-    }
-
-    if (!title.trim()) {
-      alert("Please provide a proposal title.");
-      return;
-    }
-
-    const durationSeconds = Math.max(1, Math.floor(Number(durationHours || "0") * 3600));
-
-    try {
-      const { proposalId } = await createGovernanceProposal(
-        propertyPubkey,
-        title.trim(),
-        description.trim(),
-        durationSeconds
-      );
-
-      setSuccessMessage(`Proposal #${proposalId} created successfully.`);
-      setTitle("");
-      setDescription("");
-      refreshProposals();
-      refresh();
-    } catch {
-      // handled by hook (error state)
-    }
-  };
-
-  const handleCloseProposal = async (proposalKey: PublicKey) => {
-    if (!propertyPubkey) return;
-    try {
-      await closeGovernanceProposal(propertyPubkey, proposalKey);
-      refreshProposals();
-      refresh();
-    } catch {
-      // handled by hook
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-2xl font-bold">Governance</h3>
-          <p className="text-muted-foreground">
-            Create proposals and follow the decision process for each property.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <AnimatedButton variant="outline" onClick={refresh}>
-            Refresh Properties
-          </AnimatedButton>
-          <AnimatedButton variant="outline" onClick={refreshProposals} disabled={!propertyPubkey}>
-            Refresh Proposals
-          </AnimatedButton>
-        </div>
-      </div>
-
-      {propertiesError && (
-        <GlassCard>
-          <div className="text-red-400">Error loading properties: {propertiesError}</div>
-        </GlassCard>
-      )}
-
-      <GlassCard>
-        <div className="grid gap-4">
-          <div>
-            <label className="text-sm text-muted-foreground block mb-2">Select Property</label>
-            <select
-              value={selectedProperty}
-              onChange={(e) => {
-                setSelectedProperty(e.target.value);
-                setSuccessMessage(null);
-              }}
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
-            >
-              <option value="">-- Select a property --</option>
-              {properties.map((property) => (
-                <option key={property.publicKey.toBase58()} value={property.publicKey.toBase58()}>
-                  {property.account.name} ({property.account.city})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-muted-foreground block mb-2">Proposal Title</label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
-                  placeholder="e.g. Approve renovation budget"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-muted-foreground block mb-2">Voting Duration (hours)</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={durationHours}
-                  onChange={(e) => setDurationHours(e.target.value)}
-                  className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm text-muted-foreground block mb-2">Proposal Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={6}
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm resize-none"
-                placeholder="Explain the proposal, expected benefits, risks, etc."
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm">
-              {error}
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="p-3 rounded-lg border border-green-500/40 bg-green-500/10 text-green-200 text-sm">
-              {successMessage}
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <AnimatedButton
-              variant="primary"
-              onClick={handleCreateProposal}
-              disabled={!selectedProperty || loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...
-                </>
-              ) : (
-                "Create Proposal"
-              )}
-            </AnimatedButton>
-          </div>
-        </div>
-      </GlassCard>
-
-      {propertyPubkey && (
-        <GlassCard>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h4 className="text-lg font-semibold text-purple-400">Proposals</h4>
-              <p className="text-sm text-muted-foreground">
-                {propertyPubkey.toBase58()}
-              </p>
-            </div>
-          </div>
-
-          {proposalsError && (
-            <div className="p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm mb-4">
-              {proposalsError}
-            </div>
-          )}
-
-          {proposalsLoading ? (
-            <div className="text-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-              <p className="text-muted-foreground">Loading proposals...</p>
-            </div>
-          ) : proposals.length === 0 ? (
-            <div className="text-muted-foreground text-center py-8">
-              No proposals found for this property.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {proposals.map((proposal) => {
-                const votingEndsAt = new Date(proposal.account.votingEndsAt.toNumber() * 1000);
-                return (
-                  <div
-                    key={proposal.publicKey.toBase58()}
-                    className="border border-white/10 rounded-xl p-4 bg-white/5"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div>
-                        <h5 className="text-lg font-semibold text-cyan-400">
-                          {proposal.account.title}
-                        </h5>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {proposal.account.description}
-                        </p>
-                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                          <span>Yes votes: {proposal.account.yesVotes.toNumber()}</span>
-                          <span>No votes: {proposal.account.noVotes.toNumber()}</span>
-                          <span>
-                            Voting ends: {votingEndsAt.toLocaleString()}
-                          </span>
-                          <span>Status: {proposal.account.isActive ? "Active" : "Closed"}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {proposal.account.isActive && (
-                          <AnimatedButton
-                            variant="outline"
-                            onClick={() => handleCloseProposal(proposal.publicKey)}
-                            disabled={loading}
-                          >
-                            {loading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              "Close Proposal"
-                            )}
-                          </AnimatedButton>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {loadingProperties && (
-            <div className="text-muted-foreground text-sm mt-4">Loading properties...</div>
-          )}
-        </GlassCard>
-      )}
-    </div>
-  );
-}
-
-function OperationsTab() {
-  const { properties, loading, error, refresh } = useAllProperties();
-  const { factory, loading: loadingFactory, refresh: refreshFactory } = useFactoryAccount();
-  const { closeSaleManually, triggerLiquidation, initializeFactory, loading: actionLoading, error: actionError } = useBrickChain();
-  const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [liquidationAmount, setLiquidationAmount] = useState<string>("");
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [treasuryAddress, setTreasuryAddress] = useState<string>("");
-
-  const selected = useMemo(
-    () => properties.find((p) => p.publicKey.toBase58() === selectedProperty) || null,
-    [properties, selectedProperty]
-  );
-
-  const handleCloseSale = async () => {
-    if (!selected) {
-      alert("Select a property first.");
-      return;
-    }
-
-    setSuccessMessage(null);
-
-    try {
-      await closeSaleManually(selected.publicKey);
-      setSuccessMessage("Sale closed successfully.");
-      refresh();
-    } catch {
-      // handled by hook
-    }
-  };
-
-  const handleLiquidation = async () => {
-    if (!selected) {
-      alert("Select a property first.");
-      return;
-    }
-
-    const amountSOL = parseFloat(liquidationAmount);
-    if (isNaN(amountSOL) || amountSOL <= 0) {
-      alert("Enter a valid liquidation amount (in SOL).");
-      return;
-    }
-
-    setSuccessMessage(null);
-
-    try {
-      const lamports = Math.floor(amountSOL * LAMPORTS_PER_SOL);
-      await triggerLiquidation(selected.publicKey, lamports);
-      setSuccessMessage("Liquidation triggered. Investors can now claim their proceeds.");
-      setLiquidationAmount("");
-      refresh();
-    } catch {
-      // handled by hook
-    }
-  };
-
-  const handleInitializeFactory = async () => {
-    const treasury = treasuryAddress.trim();
-    if (!treasury) {
-      alert("Enter a treasury wallet address.");
-      return;
-    }
-
-    try {
-      const treasuryPubkey = new PublicKey(treasury);
-      const { factoryPDA } = await initializeFactory(treasuryPubkey);
-      setSuccessMessage(`Factory initialized: ${factoryPDA.toBase58()}`);
-      setTreasuryAddress("");
-      refreshFactory();
-    } catch (err: any) {
-      alert(err.message || "Failed to initialize factory");
-    }
-  };
-
-  const saleEndDate =
-    selected?.account.saleEnd && selected.account.saleEnd.toNumber() > 0
-      ? new Date(selected.account.saleEnd.toNumber() * 1000)
-      : null;
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-2xl font-bold">Manual Operations</h3>
-          <p className="text-muted-foreground">
-            Close sales and trigger liquidation flows directly from the admin panel.
-          </p>
-        </div>
-        <AnimatedButton variant="outline" onClick={refresh}>
-          Refresh Properties
-        </AnimatedButton>
-      </div>
-
-      {!loadingFactory && !factory && (
-        <GlassCard>
-          <div className="grid md:grid-cols-2 gap-6 items-center">
-            <div>
-              <h4 className="text-lg font-semibold text-purple-400">Factory not initialized</h4>
-              <p className="text-sm text-muted-foreground">
-                Deployé sur Devnet, le programme doit être initialisé avec un trésor avant de gérer des propriétés
-                ou l’équipe. Utilise ce formulaire pour créer le compte factory (effectué une seule fois).
-              </p>
-            </div>
-            <div className="flex flex-col md:flex-row gap-3">
-              <input
-                type="text"
-                placeholder="Treasury wallet address"
-                value={treasuryAddress}
-                onChange={(e) => setTreasuryAddress(e.target.value)}
-                className="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
-              />
-              <AnimatedButton
-                variant="primary"
-                onClick={handleInitializeFactory}
-                disabled={actionLoading || !treasuryAddress.trim()}
-              >
-                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Initialize Factory"}
-              </AnimatedButton>
-            </div>
-          </div>
-        </GlassCard>
-      )}
-
-      {error && (
-        <GlassCard>
-          <div className="text-red-400">Error loading properties: {error}</div>
-        </GlassCard>
-      )}
-
-      <GlassCard>
-        <div className="grid gap-4">
-          <div>
-            <label className="text-sm text-muted-foreground block mb-2">Select Property</label>
-            <select
-              value={selectedProperty}
-              onChange={(e) => {
-                setSelectedProperty(e.target.value);
-                setSuccessMessage(null);
-              }}
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
-            >
-              <option value="">-- Select a property --</option>
-              {properties.map((property) => (
-                <option key={property.publicKey.toBase58()} value={property.publicKey.toBase58()}>
-                  {property.account.name} ({property.account.city})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selected && (
-            <div className="grid md:grid-cols-3 gap-4 bg-white/5 border border-white/10 rounded-xl p-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Status</p>
-                <p className="font-semibold">
-                  {selected.account.isLiquidated
-                    ? "Liquidated"
-                    : selected.account.isActive
-                      ? "Active"
-                      : "Closed"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Shares Sold</p>
-                <p className="font-semibold">
-                  {selected.account.sharesSold.toNumber()} / {selected.account.totalShares.toNumber()}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Sale End</p>
-                <p className="font-semibold">
-                  {saleEndDate ? saleEndDate.toLocaleString() : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Liquidation Amount</p>
-                <p className="font-semibold">
-                  {selected.account.liquidationAmount.toNumber() === 0
-                    ? "Not set"
-                    : `${(selected.account.liquidationAmount.toNumber() / LAMPORTS_PER_SOL).toFixed(2)} SOL`}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {actionError && (
-            <div className="p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm">
-              {actionError}
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="p-3 rounded-lg border border-green-500/40 bg-green-500/10 text-green-200 text-sm">
-              {successMessage}
-            </div>
-          )}
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-cyan-400">Close Sale</h4>
-              <p className="text-sm text-muted-foreground">
-                Force the sale to close if the automatic closure fails (for example, after the deadline).
-              </p>
-              <AnimatedButton
-                variant="primary"
-                onClick={handleCloseSale}
-                disabled={!selected || actionLoading}
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  "Close Sale Manually"
-                )}
-              </AnimatedButton>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-purple-400">Trigger Liquidation</h4>
-              <p className="text-sm text-muted-foreground">
-                Deposit the property sale proceeds so investors can claim their final payout. Amount in SOL.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  placeholder="Total sale amount (SOL)"
-                  value={liquidationAmount}
-                  onChange={(e) => setLiquidationAmount(e.target.value)}
-                  className="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
-                />
-                <AnimatedButton
-                  variant="outline"
-                  onClick={handleLiquidation}
-                  disabled={!selected || actionLoading}
-                >
-                  {actionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Trigger"
-                  )}
-                </AnimatedButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      </GlassCard>
-    </div>
-  );
-}
-
-function InvestorsTab() {
-  const { investors, loading, error } = useAllInvestors();
-  const { price: solPrice } = useSolPrice();
-  const [selectedInvestor, setSelectedInvestor] = useState<InvestorData | null>(null);
-
-  return (
-    <div className="space-y-6">
-      <h3 className="text-2xl font-bold">Investor Management</h3>
-
-      {/* Investor Details Modal */}
-      {selectedInvestor && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-4xl max-h-[80vh] overflow-auto"
-          >
-            <GlassCard>
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">Investor Details</h3>
-                  <code className="text-cyan-400 font-mono text-sm">
-                    {selectedInvestor.address}
-                  </code>
-                </div>
-                <AnimatedButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedInvestor(null)}
-                >
-                  Close
-                </AnimatedButton>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-sm text-muted-foreground mb-1">Total Shares</p>
-                  <p className="text-2xl font-bold text-cyan-400">{selectedInvestor.totalShares}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-sm text-muted-foreground mb-1">Properties</p>
-                  <p className="text-2xl font-bold text-blue-400">{selectedInvestor.propertiesInvested}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-sm text-muted-foreground mb-1">Dividends Claimed</p>
-                  <p className="text-2xl font-bold text-green-400">
-                    ${((selectedInvestor.totalDividendsClaimed / 1e9) * solPrice.usd).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-
-              <h4 className="text-lg font-semibold mb-4">All Investments</h4>
-              <div className="space-y-3">
-                {selectedInvestor.investments.map((inv, i) => {
-                  const mintDate = inv.mintTime ? new Date(inv.mintTime * 1000).toLocaleDateString() : "Unknown";
-                  const dividendsUSD = ((inv.dividendsClaimed / 1e9) * solPrice.usd).toFixed(2);
-
-                  return (
-                    <motion.div
-                      key={inv.shareNFTPDA.toBase58()}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-semibold text-cyan-400 mb-1">{inv.propertyName}</p>
-                          <p className="text-xs text-muted-foreground font-mono mb-1">
-                            Share #{inv.tokenId}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Minted: {mintDate}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Dividends Claimed</p>
-                          <p className="text-lg font-semibold text-green-400">${dividendsUSD}</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </GlassCard>
-          </motion.div>
-        </div>
-      )}
-
-      {loading ? (
-        <GlassCard>
-          <div className="text-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-            <p className="text-muted-foreground">Loading investors...</p>
-          </div>
-        </GlassCard>
-      ) : error ? (
-        <GlassCard>
-          <div className="text-center py-12">
-            <p className="text-red-400">{error}</p>
-          </div>
-        </GlassCard>
-      ) : investors.length === 0 ? (
-        <GlassCard>
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No investors yet</p>
-          </div>
-        </GlassCard>
-      ) : (
-        <GlassCard>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Wallet</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Total Shares</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Properties</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Dividends Claimed</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {investors.map((investor, i) => {
-                  const dividendsUSD = ((investor.totalDividendsClaimed / 1e9) * solPrice.usd).toFixed(2);
-
-                  return (
-                    <motion.tr
-                      key={investor.address}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="border-b border-white/5 hover:bg-white/5"
-                    >
-                      <td className="px-6 py-4">
-                        <code className="text-cyan-400 font-mono text-sm">
-                          {investor.address.slice(0, 4)}...{investor.address.slice(-4)}
-                        </code>
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-blue-400">
-                        {investor.totalShares}
-                      </td>
-                      <td className="px-6 py-4">{investor.propertiesInvested}</td>
-                      <td className="px-6 py-4 text-green-400">${dividendsUSD}</td>
-                      <td className="px-6 py-4">
-                        <AnimatedButton
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedInvestor(investor)}
-                        >
-                          View Details
-                        </AnimatedButton>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </GlassCard>
-      )}
-    </div>
-  );
-}
-
 function TeamTab() {
-  const { connection } = useConnection();
-  const wallet = useWallet();
-  const [teamMembers, setTeamMembers] = useState<{ publicKey: PublicKey; account: TeamMember }[]>([]);
   const [newMemberAddress, setNewMemberAddress] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fetchingMembers, setFetchingMembers] = useState(true);
-
-  // Fetch team members on mount
-  useEffect(() => {
-    const fetchMembers = async () => {
-      setFetchingMembers(true);
-      try {
-        const members = await getAllTeamMembers(connection);
-        setTeamMembers(members);
-      } catch (err) {
-        console.error("Error fetching team members:", err);
-      } finally {
-        setFetchingMembers(false);
-      }
-    };
-
-    fetchMembers();
-  }, [connection]);
+  const { addTeamMember, isPending: isAdding } = useAddTeamMember();
 
   const handleAddMember = async () => {
     if (!newMemberAddress.trim()) {
@@ -1688,86 +859,13 @@ function TeamTab() {
       return;
     }
 
-    if (!wallet.connected || !wallet.publicKey) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    setLoading(true);
     try {
-      // Validate address
-      let memberPubkey: PublicKey;
-      try {
-        memberPubkey = new PublicKey(newMemberAddress);
-      } catch {
-        alert("Invalid wallet address format");
-        setLoading(false);
-        return;
-      }
-
-      // Create transaction
-      const { transaction, teamMemberPDA } = await addTeamMember(
-        connection,
-        newMemberAddress,
-        wallet.publicKey
-      );
-
-      // Sign and send transaction
-      const signature = await wallet.sendTransaction(transaction, connection);
-      console.log("Transaction signature:", signature);
-
-      // Wait for confirmation
-      await connection.confirmTransaction(signature, "confirmed");
-
-      // Refresh team members list
-      const members = await getAllTeamMembers(connection);
-      setTeamMembers(members);
-
+      await addTeamMember(newMemberAddress as `0x${string}`);
+      alert("Team member added successfully!");
       setNewMemberAddress("");
-      alert(`Team member added successfully!\nSignature: ${signature}`);
-    } catch (err: any) {
-      console.error("Error adding team member:", err);
-      alert(`Error: ${err.message || "Failed to add team member"}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveMember = async (memberWallet: PublicKey) => {
-    const address = memberWallet.toBase58();
-    if (!confirm(`Remove ${address.slice(0, 8)}...${address.slice(-8)} from team?`)) return;
-
-    if (!wallet.connected || !wallet.publicKey) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Create transaction
-      const transaction = await removeTeamMember(
-        connection,
-        address,
-        wallet.publicKey
-      );
-
-      // Sign and send transaction
-      const signature = await wallet.sendTransaction(transaction, connection);
-      console.log("Transaction signature:", signature);
-
-      // Wait for confirmation
-      await connection.confirmTransaction(signature, "confirmed");
-
-      // Refresh team members list
-      const members = await getAllTeamMembers(connection);
-      setTeamMembers(members);
-
-      alert(`Team member removed successfully!\nSignature: ${signature}`);
-    } catch (err: any) {
-      console.error("Error removing team member:", err);
-      alert(`Error: ${err.message || "Failed to remove team member"}`);
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      console.error("Error adding team member:", error);
+      alert(`Error: ${error.message || "Failed to add team member"}`);
     }
   };
 
@@ -1788,93 +886,23 @@ function TeamTab() {
             type="text"
             value={newMemberAddress}
             onChange={(e) => setNewMemberAddress(e.target.value)}
-            placeholder="Enter wallet address (e.g., 7xKX...aBcD)"
+            placeholder="Enter EVM address (0x...)"
             className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-            disabled={loading}
+            disabled={isAdding}
           />
           <AnimatedButton
             variant="primary"
             onClick={handleAddMember}
-            disabled={loading || !newMemberAddress.trim()}
+            disabled={isAdding || !newMemberAddress.trim()}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            {isAdding ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
             Add Member
           </AnimatedButton>
         </div>
-      </GlassCard>
-
-      {/* Team Members List */}
-      <GlassCard>
-        <h4 className="text-lg font-semibold mb-4">
-          Team Members ({teamMembers.length})
-        </h4>
-
-        {fetchingMembers ? (
-          <div className="text-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-            <p className="text-muted-foreground">Loading team members from blockchain...</p>
-          </div>
-        ) : teamMembers.length === 0 ? (
-          <div className="text-center py-12">
-            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">No team members added yet</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Add team members to delegate property and proposal management
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {teamMembers.map((member, i) => {
-              const walletAddress = member.account.wallet.toBase58();
-              const addedAt = new Date(member.account.addedAt.toNumber() * 1000).toLocaleDateString();
-              const isActive = member.account.isActive;
-
-              return (
-                <motion.div
-                  key={member.publicKey.toBase58()}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${isActive ? 'from-purple-500 to-pink-600' : 'from-gray-500 to-gray-600'} flex items-center justify-center`}>
-                      <Users className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <code className="text-cyan-400 font-mono text-sm">
-                          {walletAddress.slice(0, 8)}...{walletAddress.slice(-8)}
-                        </code>
-                        {isActive ? (
-                          <span className="px-2 py-0.5 text-[10px] font-semibold bg-green-500/20 text-green-400 rounded-full">
-                            ACTIVE
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 text-[10px] font-semibold bg-gray-500/20 text-gray-400 rounded-full">
-                            INACTIVE
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Added on {addedAt} • Can manage properties & proposals
-                      </p>
-                    </div>
-                  </div>
-                  <AnimatedButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRemoveMember(member.account.wallet)}
-                    disabled={loading || !isActive}
-                    className="text-red-400 hover:text-red-300 border-red-400/20 hover:border-red-400/40"
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Remove"}
-                  </AnimatedButton>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
       </GlassCard>
 
       {/* Info Card */}
@@ -1905,39 +933,24 @@ function DividendsTab() {
   const [isDistributeOpen, setIsDistributeOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
-  const [isDistributing, setIsDistributing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
-  const { properties, loading: loadingProperties } = useAllProperties();
-  const { connection } = useConnection();
-  const wallet = useWallet();
-  const { price: solPrice } = useSolPrice();
+  const { places, isLoading: loadingProperties } = useAllPlaces();
+  const { depositRewards, isPending: isDistributing } = useDepositRewards();
+  const { price: ethPrice } = useEthPrice();
 
   const handleDistribute = async () => {
-    if (!wallet.publicKey || !selectedProperty || !amount) {
+    if (!selectedProperty || !amount) {
       setError("Please select a property and enter an amount");
       return;
     }
 
-    setIsDistributing(true);
-    setError(null);
-
     try {
       const amountUSD = parseFloat(amount);
-      const amountLamports = usdToLamports(amountUSD, solPrice.usd);
-      const propertyPDA = new PublicKey(selectedProperty);
+      const amountETH = usdToEth(amountUSD, ethPrice.usd);
 
-      const { depositDividends } = await import("@/lib/solana/instructions");
-      const transaction = await depositDividends(
-        connection,
-        propertyPDA,
-        amountLamports,
-        wallet.publicKey
-      );
-
-      const signature = await wallet.sendTransaction(transaction, connection);
-      await connection.confirmTransaction(signature, "confirmed");
+      await depositRewards(selectedProperty as `0x${string}`, amountETH);
 
       setSuccess(true);
       setTimeout(() => {
@@ -1947,16 +960,14 @@ function DividendsTab() {
         setAmount("");
       }, 2000);
     } catch (err: any) {
-      console.error("Error distributing dividends:", err);
-      setError(err.message || "Failed to distribute dividends");
-    } finally {
-      setIsDistributing(false);
+      console.error("Error distributing rewards:", err);
+      setError(err.message || "Failed to distribute rewards");
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Distribute Dividends Modal */}
+      {/* Distribute Modal */}
       {isDistributeOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <motion.div
@@ -1965,10 +976,9 @@ function DividendsTab() {
             className="w-full max-w-md"
           >
             <GlassCard>
-              <h3 className="text-2xl font-bold mb-6">Distribute Dividends</h3>
+              <h3 className="text-2xl font-bold mb-6">Distribute Rewards</h3>
 
               <div className="space-y-4">
-                {/* Property Selector */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Select Property</label>
                   <select
@@ -1978,15 +988,14 @@ function DividendsTab() {
                     disabled={isDistributing || loadingProperties}
                   >
                     <option value="">Select a property...</option>
-                    {properties.map((prop) => (
-                      <option key={prop.publicKey.toBase58()} value={prop.publicKey.toBase58()}>
-                        {prop.account.name} - {prop.account.city}
+                    {places.map((place) => (
+                      <option key={place.address} value={place.address}>
+                        {place.info.name} - {place.info.city}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Amount Input */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Amount (USD)</label>
                   <input
@@ -2008,7 +1017,7 @@ function DividendsTab() {
 
                 {success && (
                   <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/50 text-green-400 text-sm">
-                    ✅ Dividends distributed successfully!
+                    ✅ Rewards distributed successfully!
                   </div>
                 )}
 
@@ -2044,10 +1053,10 @@ function DividendsTab() {
       )}
 
       <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Dividend Management</h3>
+        <h3 className="text-2xl font-bold">Reward Management</h3>
         <AnimatedButton variant="primary" onClick={() => setIsDistributeOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Distribute Dividends
+          Distribute Rewards
         </AnimatedButton>
       </div>
 
@@ -2079,28 +1088,216 @@ function DividendsTab() {
           />
         </GlassCard>
       </div>
+    </div>
+  );
+}
+
+function GovernanceTab() {
+  return (
+    <div className="space-y-6">
+      <GlassCard>
+        <div className="text-center py-12">
+          <Gavel className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="text-muted-foreground">Governance feature coming soon</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Create and manage proposals for each property
+          </p>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+function OperationsTab() {
+  const { places, isLoading } = useAllPlaces();
+  const [selectedProperty, setSelectedProperty] = useState<string>("");
+  const [liquidationAmount, setLiquidationAmount] = useState<string>("");
+
+  const { closeSale, isPending: isClosing } = useCloseSale();
+  const { completePlace, isPending: isCompleting } = useCompletPlace();
+
+  const selected = places.find((p) => p.address === selectedProperty);
+
+  const handleCloseSale = async () => {
+    if (!selected) {
+      alert("Select a property first.");
+      return;
+    }
+
+    try {
+      await closeSale(selected.address);
+      alert("Sale closed successfully.");
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!selected) {
+      alert("Select a property first.");
+      return;
+    }
+
+    const amountETH = liquidationAmount;
+    if (!amountETH || parseFloat(amountETH) <= 0) {
+      alert("Enter a valid amount in ETH.");
+      return;
+    }
+
+    try {
+      await completePlace(selected.address, amountETH);
+      alert("Completion triggered. Investors can now claim their proceeds.");
+      setLiquidationAmount("");
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const saleEndDate = selected
+    ? new Date(Number(selected.info.saleEnd) * 1000)
+    : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h3 className="text-2xl font-bold">Manual Operations</h3>
+          <p className="text-muted-foreground">
+            Close sales and trigger completion flows directly from the admin panel.
+          </p>
+        </div>
+      </div>
+
+      {isLoading && (
+        <GlassCard>
+          <div className="text-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+            <p className="text-muted-foreground">Loading properties...</p>
+          </div>
+        </GlassCard>
+      )}
 
       <GlassCard>
-        <h4 className="text-lg font-semibold mb-4">Recent Distributions</h4>
-        <div className="space-y-3">
-          {[].map((dist: any, i: number) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
+        <div className="grid gap-4">
+          <div>
+            <label className="text-sm text-muted-foreground block mb-2">Select Property</label>
+            <select
+              value={selectedProperty}
+              onChange={(e) => setSelectedProperty(e.target.value)}
+              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
             >
+              <option value="">-- Select a property --</option>
+              {places.map((place) => (
+                <option key={place.address} value={place.address}>
+                  {place.info.name} ({place.info.city})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selected && (
+            <div className="grid md:grid-cols-3 gap-4 bg-white/5 border border-white/10 rounded-xl p-4">
               <div>
-                <p className="font-semibold">{dist.property}</p>
-                <p className="text-sm text-muted-foreground">{dist.investors} investors</p>
+                <p className="text-xs text-muted-foreground">Status</p>
+                <p className="font-semibold">
+                  {selected.info.isActive ? "Active" : "Closed"}
+                </p>
               </div>
-              <div className="text-right">
-                <p className="font-semibold text-green-400">{dist.amount}</p>
-                <p className="text-sm text-muted-foreground">{dist.date}</p>
+              <div>
+                <p className="text-xs text-muted-foreground">Puzzles Sold</p>
+                <p className="font-semibold">
+                  {Number(selected.info.puzzlesSold)} / {Number(selected.info.totalPuzzles)}
+                </p>
               </div>
-            </motion.div>
-          ))}
+              <div>
+                <p className="text-xs text-muted-foreground">Sale End</p>
+                <p className="font-semibold">
+                  {saleEndDate ? saleEndDate.toLocaleString() : "—"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-cyan-400">Close Sale</h4>
+              <p className="text-sm text-muted-foreground">
+                Force the sale to close if the automatic closure fails.
+              </p>
+
+              {selected && saleEndDate && (() => {
+                const isSaleEnded = Date.now() > saleEndDate.getTime();
+                const timeLeft = saleEndDate.getTime() - Date.now();
+                const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+
+                return (
+                  <div className={`p-3 rounded-lg border ${
+                    isSaleEnded || !selected.info.isActive
+                      ? "border-red-500/40 bg-red-500/10"
+                      : "border-cyan-500/40 bg-cyan-500/10"
+                  }`}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Sale Deadline:</span>
+                      <span className="font-semibold">
+                        {saleEndDate.toLocaleDateString()} {saleEndDate.toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Clock className="h-4 w-4" />
+                      {isSaleEnded || !selected.info.isActive ? (
+                        <span className="text-red-400 font-medium">⚠️ Sale Ended - Ready to Close</span>
+                      ) : daysLeft > 0 ? (
+                        <span className="text-cyan-400">{daysLeft} day{daysLeft !== 1 ? 's' : ''} left</span>
+                      ) : (
+                        <span className="text-red-400">Ending soon</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <AnimatedButton
+                variant="primary"
+                onClick={handleCloseSale}
+                disabled={!selected || isClosing}
+              >
+                {isClosing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  "Close Sale Manually"
+                )}
+              </AnimatedButton>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-purple-400">Trigger Completion</h4>
+              <p className="text-sm text-muted-foreground">
+                Deposit the property sale proceeds so investors can claim their final payout. Amount in ETH.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Total amount (ETH)"
+                  value={liquidationAmount}
+                  onChange={(e) => setLiquidationAmount(e.target.value)}
+                  className="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
+                />
+                <AnimatedButton
+                  variant="outline"
+                  onClick={handleComplete}
+                  disabled={!selected || isCompleting}
+                >
+                  {isCompleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Trigger"
+                  )}
+                </AnimatedButton>
+              </div>
+            </div>
+          </div>
         </div>
       </GlassCard>
     </div>

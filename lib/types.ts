@@ -12,6 +12,7 @@ export interface Investment {
     country?: string;
   };
   priceUSD: number;
+  priceETH?: number;
   estimatedValue: number;
   imageUrl?: string;
   imageCid?: string;
@@ -25,6 +26,10 @@ export interface Investment {
   totalShares: number;
   sharesSold: number;
   contractAddress: string;
+  puzzlePriceWei?: string;
+  saleStart: number; // Unix timestamp in seconds
+  saleEnd: number; // Unix timestamp in seconds
+  isActive: boolean;
   details: {
     yearBuilt: number;
     rooms: number;

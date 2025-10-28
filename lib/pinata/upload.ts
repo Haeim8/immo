@@ -18,9 +18,12 @@ export const pinata = new PinataSDK({
  */
 export async function uploadPropertyImage(
   file: File,
-  propertyName: string
+  _propertyName: string
 ): Promise<string> {
   try {
+    if (_propertyName) {
+      console.debug(`Uploading image for property: ${_propertyName}`);
+    }
     // Upload le fichier sur IPFS
     const upload = await pinata.upload.file(file);
 

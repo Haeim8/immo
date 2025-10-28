@@ -35,11 +35,20 @@ export default function PropertyContainer({ properties }: PropertyContainerProps
     // Recherche par nom ou localisation
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (property) =>
+      filtered = filtered.filter((property) => {
+        const locationValues = [
+          property.location.city,
+          property.location.province,
+          property.location.country,
+        ]
+          .filter(Boolean)
+          .map((value) => value.toLowerCase());
+
+        return (
           property.name.toLowerCase().includes(query) ||
-          property.location.toLowerCase().includes(query)
-      );
+          locationValues.some((value) => value.includes(query))
+        );
+      });
     }
 
     // Filtre par type

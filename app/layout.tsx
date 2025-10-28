@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SolanaWalletProvider } from "@/components/wallet-provider";
+import { EVMWalletProvider } from "@/components/privy-provider";
 import MobileNav from "@/components/organisms/MobileNav";
 import { IntlProvider } from "@/components/providers/IntlProvider";
 import HeaderContent from "@/components/HeaderContent";
@@ -21,16 +21,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" className="dark" suppressHydrationWarning>
       <body className={inter.className}>
         <IntlProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
-            enableSystem
+            forcedTheme="dark"
             disableTransitionOnChange
           >
-            <SolanaWalletProvider>
+            <EVMWalletProvider>
               <div className="fixed inset-0 border-0 md:border-[10px] border-background rounded-none md:rounded-[30px] flex flex-col m-0 md:m-[10px]">
                 <header className="bg-background flex-shrink-0 z-40 w-full flex items-center h-[50px] md:h-[80px]">
                   <HeaderContent />
@@ -43,7 +43,7 @@ export default function RootLayout({
                 </footer>
                 <MobileNav />
               </div>
-            </SolanaWalletProvider>
+            </EVMWalletProvider>
           </ThemeProvider>
         </IntlProvider>
       </body>

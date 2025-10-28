@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,74 +16,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { isTeamMember as checkIsTeamMember } from "@/lib/solana/team";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAccount } from "wagmi";
+import { useIsAdmin, useIsTeamMember } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
-import { ADMIN_WALLET } from "@/lib/config/admin";
 
 export default function HeaderContent() {
   const pathname = usePathname();
-  const [selectedNetwork, setSelectedNetwork] = useState<"mainnet" | "devnet" | "testnet">("devnet");
+  const [selectedNetwork, setSelectedNetwork] = useState<"sepolia" | "mainnet">("sepolia");
   const navT = useTranslations("navbar");
   const commonT = useTranslations("common");
 
-  // Solana Wallet Adapter
-  const { publicKey, connected, disconnect, connecting } = useWallet();
-  const { setVisible: setWalletModalVisible } = useWalletModal();
-  const { connection } = useConnection();
+  // Privy Wallet
+  const { login, logout, ready } = usePrivy();
+  const { address, isConnected } = useAccount();
 
-  const [isTeamMember, setIsTeamMember] = useState(false);
+  // Check admin and team status
+  const { isAdmin } = useIsAdmin(address);
+  const { isTeamMember } = useIsTeamMember(address);
 
-  // Get wallet address
-  const walletAddress = publicKey?.toBase58();
-
-  // Enhanced debug logging
-  useEffect(() => {
-    if (connected) {
-      console.log('🔍 =========================');
-      console.log('🔍 Solana Wallet:', walletAddress || 'Not connected');
-      console.log('🔍 Expected ADMIN_WALLET:', ADMIN_WALLET);
-      console.log('🔍 Is admin match?:', walletAddress === ADMIN_WALLET);
-      console.log('🔍 =========================');
-    }
-  }, [connected, walletAddress]);
-
-  const isAdmin = walletAddress === ADMIN_WALLET;
-
-  // Fetch team member status when wallet connects
-  useEffect(() => {
-    const checkTeamStatus = async () => {
-      if (!walletAddress || isAdmin) {
-        setIsTeamMember(false);
-        return;
-      }
-
-      try {
-        const isMember = await checkIsTeamMember(connection, walletAddress);
-        setIsTeamMember(isMember);
-        console.log('🔍 Is team member?', isMember);
-      } catch (err) {
-        console.error("Error checking team member status:", err);
-        setIsTeamMember(false);
-      }
-    };
-
-    if (walletAddress) {
-      checkTeamStatus();
-    }
-  }, [walletAddress, isAdmin, connection]);
-
-  const canAccessAdmin = isAdmin || isTeamMember;
+  const canAccessAdmin = isAdmin || (isTeamMember ?? false);
 
   // Handle connect button click
   const handleConnect = () => {
-    setWalletModalVisible(true);
+    login();
   };
 
   // Handle disconnect
   const handleDisconnect = () => {
-    disconnect();
+    logout();
   };
 
   return (
@@ -148,65 +109,34 @@ export default function HeaderContent() {
         {/* Right Section */}
         <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-4 flex-none">
           {/* Admin Link (only visible for admins or team members) - Hidden on mobile */}
-          {connected && canAccessAdmin && (
+          {isConnected && canAccessAdmin && (
             <div className="hidden md:block">
               <AdminLink isAdmin={canAccessAdmin} />
             </div>
           )}
 
-          {/* Network Selector - Solana - Hidden on mobile */}
+          {/* Network Selector - Base - Hidden on mobile */}
           <div className="hidden sm:block">
             <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
               <SelectTrigger className="w-auto whitespace-nowrap bg-white/5 border-white/10 px-2 md:px-3 text-xs md:text-sm">
                 <SelectValue />
               </SelectTrigger>
             <SelectContent>
+              <SelectItem value="sepolia">
+                <div className="flex items-center gap-2">
+                  <svg width="12" height="12" viewBox="0 0 111 111" fill="none">
+                    <circle cx="55.5" cy="55.5" r="55.5" fill="#0052FF"/>
+                    <path d="M55.5 111C86.1518 111 111 86.1518 111 55.5C111 24.8482 86.1518 0 55.5 0C24.8482 0 0 24.8482 0 55.5C0 86.1518 24.8482 111 55.5 111Z" fill="#0052FF"/>
+                  </svg>
+                  Base Sepolia
+                </div>
+              </SelectItem>
               <SelectItem value="mainnet">
                 <div className="flex items-center gap-2">
-                  <svg width="12" height="12" viewBox="0 0 397.7 311.7">
-                    <defs>
-                      <linearGradient id="solGrad1" x1="360.88" y1="351.46" x2="141.21" y2="-69.29" gradientUnits="userSpaceOnUse">
-                        <stop offset="0" stopColor="#00ffa3"/>
-                        <stop offset="1" stopColor="#dc1fff"/>
-                      </linearGradient>
-                    </defs>
-                    <path fill="url(#solGrad1)" d="M64.6,237.9c2.4-2.4,5.7-3.8,9.2-3.8h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,237.9z"/>
-                    <path fill="url(#solGrad1)" d="M64.6,3.8C67.1,1.4,70.4,0,73.8,0h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,3.8z"/>
-                    <path fill="url(#solGrad1)" d="M333.1,120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8,0-8.7,7-4.6,11.1l62.7,62.7c2.4,2.4,5.7,3.8,9.2,3.8h317.4c5.8,0,8.7-7,4.6-11.1L333.1,120.1z"/>
+                  <svg width="12" height="12" viewBox="0 0 111 111" fill="none">
+                    <circle cx="55.5" cy="55.5" r="55.5" fill="#0052FF"/>
                   </svg>
-                  {commonT("mainnet")}
-                </div>
-              </SelectItem>
-              <SelectItem value="devnet">
-                <div className="flex items-center gap-2">
-                  <svg width="12" height="12" viewBox="0 0 397.7 311.7">
-                    <defs>
-                      <linearGradient id="solGrad2" x1="360.88" y1="351.46" x2="141.21" y2="-69.29" gradientUnits="userSpaceOnUse">
-                        <stop offset="0" stopColor="#00ffa3"/>
-                        <stop offset="1" stopColor="#dc1fff"/>
-                      </linearGradient>
-                    </defs>
-                    <path fill="url(#solGrad2)" d="M64.6,237.9c2.4-2.4,5.7-3.8,9.2-3.8h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,237.9z"/>
-                    <path fill="url(#solGrad2)" d="M64.6,3.8C67.1,1.4,70.4,0,73.8,0h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,3.8z"/>
-                    <path fill="url(#solGrad2)" d="M333.1,120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8,0-8.7,7-4.6,11.1l62.7,62.7c2.4,2.4,5.7,3.8,9.2,3.8h317.4c5.8,0,8.7-7,4.6-11.1L333.1,120.1z"/>
-                  </svg>
-                  {commonT("devnet")}
-                </div>
-              </SelectItem>
-              <SelectItem value="testnet">
-                <div className="flex items-center gap-2">
-                  <svg width="12" height="12" viewBox="0 0 397.7 311.7">
-                    <defs>
-                      <linearGradient id="solGrad3" x1="360.88" y1="351.46" x2="141.21" y2="-69.29" gradientUnits="userSpaceOnUse">
-                        <stop offset="0" stopColor="#00ffa3"/>
-                        <stop offset="1" stopColor="#dc1fff"/>
-                      </linearGradient>
-                    </defs>
-                    <path fill="url(#solGrad3)" d="M64.6,237.9c2.4-2.4,5.7-3.8,9.2-3.8h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,237.9z"/>
-                    <path fill="url(#solGrad3)" d="M64.6,3.8C67.1,1.4,70.4,0,73.8,0h317.4c5.8,0,8.7,7,4.6,11.1l-62.7,62.7c-2.4,2.4-5.7,3.8-9.2,3.8H6.5c-5.8,0-8.7-7-4.6-11.1L64.6,3.8z"/>
-                    <path fill="url(#solGrad3)" d="M333.1,120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8,0-8.7,7-4.6,11.1l62.7,62.7c2.4,2.4,5.7,3.8,9.2,3.8h317.4c5.8,0,8.7-7,4.6-11.1L333.1,120.1z"/>
-                  </svg>
-                  {commonT("testnet")}
+                  Base Mainnet
                 </div>
               </SelectItem>
             </SelectContent>
@@ -215,12 +145,12 @@ export default function HeaderContent() {
 
 
           {/* Connect Wallet Button - Responsive */}
-          {!connected ? (
+          {!isConnected || !ready ? (
             <AnimatedButton
               variant="primary"
               size="sm"
               onClick={handleConnect}
-              disabled={connecting}
+              disabled={!ready}
               className="text-sm whitespace-nowrap flex-shrink-0 !px-3 !py-2"
             >
               <Wallet className="h-4 w-4 flex-shrink-0" />
@@ -230,7 +160,7 @@ export default function HeaderContent() {
             <div className="flex items-center gap-1 sm:gap-2">
               <div className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs sm:text-sm font-medium">
                 <Wallet className="h-3 w-3 inline mr-1" />
-                {walletAddress ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-3)}` : "•"}
+                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "•"}
               </div>
               <AnimatedButton
                 variant="outline"

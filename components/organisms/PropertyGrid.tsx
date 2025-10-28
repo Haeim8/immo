@@ -1,18 +1,40 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useAllProperties } from "@/lib/solana/hooks";
-import { propertyToInvestment } from "@/lib/solana/adapters";
+import { useAllPlaces, enrichWithMetadata } from "@/lib/evm";
 import PropertyContainer from "@/components/organisms/PropertyContainer";
 import GradientText from "@/components/atoms/GradientText";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "@/components/providers/IntlProvider";
+import { useState, useEffect } from "react";
+import { Investment } from "@/lib/types";
 
 export default function PropertyGrid() {
-  const { properties, loading, error } = useAllProperties();
+  const { places, isLoading } = useAllPlaces();
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [loading, setLoading] = useState(true);
   const gridT = useTranslations("propertyGrid");
 
-  if (loading) {
+  useEffect(() => {
+    async function loadInvestments() {
+      if (isLoading) return;
+
+      try {
+        const enrichedPlaces = await Promise.all(
+          places.map(place => enrichWithMetadata(place))
+        );
+        setInvestments(enrichedPlaces);
+      } catch (error) {
+        console.error("Failed to load investments:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadInvestments();
+  }, [places, isLoading]);
+
+  if (isLoading || loading) {
     return (
       <section className="py-12 md:py-20">
         <div className="container mx-auto px-4 md:px-6 text-center">
@@ -23,31 +45,7 @@ export default function PropertyGrid() {
     );
   }
 
-  if (error) {
-    return (
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              <GradientText>{gridT("title")}</GradientText>
-            </h2>
-            <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 max-w-md mx-auto">
-              {gridT("errorText", {
-                error: typeof error === "string" ? error : String(error),
-              })}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-    );
-  }
-
-  if (properties.length === 0) {
+  if (places.length === 0) {
     return (
       <section className="py-20">
         <div className="container mx-auto px-4">
@@ -71,9 +69,6 @@ export default function PropertyGrid() {
       </section>
     );
   }
-
-  // Convertir les propriétés blockchain en format UI
-  const investments = properties.map((property) => propertyToInvestment(property));
 
   return (
     <section className="py-6 md:py-10">

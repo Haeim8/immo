@@ -84,11 +84,20 @@ export interface Dictionary {
     features: string;
     contract: string;
     soldOut: string;
+    saleClosed: string;
     funded: (percentage: string) => string;
     sharesAvailable: (available: number, total: number) => string;
     lowSharesWarning: string;
+    saleClosedBanner: string;
+    saleEnded: string;
+    daysLeft: (count: number) => string;
+    hoursLeft: (count: number) => string;
+    endingSoon: string;
+    saleEndDateLabel: string;
     pricePerShare: string;
+    priceEth: string;
     totalPrice: string;
+    totalPriceEth: string;
     type: string;
     expectedReturn: string;
     estValue: string;
@@ -100,6 +109,10 @@ export interface Dictionary {
     purchaseSuccess: string;
     purchaseError: string;
     quantityRangeError: (min: number, max: number) => string;
+    saleClosedError: string;
+    priceUnavailableError: string;
+    invalidContractError: string;
+    priceUnavailableShort: string;
   };
   portfolio: {
     title: string;
@@ -357,13 +370,28 @@ export const dictionaries: Record<Locale, Dictionary> = {
       built: "Construction",
       rooms: "Pièces",
       features: "Caractéristiques",
-      contract: "Smart contract (Solana Devnet)",
+      contract: "Smart contract (Base Sepolia)",
       soldOut: "🎉 Rupture de stock - 100 % financé",
+      saleClosed: "Vente clôturée",
       funded: (percentage: string) => `${percentage}% financé`,
       sharesAvailable: (available, total) => `${available} / ${total} parts disponibles`,
       lowSharesWarning: " - Vite, bientôt épuisé !",
+      saleClosedBanner: "Vente clôturée - distribution en préparation",
+      saleEnded: "Vente terminée",
+      daysLeft: (count) => {
+        const value = Number(count);
+        return `${value} jour${value > 1 ? "s" : ""} restants`;
+      },
+      hoursLeft: (count) => {
+        const value = Number(count);
+        return `${value} heure${value > 1 ? "s" : ""} restantes`;
+      },
+      endingSoon: "Bientôt terminé",
+      saleEndDateLabel: "Fin le {{date}}",
       pricePerShare: "Prix par part",
+      priceEth: "≈ {{amount}} ETH",
       totalPrice: "Prix total",
+      totalPriceEth: "≈ {{amount}} ETH",
       type: "Type",
       expectedReturn: "Rendement attendu",
       estValue: "Valeur estimée",
@@ -376,6 +404,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       purchaseError: "Échec de l'achat de la part. Veuillez réessayer.",
       quantityRangeError: (min, max) =>
         `Veuillez sélectionner entre ${min} et ${max} part${max > 1 ? "s" : ""}`,
+      saleClosedError: "La vente est clôturée pour ce bien.",
+      priceUnavailableError: "Impossible de récupérer le prix sur la blockchain. Veuillez réessayer plus tard.",
+      invalidContractError: "Adresse de contrat invalide.",
+      priceUnavailableShort: "Prix indisponible",
     },
     portfolio: {
       title: "Mon portfolio",
@@ -383,7 +415,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectTitle: "Commencez à investir dès maintenant",
       connectMessage: "Connectez votre wallet pour accéder à votre portfolio et commencer à investir dans des biens immobiliers tokenisés.",
       connectButton: "Connecter mon wallet",
-      connectHint: "Sécurisé par la blockchain Solana • Investissements à partir de quelques SOL",
+      connectHint: "Sécurisé par la blockchain Base • Investissements accessibles dès quelques fractions d'ETH",
       loading: "Chargement de votre portfolio depuis la blockchain...",
       error: "Erreur : {{error}}",
       metrics: {
@@ -634,13 +666,28 @@ export const dictionaries: Record<Locale, Dictionary> = {
       built: "Built",
       rooms: "Rooms",
       features: "Features",
-      contract: "Smart contract (Solana Devnet)",
+      contract: "Smart contract (Base Sepolia)",
       soldOut: "🎉 SOLD OUT – 100% funded",
+      saleClosed: "Sale closed",
       funded: (percentage) => `${percentage}% funded`,
       sharesAvailable: (available, total) => `${available} / ${total} shares available`,
       lowSharesWarning: " – Hurry up!",
+      saleClosedBanner: "Sale closed – distribution in progress",
+      saleEnded: "Sale ended",
+      daysLeft: (count) => {
+        const value = Number(count);
+        return `${value} day${value === 1 ? "" : "s"} left`;
+      },
+      hoursLeft: (count) => {
+        const value = Number(count);
+        return `${value} hour${value === 1 ? "" : "s"} left`;
+      },
+      endingSoon: "Ending soon",
+      saleEndDateLabel: "Ends on {{date}}",
       pricePerShare: "Price per share",
+      priceEth: "≈ {{amount}} ETH",
       totalPrice: "Total price",
+      totalPriceEth: "≈ {{amount}} ETH",
       type: "Type",
       expectedReturn: "Expected return",
       estValue: "Est. total value",
@@ -653,6 +700,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       purchaseError: "Failed to purchase the share. Please try again.",
       quantityRangeError: (min, max) =>
         `Please select between ${min} and ${max} share${max > 1 ? "s" : ""}`,
+      saleClosedError: "This sale is closed. No additional puzzles can be purchased.",
+      priceUnavailableError: "We couldn't fetch the puzzle price from the blockchain. Please try again shortly.",
+      invalidContractError: "Invalid contract address.",
+      priceUnavailableShort: "Price unavailable",
     },
     portfolio: {
       title: "My portfolio",
@@ -660,7 +711,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectTitle: "Start investing now",
       connectMessage: "Connect your wallet to access your portfolio and start investing in tokenized real estate.",
       connectButton: "Connect my wallet",
-      connectHint: "Secured by Solana blockchain • Invest from a few SOL",
+      connectHint: "Secured by the Base blockchain • Start with just a fraction of ETH",
       loading: "Loading your portfolio from the blockchain...",
       error: "Error: {{error}}",
       metrics: {
@@ -911,13 +962,28 @@ export const dictionaries: Record<Locale, Dictionary> = {
       built: "Construido",
       rooms: "Habitaciones",
       features: "Características",
-      contract: "Smart contract (Solana Devnet)",
+      contract: "Smart contract (Base Sepolia)",
       soldOut: "🎉 AGOTADO – 100 % financiado",
+      saleClosed: "Venta cerrada",
       funded: (percentage) => `${percentage}% financiado`,
       sharesAvailable: (available, total) => `${available} / ${total} participaciones disponibles`,
       lowSharesWarning: " – ¡Date prisa!",
+      saleClosedBanner: "Venta cerrada: distribución en curso",
+      saleEnded: "Venta finalizada",
+      daysLeft: (count) => {
+        const value = Number(count);
+        return `Queda${value === 1 ? "" : "n"} ${value} día${value === 1 ? "" : "s"}`;
+      },
+      hoursLeft: (count) => {
+        const value = Number(count);
+        return `Queda${value === 1 ? "" : "n"} ${value} hora${value === 1 ? "" : "s"}`;
+      },
+      endingSoon: "Termina pronto",
+      saleEndDateLabel: "Finaliza el {{date}}",
       pricePerShare: "Precio por participación",
+      priceEth: "≈ {{amount}} ETH",
       totalPrice: "Precio total",
+      totalPriceEth: "≈ {{amount}} ETH",
       type: "Tipo",
       expectedReturn: "Rentabilidad esperada",
       estValue: "Valor total estimado",
@@ -930,6 +996,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       purchaseError: "No se pudo completar la compra. Inténtalo de nuevo.",
       quantityRangeError: (min, max) =>
         `Selecciona entre ${min} y ${max} participación${max > 1 ? "es" : ""}`,
+      saleClosedError: "Esta venta está cerrada. No se pueden comprar más participaciones.",
+      priceUnavailableError: "No se pudo obtener el precio desde la blockchain. Inténtalo de nuevo más tarde.",
+      invalidContractError: "Dirección de contrato no válida.",
+      priceUnavailableShort: "Precio no disponible",
     },
     portfolio: {
       title: "Mi portafolio",
@@ -937,7 +1007,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectTitle: "Comienza a invertir ahora",
       connectMessage: "Conecta tu wallet para acceder a tu portafolio y empezar a invertir en bienes raíces tokenizados.",
       connectButton: "Conectar mi wallet",
-      connectHint: "Protegido por blockchain Solana • Invierte desde pocos SOL",
+      connectHint: "Protegido por la blockchain Base • Invierte desde fracciones de ETH",
       loading: "Cargando tu portafolio desde la blockchain...",
       error: "Error: {{error}}",
       metrics: {

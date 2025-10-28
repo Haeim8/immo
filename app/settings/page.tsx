@@ -7,7 +7,7 @@ import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Globe, Palette, Bell, Shield, Mail } from "lucide-react";
+import { Globe, Bell, Shield, Mail } from "lucide-react";
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState("fr");

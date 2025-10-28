@@ -1,16 +1,55 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy, TrendingUp, Package } from "lucide-react";
+import { Trophy, Medal, Crown, Wallet, TrendingUp, Loader2 } from "lucide-react";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
-import { useLeaderboardData } from "@/lib/solana/hooks";
+import { useLeaderboardData } from "@/lib/evm";
 
 export default function LeaderboardPage() {
   const leaderboardT = useTranslations("leaderboard");
   const { formatCurrency } = useCurrencyFormatter();
-  const { leaderboard, loading, error } = useLeaderboardData();
+  const { leaderboardData, isLoading } = useLeaderboardData();
+
+  // Helper to shorten address
+  const shortenAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  // Helper to get rank styling
+  const getRankBadge = (rank: number) => {
+    if (rank === 1) {
+      return {
+        icon: <Crown className="h-6 w-6 text-yellow-400" />,
+        gradient: "from-yellow-400/20 to-amber-600/20",
+        border: "border-yellow-400/50",
+        textColor: "text-yellow-400",
+      };
+    }
+    if (rank === 2) {
+      return {
+        icon: <Medal className="h-6 w-6 text-gray-300" />,
+        gradient: "from-gray-300/20 to-gray-500/20",
+        border: "border-gray-300/50",
+        textColor: "text-gray-300",
+      };
+    }
+    if (rank === 3) {
+      return {
+        icon: <Medal className="h-6 w-6 text-amber-600" />,
+        gradient: "from-amber-600/20 to-amber-800/20",
+        border: "border-amber-600/50",
+        textColor: "text-amber-600",
+      };
+    }
+    return {
+      icon: <Trophy className="h-5 w-5 text-cyan-400" />,
+      gradient: "from-cyan-500/10 to-blue-500/10",
+      border: "border-white/10",
+      textColor: "text-cyan-400",
+    };
+  };
 
   return (
     <div className="min-h-screen px-2 md:px-0">
@@ -29,51 +68,38 @@ export default function LeaderboardPage() {
             </p>
           </motion.div>
 
-          {loading && (
-            <GlassCard className="text-center py-12">
-              <div className="animate-pulse">
-                <Trophy className="h-12 w-12 mx-auto mb-4 text-cyan-400" />
-                <p className="text-muted-foreground">{leaderboardT("loading")}</p>
+          {isLoading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+              <p className="text-muted-foreground">Loading leaderboard...</p>
+            </div>
+          ) : leaderboardData.length === 0 ? (
+            <GlassCard className="text-center py-24">
+              <div className="max-w-2xl mx-auto px-4">
+                <div className="p-6 rounded-full bg-gradient-to-br from-yellow-400/20 to-amber-600/20 border border-yellow-400/30 inline-flex mb-6">
+                  <Trophy className="h-12 w-12 text-yellow-400" />
+                </div>
+                <h2 className="text-2xl font-bold mb-4">
+                  <GradientText>No Investors Yet</GradientText>
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  The leaderboard will show top investors once properties are purchased.
+                </p>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>🏆 Rankings by total invested</p>
+                  <p>💰 Dividends earned tracking</p>
+                  <p>📈 Performance metrics</p>
+                  <p>🔄 Real-time updates</p>
+                </div>
               </div>
             </GlassCard>
-          )}
-
-          {error && (
-            <GlassCard className="text-center py-12 border-red-500/20">
-              <p className="text-red-400">{leaderboardT("error")}: {error}</p>
-            </GlassCard>
-          )}
-
-          {!loading && !error && leaderboard.length === 0 && (
-            <GlassCard className="text-center py-24">
-              <Trophy className="h-16 w-16 mx-auto mb-6 text-cyan-400/50" />
-              <h2 className="text-2xl font-bold mb-4">
-                <GradientText>{leaderboardT("noInvestors")}</GradientText>
-              </h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                {leaderboardT("noInvestorsText")}
-              </p>
-            </GlassCard>
-          )}
-
-          {!loading && !error && leaderboard.length > 0 && (
+          ) : (
             <div className="space-y-4">
-              {/* Header */}
-              <GlassCard className="hidden md:block">
-                <div className="grid grid-cols-6 gap-4 px-6 py-4 text-sm font-semibold text-muted-foreground">
-                  <div className="col-span-1">{leaderboardT("rank")}</div>
-                  <div className="col-span-1">{leaderboardT("investor")}</div>
-                  <div className="col-span-1 text-right">{leaderboardT("investments")}</div>
-                  <div className="col-span-1 text-right">{leaderboardT("totalInvested")}</div>
-                  <div className="col-span-1 text-right">{leaderboardT("dividends")}</div>
-                  <div className="col-span-1 text-right">{leaderboardT("performance")}</div>
-                </div>
-              </GlassCard>
-
-              {/* Leaderboard rows */}
-              {leaderboard.map((investor, index) => {
-                const isTop3 = index < 3;
-                const medalColor = index === 0 ? "text-yellow-400" : index === 1 ? "text-gray-400" : index === 2 ? "text-amber-600" : "text-cyan-400";
+              {leaderboardData.map((investor, index) => {
+                const rank = index + 1;
+                const badge = getRankBadge(rank);
+                const totalInvestedFormatted = formatCurrency(investor.totalInvestedUSD);
+                const totalDividendsFormatted = formatCurrency(investor.totalDividendsEarned);
 
                 return (
                   <motion.div
@@ -82,85 +108,76 @@ export default function LeaderboardPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <GlassCard className={`${isTop3 ? 'border-cyan-500/30' : ''} hover:border-cyan-500/50 transition-all`}>
-                      {/* Desktop view */}
-                      <div className="hidden md:grid grid-cols-6 gap-4 px-6 py-5 items-center">
-                        <div className="col-span-1 flex items-center gap-2">
-                          {isTop3 ? (
-                            <Trophy className={`h-5 w-5 ${medalColor}`} />
-                          ) : (
-                            <span className="text-muted-foreground font-semibold w-5 text-center">
-                              {index + 1}
-                            </span>
-                          )}
-                          <span className="font-bold text-lg">{index + 1}</span>
-                        </div>
-                        <div className="col-span-1">
-                          <code className="text-sm bg-background/50 px-2 py-1 rounded">
-                            {investor.displayAddress}
-                          </code>
-                        </div>
-                        <div className="col-span-1 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Package className="h-4 w-4 text-cyan-400" />
-                            <span className="font-semibold">{investor.numberOfInvestments}</span>
-                          </div>
-                        </div>
-                        <div className="col-span-1 text-right">
-                          <div className="font-semibold">{formatCurrency(investor.totalInvestedUSD)}</div>
-                          <div className="text-xs text-muted-foreground">{investor.totalInvestedSOL.toFixed(4)} SOL</div>
-                        </div>
-                        <div className="col-span-1 text-right">
-                          <div className="font-semibold text-green-400">{formatCurrency(investor.totalDividendsUSD)}</div>
-                          <div className="text-xs text-muted-foreground">{investor.totalDividendsSOL.toFixed(4)} SOL</div>
-                        </div>
-                        <div className="col-span-1 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <TrendingUp className={`h-4 w-4 ${investor.performance > 0 ? 'text-green-400' : 'text-muted-foreground'}`} />
-                            <span className={`font-bold text-lg ${investor.performance > 0 ? 'text-green-400' : 'text-muted-foreground'}`}>
-                              {investor.performance.toFixed(2)}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                    <GlassCard
+                      hover
+                      glow
+                      className={`relative overflow-hidden ${rank <= 3 ? "border-2" : ""} ${badge.border}`}
+                    >
+                      <div className={`absolute inset-0 bg-gradient-to-r ${badge.gradient}`} />
 
-                      {/* Mobile view */}
-                      <div className="md:hidden px-4 py-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {isTop3 ? (
-                              <Trophy className={`h-5 w-5 ${medalColor}`} />
-                            ) : (
-                              <span className="text-muted-foreground font-semibold">
-                                #{index + 1}
-                              </span>
-                            )}
-                            <code className="text-sm bg-background/50 px-2 py-1 rounded">
-                              {investor.displayAddress}
-                            </code>
+                      <div className="relative z-10">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                          {/* Rank & Address */}
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                              {badge.icon}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-lg font-bold ${badge.textColor}`}>
+                                  #{rank}
+                                </span>
+                                <span className="text-sm font-mono text-muted-foreground">
+                                  {shortenAddress(investor.address)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {investor.nftCount} NFT{investor.nftCount !== 1 ? "s" : ""} • {investor.investments.length} investment{investor.investments.length !== 1 ? "s" : ""}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <TrendingUp className={`h-4 w-4 ${investor.performance > 0 ? 'text-green-400' : 'text-muted-foreground'}`} />
-                            <span className={`font-bold ${investor.performance > 0 ? 'text-green-400' : 'text-muted-foreground'}`}>
-                              {investor.performance.toFixed(2)}%
-                            </span>
+
+                          {/* Stats */}
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Wallet className="h-4 w-4 text-cyan-400" />
+                                <p className="text-xs text-muted-foreground">Total Invested</p>
+                              </div>
+                              <p className="text-xl font-bold">{totalInvestedFormatted}</p>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="flex items-center gap-2 mb-1">
+                                <TrendingUp className="h-4 w-4 text-green-400" />
+                                <p className="text-xs text-muted-foreground">Dividends Earned</p>
+                              </div>
+                              <p className="text-xl font-bold text-green-400">{totalDividendsFormatted}</p>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <div className="text-muted-foreground text-xs">{leaderboardT("investments")}</div>
-                            <div className="font-semibold">{investor.numberOfInvestments}</div>
+                        {/* Investments detail (collapsible preview) */}
+                        {rank <= 3 && investor.investments.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-white/10">
+                            <p className="text-xs text-muted-foreground mb-2">Recent Investments:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {investor.investments.slice(0, 3).map((inv, i) => (
+                                <div
+                                  key={i}
+                                  className="text-xs px-2 py-1 rounded-lg bg-white/5 border border-white/10"
+                                >
+                                  {inv.placeName} #{inv.tokenId}
+                                </div>
+                              ))}
+                              {investor.investments.length > 3 && (
+                                <div className="text-xs px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-muted-foreground">
+                                  +{investor.investments.length - 3} more
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-muted-foreground text-xs">{leaderboardT("totalInvested")}</div>
-                            <div className="font-semibold">{formatCurrency(investor.totalInvestedUSD)}</div>
-                          </div>
-                          <div className="col-span-2">
-                            <div className="text-muted-foreground text-xs">{leaderboardT("dividends")}</div>
-                            <div className="font-semibold text-green-400">{formatCurrency(investor.totalDividendsUSD)}</div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </GlassCard>
                   </motion.div>

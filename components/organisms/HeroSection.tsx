@@ -5,15 +5,29 @@ import { TrendingUp, Users, Building2, ExternalLink } from "lucide-react";
 import GradientText from "@/components/atoms/GradientText";
 import StatCard from "@/components/molecules/StatCard";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
-import { useAllProperties } from "@/lib/solana/hooks";
-import { calculateGlobalMetrics } from "@/lib/solana/adapters";
+import { useAllPlaces } from "@/lib/evm";
+import { useMemo } from "react";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 
 export default function HeroSection() {
-  const { properties } = useAllProperties();
-  const globalMetrics = calculateGlobalMetrics(properties);
+  const { places } = useAllPlaces();
   const heroT = useTranslations("hero");
   const { formatCurrency } = useCurrencyFormatter();
+
+  const globalMetrics = useMemo(() => {
+    const totalProjects = places.length;
+    const totalValueDistributed = places.reduce((sum, place) =>
+      sum + Number(place.info.totalRewardsDeposited), 0
+    );
+    const activeInvestors = 0; // TODO: Calculer avec leaderboard data
+
+    return {
+      totalProjectsFunded: totalProjects,
+      totalValueDistributed,
+      activeInvestors,
+      blockchainExplorerUrl: "https://sepolia.basescan.org/",
+    };
+  }, [places]);
 
   const metrics = [
     {

@@ -1,11 +1,8 @@
 /**
  * NFT Metadata Generator
- * Creates ERC-721/Metaplex compatible metadata for Share NFTs
+ * Creates ERC-721 compatible metadata for USCI share NFTs
  */
 
-import { Property } from "@/lib/solana/types";
-
-const PINATA_API_URL = "https://api.pinata.cloud";
 const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || "";
 
 export interface NFTMetadata {
@@ -36,9 +33,27 @@ export interface NFTMetadata {
   };
 }
 
+export interface PropertyMetadataInput {
+  name: string;
+  city: string;
+  province: string;
+  country: string;
+  surface: number;
+  rooms: number;
+  yearBuilt: number;
+  priceUSD: number;
+  expectedReturn: number; // percentage
+  totalShares: number;
+  assetType?: string;
+  propertyType?: string;
+  votingEnabled?: boolean;
+  propertyId?: string | number;
+  creatorAddress?: string;
+  description?: string;
+}
+
 export interface GenerateNFTMetadataParams {
-  property: Property;
-  propertyMetadataCid: string;
+  property: PropertyMetadataInput;
   shareNumber: number;
   owner: string;
   mintTime: number;
@@ -54,7 +69,6 @@ export function generateNFTMetadata(
 ): NFTMetadata {
   const {
     property,
-    propertyMetadataCid,
     shareNumber,
     owner,
     mintTime,
@@ -62,16 +76,23 @@ export function generateNFTMetadata(
     votingPower,
   } = params;
 
-  const sharePrice = property.sharePrice?.toNumber ? property.sharePrice.toNumber() : 0;
-  const sharePriceUSD = (sharePrice / 1e9) * 100; // Approximate
-  const expectedReturn = property.expectedReturn / 100; // Convert basis points to percentage
-  const totalShares = property.totalShares?.toNumber ? property.totalShares.toNumber() : 0;
+  const sharePriceUSD = property.priceUSD ?? 0;
+  const expectedReturn = property.expectedReturn;
+  const totalShares = property.totalShares ?? 0;
+  const assetType = property.assetType?.replace(/_/g, " ") ?? property.propertyType ?? "Real Estate";
+  const propertyType = property.propertyType ?? assetType;
+  const description =
+    property.description ??
+    `Ownership certificate for 1 share of ${property.name}. This NFT represents fractional participation in a ${assetType} asset located in ${property.city}, ${property.country}. Share #${shareNumber} out of ${totalShares} total shares.`;
+  const externalUrl = property.propertyId
+    ? `https://usci.com/property/${property.propertyId}`
+    : undefined;
 
   return {
     name: `${property.name} - Share #${shareNumber}`,
-    description: `Ownership certificate for 1 share of ${property.name}. This NFT represents fractional ownership of a ${property.assetType.replace("_", " ")} asset located in ${property.city}, ${property.country}. Share #${shareNumber} of ${totalShares} total shares.`,
+    description,
     image: `ipfs://${nftImageCid}`,
-    external_url: `https://usci.com/property/${property.propertyId}`,
+    external_url: externalUrl,
     attributes: [
       {
         trait_type: "Property",
@@ -99,11 +120,11 @@ export function generateNFTMetadata(
       },
       {
         trait_type: "Asset Type",
-        value: property.assetType.replace("_", " "),
+        value: assetType,
       },
       {
         trait_type: "Property Type",
-        value: property.propertyType,
+        value: propertyType,
       },
       {
         trait_type: "Surface",
@@ -150,12 +171,14 @@ export function generateNFTMetadata(
           type: "image/png",
         },
       ],
-      creators: [
-        {
-          address: property.factory.toBase58(),
-          share: 100,
-        },
-      ],
+      creators: property.creatorAddress
+        ? [
+            {
+              address: property.creatorAddress,
+              share: 100,
+            },
+          ]
+        : undefined,
     },
     seller_fee_basis_points: 250, // 2.5% secondary sales royalty
     symbol: "USCI",

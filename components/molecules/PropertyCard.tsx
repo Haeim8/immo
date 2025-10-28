@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { MapPin, TrendingUp, ExternalLink, Calendar, Home } from "lucide-react";
+import { MapPin, TrendingUp, ExternalLink, Calendar, Home, Clock } from "lucide-react";
 import { Investment } from "@/lib/types";
 import GlassCard from "@/components/atoms/GlassCard";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
@@ -13,12 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { buyShareWithNFT } from "@/lib/solana/buy-share-with-nft";
-import { PublicKey } from "@solana/web3.js";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getIpfsUrl } from "@/lib/pinata/upload";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
+import { useAccount } from "wagmi";
+import { usePrivy } from "@privy-io/react-auth";
+import { BLOCK_EXPLORER_URL, useBuyPuzzle } from "@/lib/evm";
 
 interface PropertyCardProps {
   investment: Investment;
@@ -31,11 +30,19 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
   const [success, setSuccess] = useState(false);
   const [quantity, setQuantity] = useState(1);
 
-  const { connection } = useConnection();
-  const wallet = useWallet();
-  const { setVisible } = useWalletModal();
+  const { address, isConnected } = useAccount();
+  const { login } = usePrivy();
+  const { buyPuzzle, isPending: isTxPending } = useBuyPuzzle();
   const t = useTranslations("propertyCard");
   const { formatCurrency } = useCurrencyFormatter();
+
+  // Calculate deadline information
+  const saleEndDate = new Date(investment.saleEnd * 1000);
+  const isSaleEnded = Date.now() > saleEndDate.getTime();
+  const timeLeft = saleEndDate.getTime() - Date.now();
+  const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+  const hoursLeft = Math.ceil(timeLeft / (1000 * 60 * 60));
+  const saleClosed = isSaleEnded || !investment.isActive;
 
   // Get image URL from IPFS if imageCid exists, otherwise use imageUrl
   const displayImageUrl = investment.imageCid
@@ -44,20 +51,52 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
   const pricePerShareFormatted = formatCurrency(investment.priceUSD);
   const estimatedValueFormatted = formatCurrency(investment.estimatedValue);
   const totalPriceFormatted = formatCurrency(investment.priceUSD * quantity);
-  const actionLabel =
-    investment.fundingProgress >= 100
+  const pricePerShareETH = investment.priceETH ?? 0;
+  const totalPriceETH = useMemo(() => pricePerShareETH * quantity, [pricePerShareETH, quantity]);
+  const puzzlePriceWei = investment.puzzlePriceWei ? BigInt(investment.puzzlePriceWei) : null;
+  const saleClosedWithoutSellout = saleClosed && investment.fundingProgress < 100;
+  const soldOut = investment.fundingProgress >= 100 || investment.sharesAvailable <= 0;
+  const priceUnavailable = puzzlePriceWei === null;
+  const canPurchase =
+    !saleClosedWithoutSellout && !soldOut && !priceUnavailable && investment.sharesAvailable > 0;
+  const actionLabel = saleClosedWithoutSellout
+    ? t("saleClosed")
+    : soldOut
       ? t("soldOut")
-      : isBuying
-        ? t("processing", { quantity })
-        : success
-          ? t("purchased")
-          : wallet.connected
-            ? t("buyShares", { quantity })
-            : t("connectWallet");
+      : priceUnavailable
+        ? t("priceUnavailableShort")
+        : isBuying || isTxPending
+          ? t("processing", { quantity })
+          : success
+            ? t("purchased")
+            : isConnected
+              ? t("buyShares", { quantity })
+              : t("connectWallet");
+  const saleEndDateDisplay = saleEndDate.toLocaleString();
 
   const handleInvest = async () => {
-    if (!wallet.connected || !wallet.publicKey) {
-      setVisible(true);
+    if (!isConnected || !address) {
+      await login();
+      return;
+    }
+
+    if (saleClosedWithoutSellout) {
+      setError(t("saleClosedError"));
+      return;
+    }
+
+    if (soldOut) {
+      setError(t("soldOut"));
+      return;
+    }
+
+    if (priceUnavailable || !puzzlePriceWei) {
+      setError(t("priceUnavailableError"));
+      return;
+    }
+
+    if (!investment.contractAddress.startsWith("0x")) {
+      setError(t("invalidContractError"));
       return;
     }
 
@@ -76,31 +115,20 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
     setSuccess(false);
 
     try {
-      const propertyPDA = new PublicKey(investment.contractAddress);
-      const purchasedShares: string[] = [];
+      const hashes: string[] = [];
 
-      // Purchase shares one by one
       for (let i = 0; i < quantity; i++) {
-        console.log(`🛒 Buying share ${i + 1}/${quantity} with NFT generation...`);
-
-        const { transaction, shareNFTPDA, tokenId, nftSvgData } = await buyShareWithNFT(
-          connection,
-          propertyPDA,
-          wallet.publicKey
+        const hash = await buyPuzzle(
+          investment.contractAddress as `0x${string}`,
+          puzzlePriceWei
         );
-
-        console.log(`📤 Sending transaction ${i + 1}/${quantity} to blockchain...`);
-        const signature = await wallet.sendTransaction(transaction, connection);
-
-        console.log(`⏳ Confirming transaction ${i + 1}/${quantity}...`);
-        await connection.confirmTransaction(signature, "confirmed");
-
-        console.log(`✅ Share ${i + 1}/${quantity} purchased!`, { signature, shareNFTPDA, tokenId, nftSvgData });
-        purchasedShares.push(signature);
+        if (hash) {
+          hashes.push(hash);
+        }
       }
 
       setSuccess(true);
-      console.log(`🎉 All ${quantity} shares purchased successfully!`, purchasedShares);
+      console.log(`🎉 ${quantity} shares purchased successfully!`, hashes);
 
       // Close modal after 2 seconds
       setTimeout(() => {
@@ -173,6 +201,9 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                   {pricePerShareFormatted}
                 </span>
               </div>
+              <div className="flex justify-end text-xs text-muted-foreground">
+                {t("priceEth", { amount: pricePerShareETH.toFixed(4) })}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -202,6 +233,29 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                   transition={{ duration: 1, delay: 0.5 }}
                 />
               </div>
+
+              {/* Deadline Info */}
+              {investment.saleEnd > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    {saleClosed ? (
+                      <span className="text-red-400 font-medium">{t("saleEnded")}</span>
+                    ) : daysLeft > 0 ? (
+                      <span>{t("daysLeft", { count: daysLeft })}</span>
+                    ) : hoursLeft > 0 ? (
+                      <span className="text-orange-400 font-medium">
+                        {t("hoursLeft", { count: hoursLeft })}
+                      </span>
+                    ) : (
+                      <span className="text-red-400 font-medium">{t("endingSoon")}</span>
+                    )}
+                  </div>
+                  <span className="text-muted-foreground">
+                    {t("saleEndDateLabel", { date: saleEndDateDisplay })}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -292,7 +346,12 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 <AnimatedButton
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open(`https://explorer.solana.com/address/${investment.contractAddress}?cluster=devnet`, "_blank")}
+                  onClick={() =>
+                    window.open(
+                      `${BLOCK_EXPLORER_URL}/address/${investment.contractAddress}`,
+                      "_blank"
+                    )
+                  }
                 >
                   <ExternalLink className="h-4 w-4" />
                 </AnimatedButton>
@@ -313,14 +372,18 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
 
             {/* Shares Available Info */}
             {investment.sharesAvailable !== undefined && investment.totalShares !== undefined && (
-              <div className={`p-4 rounded-xl border text-center ${
-                investment.fundingProgress >= 100
-                  ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-400"
-                  : investment.sharesAvailable <= 10
-                    ? "bg-orange-500/20 border-orange-500/50 text-orange-400"
-                    : "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
-              }`}>
-                {investment.fundingProgress >= 100 ? (
+              <div
+                className={`p-4 rounded-xl border text-center ${
+                  saleClosedWithoutSellout || soldOut
+                    ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-400"
+                    : investment.sharesAvailable <= 10
+                      ? "bg-orange-500/20 border-orange-500/50 text-orange-400"
+                      : "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
+                }`}
+              >
+                {saleClosedWithoutSellout ? (
+                  <span className="font-semibold">{t("saleClosedBanner")}</span>
+                ) : soldOut ? (
                   <span className="font-semibold">{t("soldOut")}</span>
                 ) : (
                   <span className="font-semibold">
@@ -335,14 +398,14 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             )}
 
             {/* Quantity Selector */}
-            {investment.fundingProgress < 100 && investment.sharesAvailable > 0 && (
+            {canPurchase && (
               <div className="space-y-3">
                 <label className="block text-sm font-medium">{t("quantityLabel")}</label>
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center font-bold transition-colors"
-                    disabled={isBuying || quantity <= 1}
+                    disabled={isBuying || isTxPending || quantity <= 1}
                   >
                     −
                   </button>
@@ -356,12 +419,12 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                       setQuantity(Math.min(investment.sharesAvailable, Math.max(1, val)));
                     }}
                     className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-center text-xl font-bold focus:border-cyan-500 focus:outline-none"
-                    disabled={isBuying}
+                    disabled={isBuying || isTxPending}
                   />
                   <button
                     onClick={() => setQuantity(Math.min(investment.sharesAvailable, quantity + 1))}
                     className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center font-bold transition-colors"
-                    disabled={isBuying || quantity >= investment.sharesAvailable}
+                    disabled={isBuying || isTxPending || quantity >= investment.sharesAvailable}
                   >
                     +
                   </button>
@@ -377,6 +440,9 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                       {totalPriceFormatted}
                     </span>
                   </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    {t("totalPriceEth", { amount: totalPriceETH.toFixed(4) })}
+                  </div>
                 </div>
               </div>
             )}
@@ -388,7 +454,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 size="lg"
                 className="flex-1"
                 onClick={handleInvest}
-                disabled={isBuying || success || investment.fundingProgress >= 100}
+                disabled={!canPurchase || isBuying || isTxPending || success}
               >
                 {actionLabel}
               </AnimatedButton>

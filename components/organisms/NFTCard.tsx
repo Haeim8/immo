@@ -1,47 +1,59 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
-import { ShareNFT, Property } from "@/lib/solana/types";
-import { PublicKey } from "@solana/web3.js";
+import Image from "next/image";
+import { useMemo } from "react";
+import { Investment } from "@/lib/types";
 import { getNFTMetadataUrl } from "@/lib/nft/metadata";
 import GlassCard from "@/components/atoms/GlassCard";
 import { ExternalLink, TrendingUp, Calendar, Hash } from "lucide-react";
+import { getIpfsUrl } from "@/lib/pinata/upload";
+
+type NumericLike = bigint | number;
+
+export interface PuzzleNFTCardData {
+  tokenId: NumericLike;
+  metadataCid: string;
+  imageCid?: string;
+  mintedAt?: number; // Unix timestamp (seconds)
+  votingPower?: number;
+}
 
 interface NFTCardProps {
-  shareNFT: { publicKey: PublicKey; account: ShareNFT };
-  property: Property;
+  shareNFT: PuzzleNFTCardData;
+  property: Investment;
   index: number;
 }
 
+const toNumber = (value: NumericLike | undefined): number => {
+  if (value === undefined) return 0;
+  return typeof value === "bigint" ? Number(value) : value;
+};
+
+const normalizeCid = (value?: string): string | null => {
+  if (!value) return null;
+  if (value.startsWith("ipfs://")) {
+    return value.replace("ipfs://", "");
+  }
+  return value;
+};
+
 export default function NFTCard({ shareNFT, property, index }: NFTCardProps) {
-  const [nftImageUrl, setNftImageUrl] = useState<string>("");
+  const tokenId = toNumber(shareNFT.tokenId);
+  const totalShares = property.totalShares ?? 0;
+  const mintedAt = shareNFT.mintedAt ? new Date(Number(shareNFT.mintedAt) * 1000) : null;
+  const votingPower = shareNFT.votingPower ?? 0;
+  const expectedReturn = property.expectedReturn;
 
-  useEffect(() => {
-    // Extract CID from ipfs:// URI
-    const extractCid = (uri: string) => {
-      if (uri.startsWith("ipfs://")) {
-        return uri.replace("ipfs://", "");
-      }
-      return uri;
-    };
+  const nftImageUrl = useMemo(() => {
+    const cid = normalizeCid(shareNFT.imageCid);
+    return cid ? getIpfsUrl(cid) : "";
+  }, [shareNFT.imageCid]);
 
-    // Get IPFS gateway URL for NFT image
-    const imageCid = extractCid(shareNFT.account.nftImageUri);
-    const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
-    setNftImageUrl(`https://${gateway}/ipfs/${imageCid}`);
-  }, [shareNFT]);
-
-  const tokenId = shareNFT.account.tokenId?.toNumber ? shareNFT.account.tokenId.toNumber() : 0;
-  const totalShares = property.totalShares?.toNumber ? property.totalShares.toNumber() : 0;
-  const mintTime = shareNFT.account.mintTime?.toNumber ? shareNFT.account.mintTime.toNumber() : 0;
-  const mintDate = new Date(mintTime * 1000);
-  const votingPower = shareNFT.account.votingPower?.toNumber ? shareNFT.account.votingPower.toNumber() : 0;
-  const expectedReturn = property.expectedReturn / 100; // basis points to percentage
-
-  const metadataUrl = getNFTMetadataUrl(
-    shareNFT.account.nftMetadataUri.replace("ipfs://", "")
-  );
+  const metadataUrl = useMemo(() => {
+    const cid = normalizeCid(shareNFT.metadataCid);
+    return cid ? getNFTMetadataUrl(cid) : undefined;
+  }, [shareNFT.metadataCid]);
 
   return (
     <motion.div
@@ -53,10 +65,12 @@ export default function NFTCard({ shareNFT, property, index }: NFTCardProps) {
         {/* NFT Image */}
         <div className="relative aspect-square overflow-hidden rounded-t-xl">
           {nftImageUrl ? (
-            <img
+            <Image
               src={nftImageUrl}
               alt={`${property.name} - Share #${tokenId}`}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              fill
+              sizes="(max-width: 768px) 100vw, 300px"
+              className="object-cover transition-transform duration-300 group-hover:scale-110"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
@@ -89,7 +103,7 @@ export default function NFTCard({ shareNFT, property, index }: NFTCardProps) {
               {property.name}
             </h3>
             <p className="text-sm text-muted-foreground">
-              📍 {property.city}, {property.country}
+              📍 {property.location.city}, {property.location.country ?? property.location.province}
             </p>
           </div>
 
@@ -100,7 +114,7 @@ export default function NFTCard({ shareNFT, property, index }: NFTCardProps) {
               <div>
                 <p className="text-xs text-muted-foreground">Minted</p>
                 <p className="text-sm font-semibold">
-                  {mintDate.toLocaleDateString()}
+                  {mintedAt ? mintedAt.toLocaleDateString() : "—"}
                 </p>
               </div>
             </div>
@@ -122,24 +136,26 @@ export default function NFTCard({ shareNFT, property, index }: NFTCardProps) {
               {property.surface} m²
             </span>
             <span className="px-2 py-1 text-xs rounded-full bg-white/5 border border-white/10">
-              {property.rooms} rooms
+              {property.details.rooms} rooms
             </span>
             <span className="px-2 py-1 text-xs rounded-full bg-white/5 border border-white/10">
-              {property.propertyType}
+              {property.type}
             </span>
           </div>
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">
-            <a
-              href={metadataUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-400 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Metadata
-            </a>
+            {metadataUrl && (
+              <a
+                href={metadataUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-400 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Metadata
+              </a>
+            )}
             <button className="flex-1 px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/50 text-purple-400 font-semibold text-sm transition-colors">
               Claim Dividends
             </button>
