@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, ReactNode, useEffect, useState } from 'react';
+import { FC, ReactNode } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { createConfig, WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ const wagmiConfig = createConfig({
   transports: {
     [baseSepolia.id]: http(),
   },
+  ssr: true,
 });
 
 declare module 'wagmi' {
@@ -25,47 +26,40 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 30000,
+      staleTime: 60000,
     },
   },
 });
 
 export const EVMWalletProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [mounted, setMounted] = useState(false);
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   if (!appId) {
-    console.error('NEXT_PUBLIC_PRIVY_APP_ID is not set');
-    return <>{children}</>;
+    console.error('NEXT_PUBLIC_PRIVY_APP_ID manquant');
   }
 
   return (
-    <PrivyProvider
-      appId={appId}
-      config={{
-        appearance: {
-          theme: 'dark',
-          accentColor: '#667eea',
-        },
-        embeddedWallets: {
-          createOnLogin: 'off',
-        },
-        loginMethods: ['wallet'],
-        supportedChains: [baseSepolia],
-        defaultChain: baseSepolia,
-      }}
-    >
-      <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={wagmiConfig}>{children}</WagmiProvider>
-      </QueryClientProvider>
-    </PrivyProvider>
+    <QueryClientProvider client={queryClient}>
+      <WagmiProvider config={wagmiConfig}>
+        {appId ? (
+          <PrivyProvider
+            appId={appId}
+            config={{
+              appearance: {
+                theme: 'dark',
+                accentColor: '#667eea',
+              },
+              loginMethods: ['wallet'],
+              supportedChains: [baseSepolia],
+              defaultChain: baseSepolia,
+            }}
+          >
+            {children}
+          </PrivyProvider>
+        ) : (
+          children
+        )}
+      </WagmiProvider>
+    </QueryClientProvider>
   );
 };

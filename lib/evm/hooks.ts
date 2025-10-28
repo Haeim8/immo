@@ -3,7 +3,7 @@
  */
 
 import { useReadContract, useReadContracts } from 'wagmi';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FACTORY_ADDRESS } from './constants';
 import { USCIFactoryABI, USCIABI } from './abis';
 import { PlaceData, PlaceInfo } from './adapters';
@@ -107,18 +107,20 @@ export function useAllPlaces() {
     },
   });
 
-  // Combine addresses and infos
-  const places: PlaceData[] = placeAddresses
-    .map((address, index) => {
-      const infoResult = infos?.[index];
-      if (!infoResult || infoResult.status === 'failure') return null;
+  // Combine addresses and infos - Stabiliser avec useMemo
+  const places = useMemo(() => {
+    return placeAddresses
+      .map((address, index) => {
+        const infoResult = infos?.[index];
+        if (!infoResult || infoResult.status === 'failure') return null;
 
-      return {
-        address,
-        info: infoResult.result as PlaceInfo,
-      };
-    })
-    .filter((p): p is PlaceData => p !== null);
+        return {
+          address,
+          info: infoResult.result as PlaceInfo,
+        };
+      })
+      .filter((p): p is PlaceData => p !== null);
+  }, [placeAddresses.length, infos]);
 
   return {
     places,
@@ -259,8 +261,12 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
   const [allPuzzles, setAllPuzzles] = useState<Array<{ tokenId: bigint; placeAddress: `0x${string}` }>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Stabiliser places.length au lieu de places
+  const placesCount = places.length;
+  const placeAddresses = useMemo(() => places.map(p => p.address), [placesCount]);
+
   useEffect(() => {
-    if (!userAddress || places.length === 0) {
+    if (!userAddress || placesCount === 0) {
       setAllPuzzles([]);
       setIsLoading(false);
       return;
@@ -281,10 +287,10 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
 
         // Query all places in parallel
         await Promise.all(
-          places.map(async (place) => {
+          placeAddresses.map(async (placeAddress) => {
             try {
               const logs = await client.getLogs({
-                address: place.address,
+                address: placeAddress,
                 event: {
                   type: 'event',
                   name: 'Transfer',
@@ -306,21 +312,21 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
 
                 try {
                   const owner = await client.readContract({
-                    address: place.address,
+                    address: placeAddress,
                     abi: USCIABI,
                     functionName: 'ownerOf',
                     args: [tokenId],
                   }) as `0x${string}`;
 
                   if (owner.toLowerCase() === userAddress.toLowerCase()) {
-                    allNfts.push({ tokenId, placeAddress: place.address });
+                    allNfts.push({ tokenId, placeAddress });
                   }
                 } catch {
                   continue;
                 }
               }
             } catch (error) {
-              console.error(`Error fetching NFTs for place ${place.address}:`, error);
+              console.error(`Error fetching NFTs for place ${placeAddress}:`, error);
             }
           })
         );
@@ -337,7 +343,7 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
     if (!isLoadingPlaces) {
       fetchAllNFTs();
     }
-  }, [userAddress, places, isLoadingPlaces]);
+  }, [userAddress, placesCount, placeAddresses, isLoadingPlaces]);
 
   return { puzzles: allPuzzles, isLoading: isLoading || isLoadingPlaces };
 }
@@ -399,8 +405,13 @@ export function useLeaderboardData() {
   }>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Stabiliser les dépendances
+  const placesCount = places.length;
+  const ethPriceUsd = ethPrice.usd;
+  const placesData = useMemo(() => places.map(p => ({ address: p.address, name: p.info.name, puzzlePrice: p.info.puzzlePrice })), [placesCount]);
+
   useEffect(() => {
-    if (places.length === 0 || isLoadingPlaces) {
+    if (placesCount === 0 || isLoadingPlaces) {
       setLeaderboardData([]);
       setIsLoading(false);
       return;
@@ -428,7 +439,7 @@ export function useLeaderboardData() {
 
         // Query all places in parallel
         await Promise.all(
-          places.map(async (place) => {
+          placesData.map(async (place) => {
             try {
               const logs = await client.getLogs({
                 address: place.address,
@@ -460,8 +471,8 @@ export function useLeaderboardData() {
                   const ownerLower = owner.toLowerCase();
 
                   // Calculate investment value
-                  const puzzlePriceETH = parseFloat(formatEther(place.info.puzzlePrice));
-                  const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
+                  const puzzlePriceETH = parseFloat(formatEther(place.puzzlePrice));
+                  const puzzlePriceUSD = puzzlePriceETH * ethPriceUsd;
 
                   // Add to investor map
                   if (!investorMap.has(ownerLower)) {
@@ -477,7 +488,7 @@ export function useLeaderboardData() {
                   investorData.totalInvestedUSD += puzzlePriceUSD;
                   investorData.nftCount += 1;
                   investorData.investments.push({
-                    placeName: place.info.name,
+                    placeName: place.name,
                     tokenId: tokenId.toString(),
                   });
                 } catch {
@@ -509,7 +520,7 @@ export function useLeaderboardData() {
     }
 
     fetchLeaderboardData();
-  }, [places, isLoadingPlaces, ethPrice.usd]);
+  }, [placesCount, placesData, ethPriceUsd, isLoadingPlaces]);
 
   return { leaderboardData, isLoading: isLoading || isLoadingPlaces };
 }

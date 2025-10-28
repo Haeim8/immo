@@ -2,7 +2,7 @@
  * Hook to get ETH price in USD
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface EthPriceData {
   usd: number;
@@ -10,10 +10,8 @@ interface EthPriceData {
 }
 
 export function useEthPrice() {
-  const [price, setPrice] = useState<EthPriceData>({
-    usd: 3000, // Default estimate
-    lastUpdated: Date.now(),
-  });
+  const [priceUsd, setPriceUsd] = useState<number>(3000);
+  const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
   useEffect(() => {
     const fetchPrice = async () => {
@@ -24,10 +22,8 @@ export function useEthPrice() {
         const data = await response.json();
 
         if (data.ethereum?.usd) {
-          setPrice({
-            usd: data.ethereum.usd,
-            lastUpdated: Date.now(),
-          });
+          setPriceUsd(data.ethereum.usd);
+          setLastUpdated(Date.now());
         }
       } catch (error) {
         console.error('Failed to fetch ETH price:', error);
@@ -39,6 +35,9 @@ export function useEthPrice() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Stabiliser la référence de l'objet price pour éviter les boucles infinies
+  const price = useMemo(() => ({ usd: priceUsd, lastUpdated }), [priceUsd, lastUpdated]);
 
   return { price };
 }
