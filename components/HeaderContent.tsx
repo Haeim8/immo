@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import NavLink from "@/components/molecules/NavLink";
 import SettingsDropdown from "@/components/molecules/SettingsDropdown";
 import AdminLink from "@/components/molecules/AdminLink";
-import { Wallet } from "lucide-react";
+import { Wallet, LogOut } from "lucide-react";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import {
   Select,
@@ -19,6 +19,7 @@ import {
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useWalletAddress, useIsAdmin, useIsTeamMember } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
+import { useDisconnect } from "wagmi";
 
 export default function HeaderContent() {
   const pathname = usePathname();
@@ -27,6 +28,7 @@ export default function HeaderContent() {
   const commonT = useTranslations("common");
 
   const { address, isConnected } = useWalletAddress();
+  const { disconnect } = useDisconnect();
 
   // Check admin and team status
   const { isAdmin } = useIsAdmin(address);
@@ -183,6 +185,13 @@ export default function HeaderContent() {
                         >
                           <Wallet className="h-3 w-3 inline mr-1" />
                           {account.displayName || `${account.address.slice(0, 6)}...${account.address.slice(-4)}`}
+                        </button>
+                        <button
+                          onClick={() => disconnect()}
+                          className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs sm:text-sm font-medium hover:bg-red-500/20 transition-colors text-red-400"
+                          title="Disconnect"
+                        >
+                          <LogOut className="h-3 w-3" />
                         </button>
                       </div>
                     );
