@@ -9,42 +9,48 @@ import { USCIFactoryABI, USCIABI } from './abis';
 /**
  * Hook pour créer une place
  */
+export interface CreatePlaceParams {
+  assetType: string;
+  name: string;
+  city: string;
+  province: string;
+  country: string;
+  totalPuzzles: number;
+  puzzlePrice: bigint;
+  saleDurationSeconds: number;
+  surface: number;
+  rooms: number;
+  expectedReturnBps: number;
+  placeType: string;
+  yearBuilt: number;
+  imageCid: string;
+  metadataCid: string;
+  votingEnabled: boolean;
+}
+
 export function useCreatePlace() {
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const createPlace = (params: {
-    name: string;
-    city: string;
-    province: string;
-    surface: number;
-    rooms: number;
-    propertyType: string;
-    yearBuilt: number;
-    totalPuzzles: number;
-    puzzlePrice: bigint;
-    expectedReturn: number;
-    saleDuration: number;
-    imageCid: string;
-    metadataCid: string;
-    votingEnabled: boolean;
-  }) => {
+  const createPlace = (params: CreatePlaceParams) => {
     writeContract({
       address: FACTORY_ADDRESS,
       abi: USCIFactoryABI,
       functionName: 'createPlace',
       args: [
+        params.assetType,
         params.name,
         params.city,
         params.province,
+        params.country,
+        BigInt(params.totalPuzzles),
+        params.puzzlePrice,
+        BigInt(params.saleDurationSeconds),
         params.surface,
         params.rooms,
-        params.propertyType,
+        params.expectedReturnBps,
+        params.placeType,
         params.yearBuilt,
-        params.totalPuzzles,
-        params.puzzlePrice,
-        params.expectedReturn,
-        params.saleDuration,
         params.imageCid,
         params.metadataCid,
         params.votingEnabled,
@@ -137,7 +143,7 @@ export function useCompletPlace() {
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const completPlace = (placeAddress: `0x${string}`, amount: bigint) => {
+  const completePlace = (placeAddress: `0x${string}`, amount: bigint) => {
     writeContract({
       address: placeAddress,
       abi: USCIABI,
@@ -146,8 +152,17 @@ export function useCompletPlace() {
     });
   };
 
-  return { completPlace, isPending: isPending || isConfirming, hash, error, isSuccess };
+  return {
+    completePlace,
+    completPlace: completePlace,
+    isPending: isPending || isConfirming,
+    hash,
+    error,
+    isSuccess,
+  };
 }
+
+export const useCompletePlace = useCompletPlace;
 
 /**
  * Hook pour claim rewards

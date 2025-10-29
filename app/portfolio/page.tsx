@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+
+export const dynamic = 'force-dynamic';
 import { motion } from "framer-motion";
 import { Wallet, TrendingUp, Gift, Loader2 } from "lucide-react";
 import GlassCard from "@/components/atoms/GlassCard";

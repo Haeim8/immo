@@ -221,6 +221,10 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 <span className="text-muted-foreground">{t("type")}</span>
                 <span className="font-semibold">{investment.type}</span>
               </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("assetType")}</span>
+                <span className="font-semibold capitalize">{investment.assetType}</span>
+              </div>
             </div>
 
             {/* Progress Bar */}

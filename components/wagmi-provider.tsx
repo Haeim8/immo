@@ -1,86 +1,76 @@
 'use client';
 
-import { FC, ReactNode, useState, useEffect } from 'react';
-import { WagmiProvider, createConfig, http } from 'wagmi';
-import { baseSepolia } from 'wagmi/chains';
+import { FC, ReactNode, useMemo, useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RainbowKitProvider, darkTheme, lightTheme, getDefaultWallets } from '@rainbow-me/rainbowkit';
-import { useTheme } from 'next-themes';
+import {
+  RainbowKitProvider,
+  darkTheme,
+  lightTheme,
+  getDefaultConfig,
+} from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
+import { useTheme } from 'next-themes';
+import { WagmiProvider, http, createStorage, cookieStorage } from 'wagmi';
+import { base, baseSepolia } from 'wagmi/chains';
+
+const APP_NAME = 'USCI';
+const PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+const FALLBACK_PROJECT_ID = '21fef48091f12692cad574a6f7753643';
+
+if (!PROJECT_ID) {
+  console.warn(
+    'NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID n’est pas défini. WalletConnect utilisera un identifiant de secours – pensez à configurer votre propre clé.'
+  );
+}
+
+const chains = [base, baseSepolia] as const;
+
+const wagmiConfig = getDefaultConfig({
+  appName: APP_NAME,
+  projectId: PROJECT_ID ?? FALLBACK_PROJECT_ID,
+  chains,
+  ssr: true,
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
+  transports: {
+    [base.id]: http('https://mainnet.base.org'),
+    [baseSepolia.id]: http('https://sepolia.base.org'),
+  },
+});
 
 const RainbowWrapper: FC<{ children: ReactNode }> = ({ children }) => {
-  const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Prevent hydration mismatch by not rendering theme-dependent content until mounted
   if (!mounted) {
-    return (
-      <RainbowKitProvider modalSize="compact">
-        {children}
-      </RainbowKitProvider>
-    );
+    return null;
   }
 
   return (
-    <RainbowKitProvider
-      theme={theme === 'dark' || resolvedTheme === 'dark' ? darkTheme() : lightTheme()}
-      modalSize="compact"
-    >
+    <RainbowKitProvider chains={chains} initialChain={baseSepolia} modalSize="compact">
       {children}
     </RainbowKitProvider>
   );
 };
 
-// Create minimal SSR config outside component to avoid recreating on each render
-const ssrConfig = createConfig({
-  chains: [baseSepolia],
-  connectors: [],
-  transports: {
-    [baseSepolia.id]: http(),
-  },
-  ssr: true,
-});
-
 export const EVMWalletProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [mounted, setMounted] = useState(false);
-  const [config, setConfig] = useState<any>(ssrConfig);
-
-  useEffect(() => {
-    // Only initialize full Wagmi config on client-side to avoid indexedDB errors during SSR
-    const { connectors } = getDefaultWallets({
-      appName: 'USCI',
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
-    });
-
-    const wagmiConfig = createConfig({
-      chains: [baseSepolia],
-      connectors,
-      transports: {
-        [baseSepolia.id]: http(),
-      },
-      ssr: true,
-      // CRITICAL: Disable auto-connect to prevent automatic wallet reconnection
-      autoConnect: false,
-    });
-
-    setConfig(wagmiConfig);
-    setMounted(true);
-  }, []);
-
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-      },
-    },
-  }));
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
 
   return (
-    <WagmiProvider config={config} reconnectOnMount={false}>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowWrapper>{children}</RainbowWrapper>
       </QueryClientProvider>

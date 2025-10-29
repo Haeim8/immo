@@ -42,13 +42,16 @@ export interface PlaceData {
  */
 export function placeToInvestment(
   place: PlaceData,
-  metadata?: PropertyMetadata
+  metadata?: PropertyMetadata,
+  ethUsd?: number
 ): Investment {
   const totalPuzzles = Number(place.info.totalPuzzles);
   const puzzlesSold = Number(place.info.puzzlesSold);
   const puzzlesAvailable = totalPuzzles - puzzlesSold;
   const puzzlePrice = parseFloat(formatEther(place.info.puzzlePrice));
   const puzzlePriceWei = place.info.puzzlePrice.toString();
+  const usdRate = ethUsd ?? ETH_TO_USD_ESTIMATE;
+  const priceUsd = puzzlePrice * usdRate;
 
   return {
     id: place.info.placeId.toString(),
@@ -58,14 +61,15 @@ export function placeToInvestment(
       province: place.info.province,
       country: place.info.country,
     },
-    priceUSD: puzzlePrice * ETH_TO_USD_ESTIMATE,
+    priceUSD: priceUsd,
     priceETH: puzzlePrice,
-    estimatedValue: puzzlePrice * totalPuzzles * ETH_TO_USD_ESTIMATE,
+    estimatedValue: priceUsd * totalPuzzles,
     imageCid: place.info.imageCid || undefined,
     imageUrl: metadata?.image ? metadata.image.replace("ipfs://", "") : undefined,
     description: metadata?.description || place.info.name,
     longDescription: metadata?.longDescription,
     type: place.info.placeType,
+    assetType: place.info.assetType,
     surface: place.info.surface,
     expectedReturn: place.info.expectedReturn / 100, // basis points to percentage
     fundingProgress: totalPuzzles > 0 ? (puzzlesSold / totalPuzzles) * 100 : 0,
@@ -89,17 +93,18 @@ export function placeToInvestment(
  * Enrich place with metadata from IPFS
  */
 export async function enrichWithMetadata(
-  place: PlaceData
+  place: PlaceData,
+  ethUsd?: number
 ): Promise<Investment> {
   try {
     const metadata = place.info.metadataCid
       ? await fetchPropertyMetadata(place.info.metadataCid)
       : undefined;
 
-    return placeToInvestment(place, metadata);
+    return placeToInvestment(place, metadata, ethUsd);
   } catch (error) {
     console.error("Failed to fetch metadata for place:", place.address, error);
-    return placeToInvestment(place);
+    return placeToInvestment(place, undefined, ethUsd);
   }
 }
 

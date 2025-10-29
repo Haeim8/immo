@@ -99,6 +99,7 @@ export interface Dictionary {
     totalPrice: string;
     totalPriceEth: string;
     type: string;
+    assetType: string;
     expectedReturn: string;
     estValue: string;
     buyShares: (quantity: number) => string;
@@ -393,6 +394,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       totalPrice: "Prix total",
       totalPriceEth: "≈ {{amount}} ETH",
       type: "Type",
+      assetType: "Type d'actif",
       expectedReturn: "Rendement attendu",
       estValue: "Valeur estimée",
       buyShares: (quantity) => `Acheter ${quantity} part${quantity > 1 ? "s" : ""}`,
@@ -689,6 +691,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       totalPrice: "Total price",
       totalPriceEth: "≈ {{amount}} ETH",
       type: "Type",
+      assetType: "Asset type",
       expectedReturn: "Expected return",
       estValue: "Est. total value",
       buyShares: (quantity) => `Buy ${quantity} share${quantity > 1 ? "s" : ""}`,
@@ -985,6 +988,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       totalPrice: "Precio total",
       totalPriceEth: "≈ {{amount}} ETH",
       type: "Tipo",
+      assetType: "Tipo de activo",
       expectedReturn: "Rentabilidad esperada",
       estValue: "Valor total estimado",
       buyShares: (quantity) => `Comprar ${quantity} participación${quantity > 1 ? "es" : ""}`,

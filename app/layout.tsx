@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+
+export const dynamic = 'force-dynamic';
 import { ThemeProvider } from "@/components/theme-provider";
 import { EVMWalletProvider } from "@/components/wagmi-provider";
 import MobileNav from "@/components/organisms/MobileNav";

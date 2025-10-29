@@ -19,6 +19,7 @@ export interface Investment {
   description: string;
   longDescription?: string;
   type: string;
+  assetType: string;
   surface: number;
   expectedReturn: number; // percentage
   fundingProgress: number; // 0-100

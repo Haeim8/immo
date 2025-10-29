@@ -131,7 +131,9 @@ export function IntlProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    document.documentElement.lang = language;
+    if (typeof window !== 'undefined') {
+      document.documentElement.lang = language;
+    }
   }, [language]);
 
   useEffect(() => {
@@ -143,13 +145,17 @@ export function IntlProvider({ children }: { children: React.ReactNode }) {
 
   const setLanguage = useCallback((locale: Locale) => {
     setLanguageState(locale);
-    document.documentElement.lang = locale;
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, locale);
+    if (typeof window !== 'undefined') {
+      document.documentElement.lang = locale;
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, locale);
+    }
   }, []);
 
   const setCurrency = useCallback((code: CurrencyCode) => {
     setCurrencyState(code);
-    localStorage.setItem(CURRENCY_STORAGE_KEY, code);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CURRENCY_STORAGE_KEY, code);
+    }
   }, []);
 
   const dictionary = useMemo<Dictionary>(() => dictionaries[language] ?? dictionaries[defaultLocale], [language]);

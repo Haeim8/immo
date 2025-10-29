@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useAllPlaces } from "@/lib/evm/hooks";
+import { useAllPlaces, useEthPrice } from "@/lib/evm/hooks";
 import { enrichWithMetadata } from "@/lib/evm/adapters";
 import PropertyContainer from "@/components/organisms/PropertyContainer";
 import GradientText from "@/components/atoms/GradientText";
@@ -12,6 +12,7 @@ import { Investment } from "@/lib/types";
 
 export default function PropertyGrid() {
   const { places, isLoading } = useAllPlaces();
+  const { price: ethPrice } = useEthPrice();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
   const gridT = useTranslations("propertyGrid");
@@ -22,7 +23,7 @@ export default function PropertyGrid() {
 
       try {
         const enrichedPlaces = await Promise.all(
-          places.map(place => enrichWithMetadata(place))
+          places.map(place => enrichWithMetadata(place, ethPrice.usd))
         );
         setInvestments(enrichedPlaces);
       } catch (error) {
@@ -33,7 +34,7 @@ export default function PropertyGrid() {
     }
 
     loadInvestments();
-  }, [places, isLoading]);
+  }, [places, isLoading, ethPrice.usd]);
 
   if (isLoading || loading) {
     return (

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
+
+export const dynamic = 'force-dynamic';
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -22,6 +23,7 @@ import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
 import MetricDisplay from "@/components/atoms/MetricDisplay";
 import { useRouter } from "next/navigation";
+import CreatePropertyForm from "@/components/admin/CreatePropertyForm";
 import {
   useWalletAddress,
   useAllPlaces,
@@ -30,17 +32,14 @@ import {
   useEthPrice,
   BLOCK_EXPLORER_URL
 } from "@/lib/evm/hooks";
+import { usdToEth } from "@/lib/evm/adapters";
 import {
-  useCreatePlace,
   useAddTeamMember,
   useDepositRewards,
   useCloseSale,
   useCompletPlace,
 } from "@/lib/evm/write-hooks";
-import { usdToEth } from "@/lib/evm/adapters";
-import { uploadPropertyImage } from "@/lib/pinata/upload";
-import { createPropertyMetadata, uploadPropertyMetadata } from "@/lib/pinata/metadata";
-import { formatEther } from "viem";
+import { formatEther, parseEther } from "viem";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<
@@ -371,480 +370,7 @@ function PropertiesTab() {
 }
 
 function CreatePropertyTab() {
-  const { isConnected } = useWalletAddress();
-  const { price: ethPrice } = useEthPrice();
-  const { createPlace, isPending: isCreating } = useCreatePlace();
-
-  const [formData, setFormData] = useState({
-    assetType: "real_estate",
-    name: "",
-    city: "",
-    province: "",
-    country: "",
-    price: "",
-    shares: "",
-    pricePerShare: "",
-    duration: "",
-    expectedReturn: "",
-    description: "",
-    longDescription: "",
-    surface: "",
-    rooms: "",
-    features: "",
-    propertyType: "",
-    yearBuilt: "",
-    votingEnabled: true,
-  });
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
-
-  // Auto-calculate price per share
-  useEffect(() => {
-    const totalPrice = parseFloat(formData.price);
-    const totalShares = parseFloat(formData.shares);
-
-    if (totalPrice > 0 && totalShares > 0) {
-      const calculatedPricePerShare = (totalPrice / totalShares).toFixed(2);
-      setFormData(prev => ({ ...prev, pricePerShare: calculatedPricePerShare }));
-    } else if (!formData.price || !formData.shares) {
-      setFormData(prev => ({ ...prev, pricePerShare: "" }));
-    }
-  }, [formData.price, formData.shares]);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!isConnected) {
-      alert("Please connect your wallet first!");
-      return;
-    }
-
-    if (!selectedImage) {
-      alert("Please upload an image!");
-      return;
-    }
-
-    try {
-      setSuccess(false);
-      setError("");
-
-      // 1. Upload image to IPFS
-      console.log("⏳ Uploading property image...");
-      let uploadedImageCid = "";
-      try {
-        uploadedImageCid = await uploadPropertyImage(selectedImage, formData.name);
-        console.log("✅ Image uploaded to IPFS:", uploadedImageCid);
-      } catch (error) {
-        console.error("Upload image failed:", error);
-        setError("Failed to upload image to IPFS");
-        return;
-      }
-
-      // 2. Create and upload metadata
-      const pricePerShareUSD = parseFloat(formData.pricePerShare);
-      const expectedReturnPercentage = parseFloat(formData.expectedReturn);
-
-      const metadata = createPropertyMetadata({
-        assetType: formData.assetType,
-        name: formData.name,
-        city: formData.city,
-        province: formData.province,
-        country: formData.country,
-        description: formData.description,
-        longDescription: formData.longDescription,
-        imageCid: uploadedImageCid,
-        surface: parseInt(formData.surface),
-        rooms: parseInt(formData.rooms),
-        propertyType: formData.propertyType,
-        yearBuilt: parseInt(formData.yearBuilt),
-        features: formData.features,
-        totalShares: parseInt(formData.shares),
-        sharePrice: pricePerShareUSD,
-        expectedReturn: expectedReturnPercentage,
-        votingEnabled: formData.votingEnabled,
-        externalUrl: `https://usci.com/property/`,
-      });
-
-      let metadataCid = "";
-      try {
-        metadataCid = await uploadPropertyMetadata(metadata);
-        console.log("✅ Metadata uploaded to IPFS:", metadataCid);
-      } catch (error) {
-        console.error("Upload metadata failed:", error);
-        setError("Failed to upload metadata to IPFS");
-        return;
-      }
-      console.log("✅ Finished uploading assets");
-
-      // 3. Convert USD to ETH
-      const pricePerShareETH = usdToEth(pricePerShareUSD, ethPrice.usd);
-
-      // 4. Create on-chain
-      await createPlace({
-        name: formData.name,
-        city: formData.city,
-        province: formData.province,
-        surface: parseInt(formData.surface),
-        rooms: parseInt(formData.rooms),
-        propertyType: formData.propertyType,
-        yearBuilt: parseInt(formData.yearBuilt),
-        totalPuzzles: parseInt(formData.shares),
-        puzzlePrice: pricePerShareETH,
-        expectedReturn: expectedReturnPercentage,
-        saleDuration: parseInt(formData.duration),
-        imageCid: uploadedImageCid,
-        metadataCid: metadataCid,
-        votingEnabled: formData.votingEnabled,
-      });
-
-      setSuccess(true);
-      alert("Property created successfully!");
-
-      // Reset form
-      setFormData({
-        assetType: "real_estate",
-        name: "",
-        city: "",
-        province: "",
-        country: "",
-        price: "",
-        shares: "",
-        pricePerShare: "",
-        duration: "",
-        expectedReturn: "",
-        description: "",
-        longDescription: "",
-        surface: "",
-        rooms: "",
-        features: "",
-        propertyType: "",
-        yearBuilt: "",
-        votingEnabled: true,
-      });
-      setSelectedImage(null);
-      setImagePreview("");
-    } catch (error: any) {
-      console.error("Error creating property:", error);
-      setError(error.message || "Failed to create property");
-    }
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto">
-      <GlassCard>
-        <h3 className="text-2xl font-bold mb-6 text-purple-400">Create New Property</h3>
-
-        <div className="space-y-6">
-          {/* Basic Info */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Basic Information</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Property Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., Villa Méditerranée"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">City</label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., Paris"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Province/Region</label>
-                <input
-                  type="text"
-                  value={formData.province}
-                  onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., Île-de-France"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Country</label>
-                <input
-                  type="text"
-                  value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., France"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Surface (m²)</label>
-                <input
-                  type="number"
-                  value={formData.surface}
-                  onChange={(e) => setFormData({ ...formData, surface: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 120"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Rooms</label>
-                <input
-                  type="number"
-                  value={formData.rooms}
-                  onChange={(e) => setFormData({ ...formData, rooms: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 4"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Financial Info */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Financial Details</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Total Amount to Raise (USD)</label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 500000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Number of Puzzles</label>
-                <input
-                  type="number"
-                  value={formData.shares}
-                  onChange={(e) => setFormData({ ...formData, shares: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 1000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Price per Puzzle (USD)
-                  <span className="text-xs text-cyan-400 ml-2">✨ Auto-calculated</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.pricePerShare ? `$${parseFloat(formData.pricePerShare).toLocaleString()}` : ""}
-                  disabled
-                  className="w-full px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-semibold cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Expected Return (%)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={formData.expectedReturn}
-                  onChange={(e) => setFormData({ ...formData, expectedReturn: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 5.5"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Duration and Property Details */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Property Details</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Duration (days)</label>
-                <input
-                  type="number"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Property Type</label>
-                <input
-                  type="text"
-                  value={formData.propertyType}
-                  onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., Résidentiel, Commercial"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Year Built</label>
-                <input
-                  type="number"
-                  value={formData.yearBuilt}
-                  onChange={(e) => setFormData({ ...formData, yearBuilt: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                  placeholder="e.g., 2020"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Description (max 512 caractères)</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              maxLength={512}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none resize-none"
-              placeholder="Describe the property..."
-            />
-            <p className="text-xs text-muted-foreground mt-1">{formData.description.length}/512 caractères</p>
-          </div>
-
-          {/* Long Description */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Description détaillée (max 2000 caractères)</label>
-            <textarea
-              value={formData.longDescription}
-              onChange={(e) => setFormData({ ...formData, longDescription: e.target.value })}
-              rows={8}
-              maxLength={2000}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none resize-none"
-              placeholder="Description complète..."
-            />
-            <p className="text-xs text-muted-foreground mt-1">{formData.longDescription.length}/2000 caractères</p>
-          </div>
-
-          {/* Image Upload */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Image de la propriété</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
-            />
-            {imagePreview && (
-              <div className="mt-4 relative rounded-xl overflow-hidden border border-white/10">
-                <div className="relative w-full h-64">
-                  <Image
-                    src={imagePreview}
-                    alt="Preview"
-                    fill
-                    className="object-cover rounded-xl"
-                    sizes="(max-width: 768px) 100vw, 400px"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Features */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Features (comma separated)</label>
-            <input
-              type="text"
-              value={formData.features}
-              onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-              placeholder="e.g., Pool, Garage, Garden"
-            />
-          </div>
-
-          {/* ETH Price Display */}
-          <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
-            <p className="text-sm text-muted-foreground">
-              Current ETH Price: <span className="text-cyan-400 font-semibold">${ethPrice.usd.toFixed(2)} USD</span>
-              {" • "}
-              <span className="text-xs">Updated: {new Date(ethPrice.lastUpdated).toLocaleTimeString()}</span>
-            </p>
-          </div>
-
-          {/* Success/Error Messages */}
-          {success && (
-            <div className="p-4 rounded-xl bg-green-500/20 border border-green-500/50 text-green-400">
-              Property created successfully!
-            </div>
-          )}
-          {error && (
-            <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400">
-              Error: {error}
-            </div>
-          )}
-
-          {/* Wallet Warning */}
-          {!isConnected && (
-            <div className="p-4 rounded-xl bg-yellow-500/20 border border-yellow-500/50 text-yellow-400">
-              Please connect your wallet to create a property
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-4 pt-6">
-            <AnimatedButton
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                setFormData({
-                  assetType: "real_estate",
-                  name: "",
-                  city: "",
-                  province: "",
-                  country: "",
-                  price: "",
-                  shares: "",
-                  pricePerShare: "",
-                  duration: "",
-                  expectedReturn: "",
-                  description: "",
-                  longDescription: "",
-                  surface: "",
-                  rooms: "",
-                  features: "",
-                  propertyType: "",
-                  yearBuilt: "",
-                  votingEnabled: true,
-                });
-                setSelectedImage(null);
-                setImagePreview("");
-              }}
-            >
-              Reset Form
-            </AnimatedButton>
-            <AnimatedButton
-              variant="primary"
-              className="flex-1"
-              onClick={handleSubmit}
-              disabled={isCreating || !isConnected}
-            >
-              {isCreating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating on-chain...
-                </>
-              ) : (
-                "Create Property"
-              )}
-            </AnimatedButton>
-          </div>
-        </div>
-      </GlassCard>
-    </div>
-  );
+  return <CreatePropertyForm />;
 }
 
 function TeamTab() {
@@ -1136,14 +662,15 @@ function OperationsTab() {
       return;
     }
 
-    const amountETH = liquidationAmount;
-    if (!amountETH || parseFloat(amountETH) <= 0) {
+    const amountEthString = liquidationAmount.trim();
+    if (!amountEthString || parseFloat(amountEthString) <= 0) {
       alert("Enter a valid amount in ETH.");
       return;
     }
 
     try {
-      await completePlace(selected.address, amountETH);
+      const amountWei = parseEther(amountEthString);
+      await completePlace(selected.address, amountWei);
       alert("Completion triggered. Investors can now claim their proceeds.");
       setLiquidationAmount("");
     } catch (err: any) {
