@@ -297,6 +297,52 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                 {t("description")}
               </h3>
               <p className="text-muted-foreground">{investment.description}</p>
+              {investment.details.longDescription && (
+                <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                  <h4 className="text-sm font-semibold mb-2">Détails complets</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{investment.details.longDescription}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Informations financières et campagne */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <GlassCard className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Montant total à lever</p>
+                <p className="text-2xl font-bold text-cyan-400">{formatCurrency(investment.estimatedValue)}</p>
+              </GlassCard>
+              <GlassCard className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Durée de la campagne</p>
+                <p className="text-2xl font-bold text-orange-400">
+                  {Math.ceil((investment.saleEnd - investment.saleStart) / 86400)} jours
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {saleClosed ? "Terminée" : `${daysLeft > 0 ? daysLeft : hoursLeft} ${daysLeft > 0 ? 'jours' : 'heures'} restant(es)`}
+                </p>
+              </GlassCard>
+              <GlassCard className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Localisation complète</p>
+                <p className="text-lg font-semibold">{investment.location.city}</p>
+                <p className="text-sm text-muted-foreground">{investment.location.province}, {investment.location.country}</p>
+              </GlassCard>
+            </div>
+
+            {/* Type et classification */}
+            <div className="flex flex-wrap gap-3">
+              <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30">
+                <p className="text-xs text-muted-foreground">Type d'actif</p>
+                <p className="text-sm font-semibold capitalize text-cyan-400">{investment.assetType}</p>
+              </div>
+              <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30">
+                <p className="text-xs text-muted-foreground">Type d'exploitation</p>
+                <p className="text-sm font-semibold capitalize text-purple-400">{investment.type}</p>
+              </div>
+              {investment.votingEnabled && (
+                <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30">
+                  <p className="text-xs text-muted-foreground">Gouvernance</p>
+                  <p className="text-sm font-semibold text-green-400">🗳️ Vote activé</p>
+                </div>
+              )}
             </div>
 
             {/* Key Metrics */}

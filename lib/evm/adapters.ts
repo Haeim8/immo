@@ -81,10 +81,12 @@ export function placeToInvestment(
     saleStart: Number(place.info.saleStart),
     saleEnd: Number(place.info.saleEnd),
     isActive: place.info.isActive,
+    votingEnabled: place.info.votingEnabled,
     details: {
       yearBuilt: place.info.yearBuilt,
       rooms: place.info.rooms,
       features: metadata?.features || [],
+      longDescription: metadata?.longDescription,
     },
   };
 }

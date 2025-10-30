@@ -31,10 +31,12 @@ export interface Investment {
   saleStart: number; // Unix timestamp in seconds
   saleEnd: number; // Unix timestamp in seconds
   isActive: boolean;
+  votingEnabled: boolean; // Gouvernance activée
   details: {
     yearBuilt: number;
     rooms: number;
     features: string[];
+    longDescription?: string;
   };
 }
 

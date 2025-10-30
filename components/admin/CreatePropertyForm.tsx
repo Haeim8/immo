@@ -281,6 +281,14 @@ const CreatePropertyForm: FC = () => {
       setError('Le nombre de parts doit être un entier positif.');
       return;
     }
+    if (totalShares < 5) {
+      setError('Le nombre minimum de parts est 5.');
+      return;
+    }
+    if (totalShares > 10000) {
+      setError('Le nombre maximum de parts est 10,000 (limite du contrat).');
+      return;
+    }
     if (!Number.isFinite(sharePriceValue) || sharePriceValue <= 0) {
       setError('Le prix par part calculé est invalide.');
       return;
@@ -543,12 +551,17 @@ const CreatePropertyForm: FC = () => {
               <label className="block text-sm font-medium mb-2">Nombre de parts</label>
               <input
                 type="number"
+                min="5"
+                max="10000"
                 value={formData.totalShares}
                 onChange={(e) => updateField('totalShares', e.target.value)}
                 disabled={isCreating}
                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                placeholder="Ex : 1000"
+                placeholder="Ex : 1000 (min: 5, max: 10000)"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Entre 5 et 10,000 parts maximum
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Prix par part (USD)</label>
@@ -586,12 +599,17 @@ const CreatePropertyForm: FC = () => {
               <label className="block text-sm font-medium mb-2">Durée de vente (jours)</label>
               <input
                 type="number"
+                min="1"
+                max="365"
                 value={formData.durationDays}
                 onChange={(e) => updateField('durationDays', e.target.value)}
                 disabled={isCreating}
                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                placeholder="Ex : 30"
+                placeholder="Ex : 30 (min: 1, max: 365)"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Entre 1 et 365 jours
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Année de construction</label>
