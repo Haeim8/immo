@@ -114,6 +114,18 @@ export interface Dictionary {
     priceUnavailableError: string;
     invalidContractError: string;
     priceUnavailableShort: string;
+    fullDetails: string;
+    location: string;
+    province: string;
+    totalRaiseAmount: string;
+    campaignDuration: string;
+    governance: string;
+    votingEnabled: string;
+    progress: string;
+    viewMore: string;
+    viewLess: string;
+    campaignDurationValue: (count: number) => string;
+    soldOutBadge: string;
   };
   portfolio: {
     title: string;
@@ -410,6 +422,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       priceUnavailableError: "Impossible de récupérer le prix sur la blockchain. Veuillez réessayer plus tard.",
       invalidContractError: "Adresse de contrat invalide.",
       priceUnavailableShort: "Prix indisponible",
+      fullDetails: "Détails complets",
+      location: "Localisation",
+      province: "Province",
+      totalRaiseAmount: "Montant total à lever",
+      campaignDuration: "Durée de la campagne",
+      governance: "Gouvernance",
+      votingEnabled: "Vote activé",
+      progress: "Progression",
+      viewMore: "Voir plus",
+      viewLess: "Voir moins",
+      campaignDurationValue: (count) => {
+        const value = Number(count);
+        return `${value} jour${value > 1 ? "s" : ""}`;
+      },
+      soldOutBadge: "Épuisé",
     },
     portfolio: {
       title: "Mon portfolio",
@@ -707,6 +734,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       priceUnavailableError: "We couldn't fetch the puzzle price from the blockchain. Please try again shortly.",
       invalidContractError: "Invalid contract address.",
       priceUnavailableShort: "Price unavailable",
+      fullDetails: "Full details",
+      location: "Location",
+      province: "Province",
+      totalRaiseAmount: "Total raise amount",
+      campaignDuration: "Campaign duration",
+      governance: "Governance",
+      votingEnabled: "Voting enabled",
+      progress: "Progress",
+      viewMore: "View more",
+      viewLess: "View less",
+      campaignDurationValue: (count) => {
+        const value = Number(count);
+        return `${value} day${value === 1 ? "" : "s"}`;
+      },
+      soldOutBadge: "Sold out",
     },
     portfolio: {
       title: "My portfolio",
@@ -1004,6 +1046,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       priceUnavailableError: "No se pudo obtener el precio desde la blockchain. Inténtalo de nuevo más tarde.",
       invalidContractError: "Dirección de contrato no válida.",
       priceUnavailableShort: "Precio no disponible",
+      fullDetails: "Detalles completos",
+      location: "Ubicación",
+      province: "Provincia",
+      totalRaiseAmount: "Monto total a recaudar",
+      campaignDuration: "Duración de la campaña",
+      governance: "Gobernanza",
+      votingEnabled: "Votación activada",
+      progress: "Progreso",
+      viewMore: "Ver más",
+      viewLess: "Ver menos",
+      campaignDurationValue: (count) => {
+        const value = Number(count);
+        return `${value} día${value === 1 ? "" : "s"}`;
+      },
+      soldOutBadge: "Agotado",
     },
     portfolio: {
       title: "Mi portafolio",

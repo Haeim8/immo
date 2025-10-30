@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { MapPin, TrendingUp, ExternalLink, Calendar, Home, Clock } from "lucide-react";
 import { Investment } from "@/lib/types";
@@ -29,6 +29,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const { address, isConnected } = useWalletAddress();
   const { openConnectModal } = useConnectModal();
@@ -73,6 +74,14 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
               ? t("buyShares", { quantity })
               : t("connectWallet");
   const saleEndDateDisplay = saleEndDate.toLocaleString();
+  const campaignDurationDays = Math.max(
+    1,
+    Math.ceil((investment.saleEnd - investment.saleStart) / 86400)
+  );
+  const locationLabel = `${investment.location.city}, ${investment.location.province}, ${investment.location.country}`;
+  const descriptionShouldCollapse =
+    investment.description.length > 320 ||
+    Boolean(investment.details.longDescription && investment.details.longDescription.length > 0);
 
   const handleInvest = async () => {
     if (!isConnected || !address) {
@@ -135,6 +144,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
         setIsOpen(false);
         setSuccess(false);
         setQuantity(1);
+        setIsDescriptionExpanded(false);
       }, 2000);
     } catch (err: any) {
       console.error("Error buying share:", err);
@@ -149,6 +159,18 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
     }
   };
 
+  const handleModalToggle = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setTimeout(() => {
+        setIsDescriptionExpanded(false);
+        setSuccess(false);
+        setError(null);
+        setQuantity(1);
+      }, 150);
+    }
+  };
+
   return (
     <>
       <motion.div
@@ -159,6 +181,11 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
       >
         <div className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-cyan-500/50 transition-all duration-300 cursor-pointer"
              onClick={() => setIsOpen(true)}>
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute -top-12 right-[-15%] h-32 w-32 rounded-full bg-cyan-500/20 blur-[90px]" />
+            <div className="absolute -bottom-16 left-[-12%] h-28 w-28 rounded-full bg-blue-500/15 blur-[80px]" />
+            <div className="absolute inset-0 rounded-[24px] border border-white/10 opacity-60" />
+          </div>
           {/* Image */}
           <div className="relative h-56 w-full overflow-hidden">
             <Image
@@ -170,14 +197,14 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
             {/* Funding Progress Badge */}
-            <div className={`absolute top-4 right-4 px-3 py-1 rounded-full backdrop-blur-sm text-white text-sm font-semibold ${
+            <div className={`absolute top-4 right-4 px-3 py-1 rounded-full backdrop-blur-sm text-white text-sm font-semibold uppercase tracking-[0.25em] ${
               investment.fundingProgress >= 100
                 ? "bg-yellow-500/90"
                 : "bg-cyan-500/90"
             }`}>
               {investment.fundingProgress >= 100
-                ? "SOLD OUT"
-                : `${investment.fundingProgress.toFixed(0)}% Funded`}
+                ? t("soldOutBadge")
+                : t("funded", { percentage: investment.fundingProgress.toFixed(0) })}
             </div>
 
             {/* Location */}
@@ -269,248 +296,381 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
       </motion.div>
 
       {/* Modal */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-white/10">
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-bold">
-              <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
-                {investment.name}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Image */}
-            <div className="relative h-80 w-full overflow-hidden rounded-2xl">
-              <Image
-                src={displayImageUrl}
-                alt={investment.name}
-                fill
-                className="object-cover"
-              />
-            </div>
-
-            {/* Description */}
-            <div>
-              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-cyan-400" />
-                {t("description")}
-              </h3>
-              <p className="text-muted-foreground">{investment.description}</p>
-              {investment.details.longDescription && (
-                <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
-                  <h4 className="text-sm font-semibold mb-2">Détails complets</h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{investment.details.longDescription}</p>
+      <Dialog open={isOpen} onOpenChange={handleModalToggle}>
+        <AnimatePresence mode="wait">
+          {isOpen && (
+            <DialogContent forceMount className="flex w-full max-w-[min(92vw,1100px)] justify-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92, y: 32 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 24 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="relative mx-auto grid max-h-[80vh] md:max-h-none w-full gap-8 overflow-y-auto md:overflow-visible rounded-3xl border border-white/10 bg-background/80 px-6 py-8 backdrop-blur-3xl shadow-[0_0_120px_-40px_rgba(34,211,238,0.45)] sm:px-8 lg:grid-cols-[1.15fr,0.85fr]"
+              >
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/6 via-transparent to-white/4 opacity-70" />
+                  <div className="absolute inset-0 rounded-[28px] border border-white/10" />
+                  <div className="absolute -top-36 left-[20%] h-96 w-96 rounded-full bg-cyan-500/20 blur-[180px]" />
+                  <div className="absolute -bottom-40 right-[15%] h-96 w-96 rounded-full bg-blue-600/20 blur-[200px]" />
                 </div>
-              )}
-            </div>
+                <DialogHeader className="lg:col-span-2 space-y-4 border-b border-white/5 pb-6 text-left">
+                  <DialogTitle className="text-2xl font-semibold leading-tight text-foreground md:text-3xl">
+                    <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
+                      {investment.name}
+                    </span>
+                  </DialogTitle>
+                  <div className="flex flex-wrap items-center gap-3 text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold tracking-[0.18em] uppercase text-foreground">
+                      {investment.assetType}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold tracking-[0.18em] uppercase text-foreground">
+                      {investment.type}
+                    </span>
+                    {investment.votingEnabled && (
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold tracking-[0.18em] text-foreground">
+                        🗳️ {t("votingEnabled")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                    <span className="font-medium">{t("pricePerShare")}</span>
+                    <span className="text-lg font-semibold text-cyan-400 md:text-xl">
+                      {pricePerShareFormatted}
+                    </span>
+                    <span className="text-xs">
+                      {t("priceEth", { amount: pricePerShareETH.toFixed(4) })}
+                    </span>
+                  </div>
+                </DialogHeader>
 
-            {/* Informations financières et campagne */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <GlassCard className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">Montant total à lever</p>
-                <p className="text-2xl font-bold text-cyan-400">{formatCurrency(investment.estimatedValue)}</p>
-              </GlassCard>
-              <GlassCard className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">Durée de la campagne</p>
-                <p className="text-2xl font-bold text-orange-400">
-                  {Math.ceil((investment.saleEnd - investment.saleStart) / 86400)} jours
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {saleClosed ? "Terminée" : `${daysLeft > 0 ? daysLeft : hoursLeft} ${daysLeft > 0 ? 'jours' : 'heures'} restant(es)`}
-                </p>
-              </GlassCard>
-              <GlassCard className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">Localisation complète</p>
-                <p className="text-lg font-semibold">{investment.location.city}</p>
-                <p className="text-sm text-muted-foreground">{investment.location.province}, {investment.location.country}</p>
-              </GlassCard>
-            </div>
+                <div className="space-y-6 pb-6">
+                  <motion.div
+                    layout
+                    className="group relative aspect-[16/10] min-h-[320px] overflow-hidden rounded-3xl border border-white/20 bg-white/5 shadow-[0_25px_90px_-30px_rgba(6,182,212,0.45)] backdrop-blur-2xl"
+                  >
+                    <Image
+                      src={displayImageUrl}
+                      alt={investment.name}
+                      fill
+                      sizes="(min-width: 1280px) 640px, 100vw"
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="pointer-events-none absolute inset-0">
+                      <div className="absolute -top-24 left-[-8%] h-72 w-72 rounded-full bg-cyan-500/25 blur-[140px]" />
+                      <div className="absolute -bottom-28 right-[-12%] h-80 w-80 rounded-full bg-blue-500/25 blur-[160px]" />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+                    <div className="absolute top-5 right-5 flex items-center gap-2 rounded-full border border-white/30 bg-black/50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-white backdrop-blur-md">
+                      <span>
+                        {investment.fundingProgress >= 100
+                          ? t("soldOutBadge")
+                          : t("funded", { percentage: investment.fundingProgress.toFixed(0) })}
+                      </span>
+                    </div>
+                    <div className="absolute bottom-5 left-5 flex flex-wrap items-center gap-3">
+                      <span className="flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur">
+                        <MapPin className="h-4 w-4" />
+                        {locationLabel}
+                      </span>
+                    </div>
+                  </motion.div>
 
-            {/* Type et classification */}
-            <div className="flex flex-wrap gap-3">
-              <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30">
-                <p className="text-xs text-muted-foreground">Type d'actif</p>
-                <p className="text-sm font-semibold capitalize text-cyan-400">{investment.assetType}</p>
-              </div>
-              <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30">
-                <p className="text-xs text-muted-foreground">Type d'exploitation</p>
-                <p className="text-sm font-semibold capitalize text-purple-400">{investment.type}</p>
-              </div>
-              {investment.votingEnabled && (
-                <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30">
-                  <p className="text-xs text-muted-foreground">Gouvernance</p>
-                  <p className="text-sm font-semibold text-green-400">🗳️ Vote activé</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <GlassCard glow className="space-y-2 p-5 sm:p-6">
+                      <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
+                        {t("totalRaiseAmount")}
+                      </p>
+                      <p className="text-2xl font-semibold text-cyan-400 sm:text-3xl">
+                        {estimatedValueFormatted}
+                      </p>
+                    </GlassCard>
+                    <GlassCard glow className="space-y-2 p-5 sm:p-6">
+                      <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
+                        {t("campaignDuration")}
+                      </p>
+                      <p className="text-2xl font-semibold text-orange-400 sm:text-3xl">
+                        {t("campaignDurationValue", { count: campaignDurationDays })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {saleClosed
+                          ? t("saleEnded")
+                          : daysLeft > 0
+                            ? t("daysLeft", { count: daysLeft })
+                            : t("hoursLeft", { count: hoursLeft })}
+                      </p>
+                    </GlassCard>
+                    <GlassCard glow className="space-y-3 p-5 sm:col-span-2 sm:p-6">
+                      <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
+                        {t("location")}
+                      </p>
+                      <p className="text-lg font-semibold text-foreground">{investment.location.city}</p>
+                      <p className="text-sm text-muted-foreground">{locationLabel}</p>
+                    </GlassCard>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <GlassCard glow className="space-y-3 p-5 sm:p-6">
+                      <Home className="h-5 w-5 text-cyan-400" />
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        {t("surface")}
+                      </p>
+                      <p className="text-xl font-semibold text-foreground">
+                        {investment.surface} m²
+                      </p>
+                    </GlassCard>
+                    <GlassCard glow className="space-y-3 p-5 sm:p-6">
+                      <TrendingUp className="h-5 w-5 text-green-400" />
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        {t("return")}
+                      </p>
+                      <p className="text-xl font-semibold text-foreground">
+                        {investment.expectedReturn.toFixed(2)}%
+                      </p>
+                    </GlassCard>
+                    <GlassCard glow className="space-y-3 p-5 sm:p-6">
+                      <Calendar className="h-5 w-5 text-blue-400" />
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        {t("built")}
+                      </p>
+                      <p className="text-xl font-semibold text-foreground">
+                        {investment.details.yearBuilt}
+                      </p>
+                    </GlassCard>
+                    <GlassCard glow className="space-y-3 p-5 sm:p-6">
+                      <Home className="h-5 w-5 text-purple-400" />
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        {t("rooms")}
+                      </p>
+                      <p className="text-xl font-semibold text-foreground">
+                        {investment.details.rooms}
+                      </p>
+                    </GlassCard>
+                  </div>
+
+                  <GlassCard glow className="space-y-4 p-5 sm:p-6">
+                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                      <span>{t("progress")}</span>
+                      <span className="font-semibold text-cyan-400">
+                        {investment.fundingProgress.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-600"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${investment.fundingProgress}%` }}
+                        transition={{ duration: 1, delay: 0.4 }}
+                      />
+                    </div>
+                    {investment.saleEnd > 0 && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          {saleClosed ? (
+                            <span className="font-medium text-red-400">{t("saleEnded")}</span>
+                          ) : daysLeft > 0 ? (
+                            <span>{t("daysLeft", { count: daysLeft })}</span>
+                          ) : hoursLeft > 0 ? (
+                            <span className="font-medium text-orange-400">
+                              {t("hoursLeft", { count: hoursLeft })}
+                            </span>
+                          ) : (
+                            <span className="font-medium text-red-400">{t("endingSoon")}</span>
+                          )}
+                        </div>
+                        <span>{t("saleEndDateLabel", { date: saleEndDateDisplay })}</span>
+                      </div>
+                    )}
+                  </GlassCard>
                 </div>
-              )}
-            </div>
 
-            {/* Key Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <GlassCard className="p-4">
-                <Home className="h-5 w-5 text-cyan-400 mb-2" />
-                <p className="text-xs text-muted-foreground">{t("surface")}</p>
-                <p className="text-2xl font-bold">{investment.surface}m²</p>
-              </GlassCard>
-              <GlassCard className="p-4">
-                <TrendingUp className="h-5 w-5 text-green-400 mb-2" />
-                <p className="text-xs text-muted-foreground">{t("return")}</p>
-                <p className="text-2xl font-bold">{investment.expectedReturn.toFixed(2)}%</p>
-              </GlassCard>
-              <GlassCard className="p-4">
-                <Calendar className="h-5 w-5 text-blue-400 mb-2" />
-                <p className="text-xs text-muted-foreground">{t("built")}</p>
-                <p className="text-2xl font-bold">{investment.details.yearBuilt}</p>
-              </GlassCard>
-              <GlassCard className="p-4">
-                <Home className="h-5 w-5 text-purple-400 mb-2" />
-                <p className="text-xs text-muted-foreground">{t("rooms")}</p>
-                <p className="text-2xl font-bold">{investment.details.rooms}</p>
-              </GlassCard>
-            </div>
-
-            {/* Features */}
-            {investment.details.features.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3">{t("features")}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {investment.details.features.map((feature, index) => (
-                    <span
-                      key={index}
-                      className="px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm"
+                <div className="flex h-full flex-col gap-6 pb-6">
+                  <GlassCard glow className="space-y-4 p-5 sm:p-6">
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                      <MapPin className="h-4 w-4 text-cyan-400" />
+                      {t("description")}
+                    </div>
+                    <div
+                      className={`text-sm leading-relaxed text-muted-foreground transition-all duration-300 ${!isDescriptionExpanded && descriptionShouldCollapse ? "max-h-40 overflow-hidden [mask-image:linear-gradient(to_bottom,rgba(0,0,0,1),rgba(0,0,0,0))]" : ""}`}
                     >
-                      {feature}
-                    </span>
-                  ))}
+                      {investment.description}
+                      {investment.details.longDescription && (
+                        <span className={`${!isDescriptionExpanded ? "hidden" : "block"} whitespace-pre-wrap pt-3 text-sm text-muted-foreground`}>
+                          {investment.details.longDescription}
+                        </span>
+                      )}
+                    </div>
+                    {descriptionShouldCollapse && (
+                      <button
+                        type="button"
+                        onClick={() => setIsDescriptionExpanded((prev) => !prev)}
+                        className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400 transition-colors hover:text-cyan-300"
+                      >
+                        {isDescriptionExpanded ? t("viewLess") : t("viewMore")}
+                      </button>
+                    )}
+                  </GlassCard>
+
+                  {investment.details.features.length > 0 && (
+                    <GlassCard glow className="space-y-4 p-5 sm:p-6">
+                      <h3 className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                        {t("features")}
+                      </h3>
+                      <ul className="grid grid-cols-1 gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                        {investment.details.features.map((feature, index) => (
+                          <li
+                            key={`${feature}-${index}`}
+                            className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2"
+                          >
+                            <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </GlassCard>
+                  )}
+
+                  <GlassCard glow className="space-y-4 p-5 sm:p-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                          {t("contract")}
+                        </h3>
+                        <code className="mt-2 block text-xs text-muted-foreground break-all">
+                          {investment.contractAddress}
+                        </code>
+                      </div>
+                      <AnimatedButton
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            `${BLOCK_EXPLORER_URL}/address/${investment.contractAddress}`,
+                            "_blank"
+                          )
+                        }
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </AnimatedButton>
+                    </div>
+                  </GlassCard>
+
+                  {success && (
+                    <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-4 text-center text-sm font-semibold text-green-400">
+                      {t("purchaseSuccess")}
+                    </div>
+                  )}
+                  {error && (
+                    <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+                      {error}
+                    </div>
+                  )}
+
+                  {investment.sharesAvailable !== undefined &&
+                    investment.totalShares !== undefined && (
+                      <div
+                        className={`rounded-2xl border p-4 text-center text-sm font-semibold ${
+                          saleClosedWithoutSellout || soldOut
+                            ? "border-yellow-500/50 bg-yellow-500/20 text-yellow-400"
+                            : investment.sharesAvailable <= 10
+                              ? "border-orange-500/50 bg-orange-500/20 text-orange-400"
+                              : "border-cyan-500/50 bg-cyan-500/20 text-cyan-400"
+                        }`}
+                      >
+                        {saleClosedWithoutSellout ? (
+                          <span>{t("saleClosedBanner")}</span>
+                        ) : soldOut ? (
+                          <span>{t("soldOut")}</span>
+                        ) : (
+                          <span>
+                            {t("sharesAvailable", {
+                              available: investment.sharesAvailable,
+                              total: investment.totalShares,
+                            })}
+                            {investment.sharesAvailable <= 10 && t("lowSharesWarning")}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                  <GlassCard glow className="flex flex-col gap-5 p-5 sm:p-6">
+                    {canPurchase && (
+                      <div className="space-y-3">
+                        <label className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                          {t("quantityLabel")}
+                        </label>
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                            className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg font-bold transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={isBuying || isTxPending || quantity <= 1}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            max={investment.sharesAvailable}
+                            value={quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 1;
+                              setQuantity(
+                                Math.min(investment.sharesAvailable, Math.max(1, val))
+                              );
+                            }}
+                            className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-xl font-semibold tracking-wider text-foreground focus:border-cyan-500 focus:outline-none"
+                            disabled={isBuying || isTxPending}
+                          />
+                          <button
+                            onClick={() =>
+                              setQuantity(
+                                Math.min(investment.sharesAvailable, quantity + 1)
+                              )
+                            }
+                            className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg font-bold transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={
+                              isBuying || isTxPending || quantity >= investment.sharesAvailable
+                            }
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-3 rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 p-4">
+                      <div className="flex items-center justify-between text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                        <span>{t("pricePerShare")}</span>
+                        <span className="font-semibold text-foreground">
+                          {pricePerShareFormatted}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-base font-semibold text-foreground">
+                        <span>{t("totalPrice")}</span>
+                        <span className="text-2xl font-bold text-cyan-400">
+                          {totalPriceFormatted}
+                        </span>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground">
+                        {t("totalPriceEth", { amount: totalPriceETH.toFixed(4) })}
+                      </div>
+                    </div>
+
+                    <AnimatedButton
+                      variant="primary"
+                      size="lg"
+                      className="h-14 w-full text-sm font-semibold uppercase tracking-[0.32em]"
+                      onClick={handleInvest}
+                      disabled={!canPurchase || isBuying || isTxPending || success}
+                    >
+                      {actionLabel}
+                    </AnimatedButton>
+                  </GlassCard>
                 </div>
-              </div>
-            )}
-
-            {/* Contract */}
-            <GlassCard className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold mb-1">{t("contract")}</h3>
-                  <code className="text-xs text-muted-foreground break-all">{investment.contractAddress}</code>
-                </div>
-                <AnimatedButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    window.open(
-                      `${BLOCK_EXPLORER_URL}/address/${investment.contractAddress}`,
-                      "_blank"
-                    )
-                  }
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </AnimatedButton>
-              </div>
-            </GlassCard>
-
-            {/* Success/Error Messages */}
-            {success && (
-              <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-center">
-                {t("purchaseSuccess")}
-              </div>
-            )}
-            {error && (
-              <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* Shares Available Info */}
-            {investment.sharesAvailable !== undefined && investment.totalShares !== undefined && (
-              <div
-                className={`p-4 rounded-xl border text-center ${
-                  saleClosedWithoutSellout || soldOut
-                    ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-400"
-                    : investment.sharesAvailable <= 10
-                      ? "bg-orange-500/20 border-orange-500/50 text-orange-400"
-                      : "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
-                }`}
-              >
-                {saleClosedWithoutSellout ? (
-                  <span className="font-semibold">{t("saleClosedBanner")}</span>
-                ) : soldOut ? (
-                  <span className="font-semibold">{t("soldOut")}</span>
-                ) : (
-                  <span className="font-semibold">
-                    {t("sharesAvailable", {
-                      available: investment.sharesAvailable,
-                      total: investment.totalShares,
-                    })}
-                    {investment.sharesAvailable <= 10 && t("lowSharesWarning")}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Quantity Selector */}
-            {canPurchase && (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium">{t("quantityLabel")}</label>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center font-bold transition-colors"
-                    disabled={isBuying || isTxPending || quantity <= 1}
-                  >
-                    −
-                  </button>
-                  <input
-                    type="number"
-                    min="1"
-                    max={investment.sharesAvailable}
-                    value={quantity}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value) || 1;
-                      setQuantity(Math.min(investment.sharesAvailable, Math.max(1, val)));
-                    }}
-                    className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-center text-xl font-bold focus:border-cyan-500 focus:outline-none"
-                    disabled={isBuying || isTxPending}
-                  />
-                  <button
-                    onClick={() => setQuantity(Math.min(investment.sharesAvailable, quantity + 1))}
-                    className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center font-bold transition-colors"
-                    disabled={isBuying || isTxPending || quantity >= investment.sharesAvailable}
-                  >
-                    +
-                  </button>
-                </div>
-                <div className="p-4 rounded-lg bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">{t("pricePerShare")}</span>
-                    <span className="font-semibold">{pricePerShareFormatted}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold">{t("totalPrice")}</span>
-                    <span className="text-2xl font-bold text-cyan-400">
-                      {totalPriceFormatted}
-                    </span>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground">
-                    {t("totalPriceEth", { amount: totalPriceETH.toFixed(4) })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-4">
-              <AnimatedButton
-                variant="primary"
-                size="lg"
-                className="flex-1"
-                onClick={handleInvest}
-                disabled={!canPurchase || isBuying || isTxPending || success}
-              >
-                {actionLabel}
-              </AnimatedButton>
-            </div>
-          </div>
-        </DialogContent>
+              </motion.div>
+            </DialogContent>
+          )}
+        </AnimatePresence>
       </Dialog>
     </>
   );
