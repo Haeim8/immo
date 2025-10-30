@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Loader2,
   Gavel,
-  Wrench
+  Wrench,
+  Mail
 } from "lucide-react";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
@@ -45,7 +46,7 @@ import { formatEther, parseEther } from "viem";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "properties" | "create" | "team" | "dividends" | "governance" | "operations"
+    "overview" | "properties" | "create" | "team" | "dividends" | "governance" | "operations" | "waitlist"
   >("overview");
   const router = useRouter();
   const { address, isConnected } = useWalletAddress();
@@ -133,6 +134,7 @@ export default function AdminDashboard() {
                   { id: "dividends", label: "Rewards", icon: DollarSign },
                   { id: "governance", label: "Governance", icon: Gavel },
                   { id: "operations", label: "Operations", icon: Wrench },
+                  { id: "waitlist", label: "Waitlist", icon: Mail },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -159,6 +161,7 @@ export default function AdminDashboard() {
           {activeTab === "dividends" && <DividendsTab />}
           {activeTab === "governance" && <GovernanceTab />}
           {activeTab === "operations" && <OperationsTab />}
+          {activeTab === "waitlist" && <WaitlistTab />}
         </div>
       </main>
     </div>
@@ -1056,6 +1059,196 @@ function OperationsTab() {
           </div>
         </GlassCard>
       )}
+    </div>
+  );
+}
+
+function WaitlistTab() {
+  const [entries, setEntries] = useState<any[]>([]);
+  const [count, setCount] = useState(0);
+  const [maxMembers] = useState(2500);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWaitlist = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/waitlist");
+        const data = await res.json();
+        if (data.success) {
+          setEntries(data.entries);
+          setCount(data.count);
+        }
+      } catch (err) {
+        console.error("Error fetching waitlist:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchWaitlist();
+  }, []);
+
+  const handleExportCSV = () => {
+    const csv = [
+      ["Email", "EVM Address", "Joined At"],
+      ...entries.map((e) => [
+        e.email,
+        e.evmAddress,
+        new Date(e.createdAt).toLocaleString(),
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `waitlist-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h3 className="text-2xl font-bold">Waitlist Management</h3>
+          <p className="text-muted-foreground">
+            Manage early access registrations for the platform
+          </p>
+        </div>
+        {entries.length > 0 && (
+          <AnimatedButton variant="outline" onClick={handleExportCSV}>
+            Export CSV
+          </AnimatedButton>
+        )}
+      </div>
+
+      {/* Counter */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <GlassCard hover glow>
+          <MetricDisplay
+            icon={Users}
+            label="Total Registered"
+            value={count}
+            iconColor="text-cyan-400"
+          />
+        </GlassCard>
+        <GlassCard hover glow>
+          <MetricDisplay
+            icon={CheckCircle2}
+            label="Spots Remaining"
+            value={maxMembers - count}
+            iconColor="text-green-400"
+            delay={0.1}
+          />
+        </GlassCard>
+        <GlassCard hover glow>
+          <MetricDisplay
+            icon={TrendingUp}
+            label="Fill Rate"
+            value={`${((count / maxMembers) * 100).toFixed(1)}%`}
+            iconColor="text-purple-400"
+            delay={0.2}
+          />
+        </GlassCard>
+      </div>
+
+      {/* Progress Bar */}
+      <GlassCard>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">
+              Waitlist Progress
+            </span>
+            <span className="text-lg font-bold text-cyan-400">
+              {count} / {maxMembers}
+            </span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-white/10">
+            <motion.div
+              className="h-full bg-gradient-to-r from-cyan-500 to-blue-600"
+              initial={{ width: 0 }}
+              animate={{ width: `${(count / maxMembers) * 100}%` }}
+              transition={{ duration: 1, delay: 0.3 }}
+            />
+          </div>
+          {count >= maxMembers * 0.9 && (
+            <p className="text-sm text-orange-400">
+              ⚠️ Waitlist is {count >= maxMembers ? "full" : "almost full"}!
+            </p>
+          )}
+        </div>
+      </GlassCard>
+
+      {/* Table */}
+      <GlassCard>
+        <h4 className="text-lg font-semibold mb-4">Registered Members</h4>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
+            <p className="text-muted-foreground">Loading waitlist...</p>
+          </div>
+        ) : entries.length === 0 ? (
+          <div className="text-center py-12">
+            <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">No registrations yet</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Share the waitlist page to start collecting signups
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                    #
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                    Email
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                    EVM Address
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                    Joined At
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry, index) => (
+                  <motion.tr
+                    key={entry.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                  >
+                    <td className="py-3 px-4 text-sm text-muted-foreground">
+                      {index + 1}
+                    </td>
+                    <td className="py-3 px-4 text-sm font-medium">
+                      {entry.email}
+                    </td>
+                    <td className="py-3 px-4">
+                      <code className="text-xs text-cyan-400 font-mono">
+                        {entry.evmAddress.slice(0, 6)}...
+                        {entry.evmAddress.slice(-4)}
+                      </code>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">
+                      {new Date(entry.createdAt).toLocaleDateString()}{" "}
+                      {new Date(entry.createdAt).toLocaleTimeString()}
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </GlassCard>
     </div>
   );
 }

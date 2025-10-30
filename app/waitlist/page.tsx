@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ArrowRight, Check, TrendingUp, Shield, Zap, Globe, Mail, Loader2 } from "lucide-react";
+import { ArrowRight, Check, TrendingUp, Shield, Zap, Globe, Mail, Loader2, Wallet } from "lucide-react";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
@@ -14,8 +14,11 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function WaitlistPage() {
   const [email, setEmail] = useState("");
+  const [evmAddress, setEvmAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
   const waitlistT = useTranslations("waitlist");
   const { formatCurrency } = useCurrencyFormatter();
   const { language } = useIntl();
@@ -130,23 +133,56 @@ export default function WaitlistPage() {
     // Removed infinite floating animation that was causing performance issues
   }, []);
 
+  // Fetch waitlist count on mount
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch("/api/waitlist");
+        const data = await res.json();
+        if (data.success) {
+          setWaitlistCount(data.count);
+        }
+      } catch (err) {
+        console.error("Error fetching waitlist count:", err);
+      }
+    };
+    fetchCount();
+  }, [success]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !evmAddress) {
+      setError("Please fill in all fields");
+      return;
+    }
 
     setLoading(true);
+    setError("");
+
     try {
-      // TODO: Send to backend/database
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, evmAddress }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.error || "Failed to join waitlist");
+        return;
+      }
 
       setSuccess(true);
       setEmail("");
+      setEvmAddress("");
+      setWaitlistCount(data.count);
 
       // Reset success message after 5s
       setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
       console.error("Error:", err);
-      alert(waitlistT("errorText"));
+      setError(waitlistT("errorText") || "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -213,6 +249,17 @@ export default function WaitlistPage() {
                     {waitlistT("joinSubtitle")}
                   </p>
 
+                  {waitlistCount !== null && (
+                    <div className="mb-4 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-center">
+                      <p className="text-sm font-semibold text-cyan-400">
+                        {waitlistCount} / 2500 members registered
+                      </p>
+                      {waitlistCount >= 2400 && (
+                        <p className="text-xs text-orange-400 mt-1">Almost full! Join now</p>
+                      )}
+                    </div>
+                  )}
+
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
@@ -225,6 +272,25 @@ export default function WaitlistPage() {
                       disabled={loading}
                     />
                   </div>
+
+                  <div className="relative">
+                    <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={evmAddress}
+                      onChange={(e) => setEvmAddress(e.target.value)}
+                      placeholder="Your EVM wallet address (0x...)"
+                      className="w-full pl-12 pr-4 py-4 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none transition-colors"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                      {error}
+                    </div>
+                  )}
 
                   <AnimatedButton
                     type="submit"
