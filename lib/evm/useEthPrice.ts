@@ -9,19 +9,29 @@ export function useEthPrice() {
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
   useEffect(() => {
+    // Skip during SSR
+    if (typeof window === 'undefined') return;
+
     const fetchPrice = async () => {
       try {
         const response = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
+          'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
+          { cache: 'no-store' }
         );
+
+        if (!response.ok) {
+          // Silently fail and keep default price
+          return;
+        }
+
         const data = await response.json();
 
         if (data.ethereum?.usd) {
           setPriceUsd(data.ethereum.usd);
           setLastUpdated(Date.now());
         }
-      } catch (error) {
-        console.error('Failed to fetch ETH price:', error);
+      } catch {
+        // Silently fail - keep using fallback price
       }
     };
 

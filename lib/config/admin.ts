@@ -1,1 +1,2 @@
-export const ADMIN_WALLET = "FMRF9paehrTGB43MLdboekwUpSPbnPW1vKyhKxWRR8DH";
+// Admin configuration is now handled dynamically via EVM smart contracts
+// Use useIsAdmin() and useIsTeamMember() hooks to check permissions

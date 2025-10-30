@@ -32,9 +32,11 @@ import {
   useEthPrice,
   BLOCK_EXPLORER_URL
 } from "@/lib/evm/hooks";
+import { useTeamMembers } from "@/lib/evm/hooks";
 import { usdToEth } from "@/lib/evm/adapters";
 import {
   useAddTeamMember,
+  useRemoveTeamMember,
   useDepositRewards,
   useCloseSale,
   useCompletPlace,
@@ -375,21 +377,36 @@ function CreatePropertyTab() {
 
 function TeamTab() {
   const [newMemberAddress, setNewMemberAddress] = useState("");
-  const { addTeamMember, isPending: isAdding } = useAddTeamMember();
+  const [localError, setLocalError] = useState("");
+  const { address: currentUserAddress } = useWalletAddress();
+  const { isAdmin } = useIsAdmin(currentUserAddress);
+  const { addTeamMember, isPending: isAdding, isSuccess, error } = useAddTeamMember();
+  const { removeTeamMember, isPending: isRemoving, isSuccess: removeSuccess, error: removeError } = useRemoveTeamMember();
+  const { teamMembers, isLoading: isLoadingMembers } = useTeamMembers();
 
-  const handleAddMember = async () => {
+  // Gérer le succès de la transaction - recharger après ajout/suppression
+  useEffect(() => {
+    if (isSuccess || removeSuccess) {
+      setNewMemberAddress("");
+      setLocalError("");
+      // Forcer un rechargement après ajout/suppression
+      window.location.reload();
+    }
+  }, [isSuccess, removeSuccess]);
+
+  const handleAddMember = () => {
     if (!newMemberAddress.trim()) {
-      alert("Please enter a wallet address");
+      setLocalError("Veuillez entrer une adresse wallet valide");
       return;
     }
 
-    try {
-      await addTeamMember(newMemberAddress as `0x${string}`);
-      alert("Team member added successfully!");
-      setNewMemberAddress("");
-    } catch (error: any) {
-      console.error("Error adding team member:", error);
-      alert(`Error: ${error.message || "Failed to add team member"}`);
+    setLocalError("");
+    addTeamMember(newMemberAddress as `0x${string}`);
+  };
+
+  const handleRemoveMember = (memberAddress: string) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir retirer ce membre de l'équipe ?\n\n${memberAddress}`)) {
+      removeTeamMember(memberAddress as `0x${string}`);
     }
   };
 
@@ -397,36 +414,146 @@ function TeamTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-bold">Team Management</h3>
-          <p className="text-muted-foreground mt-1">Manage team members who can create properties and proposals</p>
+          <h3 className="text-2xl font-bold">Gestion de l'équipe</h3>
+          <p className="text-muted-foreground mt-1">Gérer les membres de l'équipe qui peuvent créer des propriétés et des propositions</p>
         </div>
       </div>
 
-      {/* Add Team Member */}
-      <GlassCard>
-        <h4 className="text-lg font-semibold mb-4">Add Team Member</h4>
-        <div className="flex gap-4">
-          <input
-            type="text"
-            value={newMemberAddress}
-            onChange={(e) => setNewMemberAddress(e.target.value)}
-            placeholder="Enter EVM address (0x...)"
-            className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-            disabled={isAdding}
-          />
-          <AnimatedButton
-            variant="primary"
-            onClick={handleAddMember}
-            disabled={isAdding || !newMemberAddress.trim()}
-          >
-            {isAdding ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
-            Add Member
-          </AnimatedButton>
+      {/* Add Team Member - Seulement pour le wallet admin */}
+      {isAdmin && (
+        <GlassCard>
+          <h4 className="text-lg font-semibold mb-4">Ajouter un membre</h4>
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <input
+              type="text"
+              value={newMemberAddress}
+              onChange={(e) => setNewMemberAddress(e.target.value)}
+              placeholder="Entrer l'adresse EVM (0x...)"
+              className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
+              disabled={isAdding}
+            />
+            <AnimatedButton
+              variant="primary"
+              onClick={handleAddMember}
+              disabled={isAdding || !newMemberAddress.trim()}
+            >
+              {isAdding ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
+              Ajouter
+            </AnimatedButton>
+          </div>
+
+          {/* État de chargement */}
+          {isAdding && (
+            <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
+              <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+              <div>
+                <p className="font-medium">Transaction en cours...</p>
+                <p className="text-sm text-muted-foreground">Veuillez signer dans votre wallet et attendre la confirmation.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Message de succès */}
+          {isSuccess && !isAdding && (
+            <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+              ✅ Membre de l'équipe ajouté avec succès ! La transaction a été confirmée.
+            </div>
+          )}
+
+          {/* Message d'erreur du hook */}
+          {error && !isAdding && (
+            <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+              ❌ Erreur : {error.message || "Échec de l'ajout du membre"}
+            </div>
+          )}
+
+          {/* Message d'erreur local (validation) */}
+          {localError && (
+            <div className="p-4 rounded-xl bg-yellow-500/15 border border-yellow-500/40 text-yellow-300">
+              ⚠️ {localError}
+            </div>
+          )}
+
+          {/* Message de succès remove */}
+          {removeSuccess && !isRemoving && (
+            <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+              ✅ Membre révoqué avec succès ! La transaction a été confirmée.
+            </div>
+          )}
+
+          {/* Message d'erreur remove */}
+          {removeError && !isRemoving && (
+            <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+              ❌ Erreur : {removeError.message || "Échec de la révocation"}
+            </div>
+          )}
         </div>
+      </GlassCard>
+      )}
+
+      {/* Liste des membres de l'équipe */}
+      <GlassCard>
+        <h4 className="text-lg font-semibold mb-4">Membres de l'équipe actifs</h4>
+        {isLoadingMembers ? (
+          <div className="text-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-cyan-400" />
+            <p className="text-sm text-muted-foreground">Chargement des membres...</p>
+          </div>
+        ) : teamMembers.length === 0 ? (
+          <div className="text-center py-8">
+            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">Aucun membre d'équipe pour le moment</p>
+            <p className="text-sm text-muted-foreground mt-2">Ajoutez des membres ci-dessus</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {teamMembers.map((member, index) => (
+              <motion.div
+                key={member.address}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
+              >
+                <div className="flex-1">
+                  <p className="font-mono text-sm text-cyan-400">{member.address}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ajouté le {member.addedAt.toLocaleDateString()} à {member.addedAt.toLocaleTimeString()}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`${BLOCK_EXPLORER_URL}/address/${member.address}`, '_blank')}
+                  >
+                    Explorer
+                  </AnimatedButton>
+                  {isAdmin && (
+                    <AnimatedButton
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveMember(member.address)}
+                      disabled={isRemoving}
+                      className="text-red-400 border-red-500/40 hover:bg-red-500/10"
+                    >
+                      {isRemoving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Révoquer"
+                      )}
+                    </AnimatedButton>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </GlassCard>
 
       {/* Info Card */}
@@ -438,13 +565,13 @@ function TeamTab() {
             </div>
           </div>
           <div>
-            <h5 className="font-semibold text-cyan-400 mb-2">Team Member Permissions</h5>
+            <h5 className="font-semibold text-cyan-400 mb-2">Permissions des membres</h5>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Create new properties and campaigns</li>
-              <li>• Create proposals for voting</li>
-              <li>• Manage property details</li>
-              <li>• View admin dashboard</li>
-              <li className="text-yellow-400">⚠️ Cannot withdraw funds from treasury</li>
+              <li>• Créer de nouvelles propriétés et campagnes</li>
+              <li>• Créer des propositions de vote</li>
+              <li>• Gérer les détails des propriétés</li>
+              <li>• Accéder au tableau de bord admin</li>
+              <li className="text-yellow-400">⚠️ Ne peut pas retirer de fonds du trésor</li>
             </ul>
           </div>
         </div>
@@ -457,36 +584,45 @@ function DividendsTab() {
   const [isDistributeOpen, setIsDistributeOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
+  const [localError, setLocalError] = useState("");
 
   const { places, isLoading: loadingProperties } = useAllPlaces();
-  const { depositRewards, isPending: isDistributing } = useDepositRewards();
+  const {
+    depositRewards,
+    isPending: isDistributing,
+    isSuccess,
+    error
+  } = useDepositRewards();
   const { price: ethPrice } = useEthPrice();
 
-  const handleDistribute = async () => {
+  // Gérer le succès de la transaction
+  useEffect(() => {
+    if (isSuccess) {
+      // Fermer la modal et réinitialiser après succès
+      setTimeout(() => {
+        setIsDistributeOpen(false);
+        setSelectedProperty("");
+        setAmount("");
+        setLocalError("");
+      }, 2000);
+    }
+  }, [isSuccess]);
+
+  const handleDistribute = () => {
     if (!selectedProperty || !amount) {
-      setError("Please select a property and enter an amount");
+      setLocalError("Veuillez sélectionner une propriété et entrer un montant");
       return;
     }
 
-    try {
-      const amountUSD = parseFloat(amount);
-      const amountETH = usdToEth(amountUSD, ethPrice.usd);
-
-      await depositRewards(selectedProperty as `0x${string}`, amountETH);
-
-      setSuccess(true);
-      setTimeout(() => {
-        setIsDistributeOpen(false);
-        setSuccess(false);
-        setSelectedProperty("");
-        setAmount("");
-      }, 2000);
-    } catch (err: any) {
-      console.error("Error distributing rewards:", err);
-      setError(err.message || "Failed to distribute rewards");
+    const amountUSD = parseFloat(amount);
+    if (!Number.isFinite(amountUSD) || amountUSD <= 0) {
+      setLocalError("Veuillez entrer un montant valide");
+      return;
     }
+
+    setLocalError("");
+    const amountETH = usdToEth(amountUSD, ethPrice.usd);
+    depositRewards(selectedProperty as `0x${string}`, amountETH);
   };
 
   return (
@@ -533,15 +669,37 @@ function DividendsTab() {
                   />
                 </div>
 
-                {error && (
-                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
-                    {error}
+                {/* État de chargement */}
+                {isDistributing && (
+                  <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
+                    <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Transaction en cours...</p>
+                      <p className="text-xs text-muted-foreground">
+                        Veuillez signer dans votre wallet et attendre la confirmation.
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                {success && (
+                {/* Message de succès */}
+                {isSuccess && !isDistributing && (
                   <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/50 text-green-400 text-sm">
-                    ✅ Rewards distributed successfully!
+                    ✅ Rewards distribués avec succès ! La transaction a été confirmée.
+                  </div>
+                )}
+
+                {/* Erreur de transaction */}
+                {error && !isDistributing && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
+                    ❌ Erreur : {error.message || "Échec de la transaction"}
+                  </div>
+                )}
+
+                {/* Erreur de validation locale */}
+                {localError && (
+                  <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/50 text-yellow-400 text-sm">
+                    ⚠️ {localError}
                   </div>
                 )}
 
@@ -636,46 +794,64 @@ function OperationsTab() {
   const { places, isLoading } = useAllPlaces();
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [liquidationAmount, setLiquidationAmount] = useState<string>("");
+  const [localError, setLocalError] = useState("");
 
-  const { closeSale, isPending: isClosing } = useCloseSale();
-  const { completePlace, isPending: isCompleting } = useCompletPlace();
+  const {
+    closeSale,
+    isPending: isClosing,
+    isSuccess: closeSuccess,
+    error: closeError
+  } = useCloseSale();
+
+  const {
+    completePlace,
+    isPending: isCompleting,
+    isSuccess: completeSuccess,
+    error: completeError
+  } = useCompletPlace();
 
   const selected = places.find((p) => p.address === selectedProperty);
 
-  const handleCloseSale = async () => {
+  // Gérer le succès du close sale
+  useEffect(() => {
+    if (closeSuccess) {
+      setLocalError("");
+    }
+  }, [closeSuccess]);
+
+  // Gérer le succès de la complétion
+  useEffect(() => {
+    if (completeSuccess) {
+      setLiquidationAmount("");
+      setLocalError("");
+    }
+  }, [completeSuccess]);
+
+  const handleCloseSale = () => {
     if (!selected) {
-      alert("Select a property first.");
+      setLocalError("Veuillez sélectionner une propriété");
       return;
     }
 
-    try {
-      await closeSale(selected.address);
-      alert("Sale closed successfully.");
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
+    setLocalError("");
+    closeSale(selected.address);
   };
 
-  const handleComplete = async () => {
+  const handleComplete = () => {
     if (!selected) {
-      alert("Select a property first.");
+      setLocalError("Veuillez sélectionner une propriété");
       return;
     }
 
     const amountEthString = liquidationAmount.trim();
     if (!amountEthString || parseFloat(amountEthString) <= 0) {
-      alert("Enter a valid amount in ETH.");
+      setLocalError("Veuillez entrer un montant valide en ETH");
       return;
     }
 
-    try {
-      const amountWei = parseEther(amountEthString);
-      await completePlace(selected.address, amountWei);
-      alert("Completion triggered. Investors can now claim their proceeds.");
-      setLiquidationAmount("");
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
+    setLocalError("");
+    const amountWei = parseEther(amountEthString);
+    completePlace(selected.address, amountWei);
   };
 
   const saleEndDate = selected
@@ -825,6 +1001,61 @@ function OperationsTab() {
           </div>
         </div>
       </GlassCard>
+
+      {/* Messages de statut */}
+      {(isClosing || isCompleting) && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
+            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+            <div>
+              <p className="font-medium">Transaction en cours...</p>
+              <p className="text-sm text-muted-foreground">
+                Veuillez signer dans votre wallet et attendre la confirmation.
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
+      {closeSuccess && !isClosing && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+            ✅ Vente fermée avec succès ! La transaction a été confirmée.
+          </div>
+        </GlassCard>
+      )}
+
+      {completeSuccess && !isCompleting && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+            ✅ Complétion déclenchée avec succès ! Les investisseurs peuvent maintenant réclamer leurs gains.
+          </div>
+        </GlassCard>
+      )}
+
+      {closeError && !isClosing && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+            ❌ Erreur lors de la fermeture : {closeError.message || "Échec de la transaction"}
+          </div>
+        </GlassCard>
+      )}
+
+      {completeError && !isCompleting && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+            ❌ Erreur lors de la complétion : {completeError.message || "Échec de la transaction"}
+          </div>
+        </GlassCard>
+      )}
+
+      {localError && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-yellow-500/15 border border-yellow-500/40 text-yellow-300">
+            ⚠️ {localError}
+          </div>
+        </GlassCard>
+      )}
     </div>
   );
 }

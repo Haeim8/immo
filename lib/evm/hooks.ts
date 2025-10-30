@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { createPublicClient, http, formatEther } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { FACTORY_ADDRESS, BLOCK_EXPLORER_URL } from './constants';
+import { FACTORY_ADDRESS, BLOCK_EXPLORER_URL, FACTORY_DEPLOYMENT_BLOCK } from './constants';
 import { USCIFactoryABI, USCIABI } from './abis';
 import { PlaceData, PlaceInfo } from './adapters';
 import { useEthPrice } from './useEthPrice';
@@ -21,6 +21,39 @@ const publicClient = createPublicClient({
   chain: baseSepolia,
   transport: http(),
 });
+
+/**
+ * Helper pour récupérer les logs par chunks
+ * Évite le dépassement de la limite RPC (100K blocs sur Base Sepolia public RPC)
+ */
+async function getLogsInChunks(
+  params: Parameters<typeof publicClient.getLogs>[0],
+  chunkSize: bigint = 10000n
+) {
+  const fromBlock = params.fromBlock === 'earliest' ? 0n : BigInt(params.fromBlock || 0);
+  const currentBlock = await publicClient.getBlockNumber();
+  const toBlock = params.toBlock === 'latest' ? currentBlock : BigInt(params.toBlock || currentBlock);
+
+  const allLogs = [];
+
+  for (let start = fromBlock; start <= toBlock; start += chunkSize) {
+    const end = start + chunkSize - 1n > toBlock ? toBlock : start + chunkSize - 1n;
+
+    try {
+      const logs = await publicClient.getLogs({
+        ...params,
+        fromBlock: start,
+        toBlock: end,
+      });
+      allLogs.push(...logs);
+    } catch (error) {
+      console.error(`Error fetching logs from block ${start} to ${end}:`, error);
+      // Continue avec le prochain chunk même si un chunk fail
+    }
+  }
+
+  return allLogs;
+}
 
 /**
  * Hook pour obtenir l'adresse du wallet connecté
@@ -226,7 +259,7 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
         await Promise.all(
           places.map(async (place) => {
             try {
-              const logs = await publicClient.getLogs({
+              const logs = await getLogsInChunks({
                 address: place.address,
                 event: {
                   type: 'event',
@@ -238,7 +271,7 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
                   ],
                 },
                 args: { to: userAddress },
-                fromBlock: 0n,
+                fromBlock: FACTORY_DEPLOYMENT_BLOCK,
                 toBlock: 'latest',
               });
 
@@ -284,6 +317,96 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
 }
 
 /**
+ * Hook pour obtenir tous les membres de l'équipe
+ * Lit les événements TeamMemberAdded et TeamMemberRemoved du contrat Factory
+ */
+export function useTeamMembers() {
+  const [teamMembers, setTeamMembers] = useState<Array<{ address: string; addedAt: Date }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTeamMembers() {
+      setIsLoading(true);
+      try {
+        // Fetch TeamMemberAdded events depuis le déploiement
+        const addedLogs = await getLogsInChunks({
+          address: FACTORY_ADDRESS,
+          event: {
+            type: 'event',
+            name: 'TeamMemberAdded',
+            inputs: [
+              { indexed: true, name: 'member', type: 'address' },
+              { indexed: true, name: 'addedBy', type: 'address' },
+            ],
+          },
+          fromBlock: FACTORY_DEPLOYMENT_BLOCK,
+          toBlock: 'latest',
+        });
+
+        // Fetch TeamMemberRemoved events depuis le déploiement
+        const removedLogs = await getLogsInChunks({
+          address: FACTORY_ADDRESS,
+          event: {
+            type: 'event',
+            name: 'TeamMemberRemoved',
+            inputs: [
+              { indexed: true, name: 'member', type: 'address' },
+              { indexed: true, name: 'removedBy', type: 'address' },
+            ],
+          },
+          fromBlock: FACTORY_DEPLOYMENT_BLOCK,
+          toBlock: 'latest',
+        });
+
+        // Create a map to track members
+        const memberMap = new Map<string, { address: string; addedAt: Date; removed: boolean }>();
+
+        // Process added events
+        for (const log of addedLogs) {
+          const memberAddress = log.args.member as string;
+
+          // Get block to extract timestamp
+          const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+          const addedAt = new Date(Number(block.timestamp) * 1000);
+
+          memberMap.set(memberAddress.toLowerCase(), {
+            address: memberAddress,
+            addedAt,
+            removed: false,
+          });
+        }
+
+        // Process removed events
+        for (const log of removedLogs) {
+          const memberAddress = log.args.member as string;
+          const member = memberMap.get(memberAddress.toLowerCase());
+          if (member) {
+            member.removed = true;
+          }
+        }
+
+        // Filter out removed members and convert to array
+        const activeMembers = Array.from(memberMap.values())
+          .filter((m) => !m.removed)
+          .map(({ address, addedAt }) => ({ address, addedAt }))
+          .sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime());
+
+        setTeamMembers(activeMembers);
+      } catch (error) {
+        console.error('Error fetching team members:', error);
+        setTeamMembers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTeamMembers();
+  }, []);
+
+  return { teamMembers, isLoading };
+}
+
+/**
  * Hook leaderboard data
  */
 export function useLeaderboardData() {
@@ -323,7 +446,7 @@ export function useLeaderboardData() {
         await Promise.all(
           places.map(async (place) => {
             try {
-              const logs = await publicClient.getLogs({
+              const logs = await getLogsInChunks({
                 address: place.address,
                 event: {
                   type: 'event',
@@ -334,7 +457,7 @@ export function useLeaderboardData() {
                     { indexed: true, name: 'tokenId', type: 'uint256' },
                   ],
                 },
-                fromBlock: 0n,
+                fromBlock: FACTORY_DEPLOYMENT_BLOCK,
                 toBlock: 'latest',
               });
 

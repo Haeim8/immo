@@ -9,6 +9,7 @@ import MobileNav from "@/components/organisms/MobileNav";
 import { IntlProvider } from "@/components/providers/IntlProvider";
 import HeaderContent from "@/components/HeaderContent";
 import FooterContent from "@/components/FooterContent";
+import ErrorFilter from "@/components/ErrorFilter";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className={inter.className}>
+        <ErrorFilter />
         <IntlProvider>
           <ThemeProvider
             attribute="class"

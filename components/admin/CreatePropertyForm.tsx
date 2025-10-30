@@ -22,6 +22,9 @@ import { useIntl } from '@/components/providers/IntlProvider';
 
 const FORM_STORAGE_KEY = 'usci:admin:create-form';
 
+// Types d'actifs où le nombre de pièces n'a pas de sens
+const ASSET_TYPES_WITHOUT_ROOMS = ['vehicle', 'boat', 'motorcycle', 'equipment', 'land'];
+
 type Locale = 'fr' | 'en' | 'es';
 
 interface CreatePropertyFormState {
@@ -67,7 +70,12 @@ const DEFAULT_FORM_STATE: CreatePropertyFormState = {
 const CreatePropertyForm: FC = () => {
   const { isConnected } = useWalletAddress();
   const { price: ethPrice } = useEthPrice();
-  const { createPlace, isPending: isCreating } = useCreatePlace();
+  const {
+    createPlace,
+    isPending: isCreating,
+    isSuccess: txSuccess,
+    error: txError
+  } = useCreatePlace();
   const { language } = useIntl();
   const currentLocale = language as Locale;
 
@@ -75,8 +83,14 @@ const CreatePropertyForm: FC = () => {
   const [isPersistEnabled, setIsPersistEnabled] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  // Gérer le succès de la création
+  useEffect(() => {
+    if (txSuccess) {
+      resetForm();
+    }
+  }, [txSuccess]);
 
   const assetOptions = useMemo(
     () =>
@@ -162,6 +176,15 @@ const CreatePropertyForm: FC = () => {
     }
   }, [formData, isPersistEnabled]);
 
+  // Forcer rooms à 0 pour les types d'actifs où ça n'a pas de sens
+  useEffect(() => {
+    if (ASSET_TYPES_WITHOUT_ROOMS.includes(formData.assetType)) {
+      if (formData.rooms !== '0') {
+        setFormData((prev) => ({ ...prev, rooms: '0' }));
+      }
+    }
+  }, [formData.assetType, formData.rooms]);
+
   const updateField = (field: keyof CreatePropertyFormState, value: string | boolean) => {
     setFormData((prev) => ({
       ...prev,
@@ -214,7 +237,8 @@ const CreatePropertyForm: FC = () => {
       ['durationDays', 'Durée (jours)'],
       ['expectedReturnPct', 'Rendement attendu'],
       ['surface', 'Surface'],
-      ['rooms', 'Pièces'],
+      // Rooms est requis seulement pour certains types d'actifs
+      ...(!ASSET_TYPES_WITHOUT_ROOMS.includes(formData.assetType) ? [['rooms', 'Pièces'] as [keyof CreatePropertyFormState, string]] : []),
       ['yearBuilt', 'Année de construction'],
       ['description', 'Description courte'],
     ];
@@ -273,9 +297,20 @@ const CreatePropertyForm: FC = () => {
       setError('La surface doit être un entier positif.');
       return;
     }
-    if (!Number.isInteger(rooms) || rooms <= 0 || rooms > 255) {
-      setError('Le nombre de pièces doit être compris entre 1 et 255.');
-      return;
+
+    // Validation conditionnelle pour rooms
+    if (ASSET_TYPES_WITHOUT_ROOMS.includes(formData.assetType)) {
+      // Pour les véhicules, bateaux, équipements, etc., rooms doit être 0
+      if (rooms !== 0) {
+        setError("Le nombre de pièces n'est pas applicable pour ce type d'actif et doit être 0.");
+        return;
+      }
+    } else {
+      // Pour les maisons, appartements, etc., rooms doit être entre 1 et 255
+      if (!Number.isInteger(rooms) || rooms <= 0 || rooms > 255) {
+        setError('Le nombre de pièces doit être compris entre 1 et 255.');
+        return;
+      }
     }
     if (!Number.isInteger(yearBuilt) || yearBuilt < 1800 || yearBuilt > currentYear) {
       setError(`L'année de construction doit être comprise entre 1800 et ${currentYear}.`);
@@ -292,7 +327,6 @@ const CreatePropertyForm: FC = () => {
     }
 
     setError('');
-    setSuccess(false);
 
     let uploadedImageCid = '';
     try {
@@ -332,31 +366,25 @@ const CreatePropertyForm: FC = () => {
       return;
     }
 
-    try {
-      await createPlace({
-        assetType: formData.assetType,
-        name: formData.name.trim(),
-        city: formData.city.trim(),
-        province: formData.province.trim(),
-        country: formData.country,
-        totalPuzzles: totalShares,
-        puzzlePrice: puzzlePriceWei,
-        saleDurationSeconds,
-        surface,
-        rooms,
-        expectedReturnBps,
-        placeType: formData.placeType,
-        yearBuilt,
-        imageCid: uploadedImageCid,
-        metadataCid,
-        votingEnabled: formData.votingEnabled,
-      });
-      setSuccess(true);
-      resetForm();
-    } catch (chainError: any) {
-      console.error('Error creating property:', chainError);
-      setError(chainError?.message || 'La transaction a échoué. Vérifiez votre wallet.');
-    }
+    setError('');
+    createPlace({
+      assetType: formData.assetType,
+      name: formData.name.trim(),
+      city: formData.city.trim(),
+      province: formData.province.trim(),
+      country: formData.country,
+      totalPuzzles: totalShares,
+      puzzlePrice: puzzlePriceWei,
+      saleDurationSeconds,
+      surface,
+      rooms,
+      expectedReturnBps,
+      placeType: formData.placeType,
+      yearBuilt,
+      imageCid: uploadedImageCid,
+      metadataCid,
+      votingEnabled: formData.votingEnabled,
+    });
   };
 
   return (
@@ -468,17 +496,32 @@ const CreatePropertyForm: FC = () => {
                 placeholder="Ex : 120"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Nombre de pièces</label>
-              <input
-                type="number"
-                value={formData.rooms}
-                onChange={(e) => updateField('rooms', e.target.value)}
-                disabled={isCreating}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-                placeholder="Ex : 4"
-              />
-            </div>
+            {!ASSET_TYPES_WITHOUT_ROOMS.includes(formData.assetType) && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Nombre de pièces</label>
+                <input
+                  type="number"
+                  value={formData.rooms}
+                  onChange={(e) => updateField('rooms', e.target.value)}
+                  disabled={isCreating}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
+                  placeholder="Ex : 4"
+                />
+              </div>
+            )}
+            {ASSET_TYPES_WITHOUT_ROOMS.includes(formData.assetType) && (
+              <div>
+                <label className="block text-sm font-medium mb-2 text-muted-foreground">
+                  Nombre de pièces (non applicable)
+                </label>
+                <input
+                  type="text"
+                  value="N/A"
+                  disabled
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-muted-foreground"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -665,15 +708,37 @@ const CreatePropertyForm: FC = () => {
           </p>
         </div>
 
-        {success && (
-          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-            La propriété a été créée avec succès. Vérifiez votre wallet pour la transaction.
+        {/* Transaction en cours */}
+        {isCreating && (
+          <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
+            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+            <div>
+              <p className="font-medium">Déploiement en cours...</p>
+              <p className="text-sm text-muted-foreground">
+                Veuillez signer la transaction dans votre wallet et attendre la confirmation.
+              </p>
+            </div>
           </div>
         )}
 
+        {/* Succès de la transaction */}
+        {txSuccess && !isCreating && (
+          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+            ✅ Propriété créée avec succès ! La transaction a été confirmée sur la blockchain.
+          </div>
+        )}
+
+        {/* Erreur de transaction */}
+        {txError && !isCreating && (
+          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+            ❌ Erreur blockchain : {txError.message || 'La transaction a échoué'}
+          </div>
+        )}
+
+        {/* Erreur locale (validation ou upload IPFS) */}
         {error && (
           <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-            {error}
+            ❌ {error}
           </div>
         )}
 

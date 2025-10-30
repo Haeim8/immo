@@ -19,3 +19,7 @@ export const BLOCK_EXPLORER_URL = 'https://sepolia.basescan.org';
 
 // ETH to USD estimate (for display purposes)
 export const ETH_TO_USD_ESTIMATE = 3000;
+
+// Bloc de déploiement du contrat Factory sur Base Sepolia
+// Utilisé pour limiter la plage de recherche des événements
+export const FACTORY_DEPLOYMENT_BLOCK = 32913066n as const;
