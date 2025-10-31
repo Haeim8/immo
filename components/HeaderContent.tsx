@@ -97,9 +97,9 @@ export default function HeaderContent() {
 
         {/* Right Section */}
         <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-4 flex-none">
-          {/* Admin Link (only visible for admins or team members) - Hidden on mobile */}
+          {/* Admin Link (only visible for admins or team members) */}
           {isConnected && canAccessAdmin && (
-            <div className="hidden md:block">
+            <div>
               <AdminLink isAdmin={canAccessAdmin} />
             </div>
           )}

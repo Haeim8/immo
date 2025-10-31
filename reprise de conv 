@@ -1,0 +1,345 @@
+ Voici ce que j'ai fait :
+
+  ✅ PROJET WAITLIST (modifié)
+
+  Modifications :
+
+  1. Schema (lib/schema.ts) : Ajouté champ evmAddress avec validation
+   regex
+  2. Subscribe (lib/subscribe.ts) :
+    - Stocke email + EVM address dans Redis
+    - Vérifie les doublons (email ET adresse)
+    - Limite à 2500 membres
+  3. Form (components/form-newsletter.tsx) : Deux champs maintenant
+  (email + EVM)
+  4. Newsletter (components/newsletter.tsx) : Affiche "Limited to
+  2,500 early investors"
+
+  ---
+  ✅ PROJET USCI (modifié)
+
+  Ajouts :
+
+  1. Package : Installé @upstash/redis
+  2. Lib (lib/waitlist.ts) :
+    - Fonction getWaitlist() qui lit depuis Redis
+    - Fonction exportWaitlistCSV() pour export
+  3. API (app/api/waitlist/route.ts) : Route GET qui lit depuis Redis
+  4. Admin : Tab "Waitlist" déjà créé, affiche tableau + compteur +
+  export CSV
+
+  ---
+  🔧 SETUP NÉCESSAIRE
+
+  Dans les deux projets, tu dois ajouter les mêmes variables dans
+  .env :
+
+  KV_REST_API_URL=ton_url_upstash
+  KV_REST_API_TOKEN=ton_token_upstash
+
+  Ces credentials viennent du projet waitlist (ils sont déjà
+  configurés là-bas).
+
+  ---
+  🎯 COMMENT ÇA MARCHE
+
+  1. WAITLIST collecte email + EVM → Écrit dans Redis
+  2. USCI Admin lit depuis le même Redis → Affiche la liste
+
+  Les deux projets partagent la même base de données Redis via les
+  mêmes credentials !
+
+  ---
+  C'est bon ?
+
+> ok mais comment il la partager ? elle est ou la clef privé ?? 
+
+⏺ Les clés Redis sont dans le fichier .env du projet waitlist !
+  Laisse-moi vérifier :
+
+⏺ Read(~/Desktop/Projet perso /Crypto project crypto/waitlist usci/.env)
+  ⎿  Error reading file
+
+⏺ Bash(ls -la "/Users/mathieu/Desktop/Projet perso /Crypto project
+      crypto/waitlist usci/" | grep env)
+  ⎿ -rw-r--r--@  1 mathieu  staff     211 23 oct 19:04 next-env.d.ts
+
+
+⏺ OK, le fichier .env n'existe pas encore dans le projet waitlist !
+
+  Voici comment obtenir les clés Redis :
+
+  Option 1 : Si le projet waitlist est déjà déployé sur Vercel
+
+  Les clés sont dans Vercel Dashboard :
+  1. Va sur vercel.com
+  2. Trouve le projet "waitlist usci"
+  3. Settings → Environment Variables
+  4. Cherche KV_REST_API_URL et KV_REST_API_TOKEN
+  5. Copie ces valeurs
+
+  Option 2 : Créer un nouveau Redis sur Upstash (gratuit)
+
+  1. Va sur https://upstash.com
+  2. Crée un compte (gratuit)
+  3. Crée une nouvelle database Redis
+  4. Copie les credentials : UPSTASH_REDIS_REST_URL et
+  UPSTASH_REDIS_REST_TOKEN
+
+  ---
+  Ensuite, dans les DEUX projets :
+
+  Projet WAITLIST - Crée /waitlist usci/.env :
+  KV_REST_API_URL=https://ton-url-upstash.upstash.io
+  KV_REST_API_TOKEN=ton_token_ici
+
+  Projet USCI - Crée /usci/.env.local :
+  KV_REST_API_URL=https://ton-url-upstash.upstash.io
+  KV_REST_API_TOKEN=ton_token_ici
+
+  LES MÊMES VALEURS DANS LES DEUX !
+
+  Tu veux que je t'aide à créer un compte Upstash ou tu as déjà les
+  clés sur Vercel ?
+
+> non rien n'est encore deployer sur vercel ! et j'ai pas envie de 
+crée de compte donc prepare le deployement de waitlist sur vercel stp
+ 
+
+⏺ Bash(ls -la "/Users/mathieu/Desktop/Projet perso /Crypto project
+      crypto/waitlist usci/" | grep -E "vercel|git")
+  ⎿  -rw-rw-r--@  1 mathieu  staff     313 23 oct 07:40 .gitignore
+
+⏺ Read(~/Desktop/Projet perso /Crypto project crypto/waitlist
+      usci/package.json)
+  ⎿  Read 83 lines
+
+⏺ Bash(cd "/Users/mathieu/Desktop/Projet perso /Crypto project
+      crypto/waitlist usci" && git status 2>&1 || echo "Not a git
+      repository")
+  ⎿  fatal: not a git repository (or any of the parent directories):
+     .git
+     Not a git repository
+  ⎿ Shell cwd was reset to /Users/mathieu/Desktop/Projet perso /Cryp
+    to project crypto/usci
+
+
+⏺ Bash(cd "/Users/mathieu/Desktop/Projet perso /Crypto project
+      crypto/waitlist usci" && git init && git add . && git commit -m
+      "Initial commit - waitlist project")
+  ⎿  Interrupted · What should Claude do instead?
+
+> non je veut pas passer par git pour waitlist , je veut juste vercel
+ pro 
+
+⏺ OK ! On va déployer directement avec Vercel CLI (sans Git).
+
+⏺ Bash(which vercel)
+  ⎿  /usr/local/bin/vercel
+
+⏺ Write(~/Desktop/Projet perso /Crypto project crypto/waitlist
+       usci/.vercelignore)
+  ⎿  Wrote 7 lines to ../waitlist usci/.vercelignore
+     node_modules
+     .next
+     .yarn
+     .pnp.*
+     *.log
+     .DS_Store
+
+⏺ Write(~/Desktop/Projet perso /Crypto project crypto/waitlist
+       usci/DEPLOY.md)
+  ⎿  Wrote 77 lines to ../waitlist usci/DEPLOY.md   
+     # 🚀 Déploiement Waitlist USCI sur Vercel
+     ## Étapes de déploiement
+     ### 1. Se connecter à Vercel (si pas déjà fait)
+     ```bash
+     vercel login
+     ```
+     ### 2. Déployer le projet
+     … +67 lines (ctrl+o to expand)
+
+⏺ ✅ TOUT EST PRÊT POUR LE DÉPLOIEMENT !
+
+  J'ai créé le guide complet dans DEPLOY.md dans le projet waitlist.
+
+  🎯 Prochaines étapes (super simple) :
+
+  1. Déployer la waitlist
+
+  cd "/Users/mathieu/Desktop/Projet perso /Crypto project 
+  crypto/waitlist usci"
+  vercel
+
+  2. Ajouter Redis depuis Vercel Dashboard
+
+  - Va sur vercel.com → ton projet
+  - Storage → Create Database → KV (Redis)
+  - ✅ Vercel crée automatiquement Redis + les credentials
+
+  3. Copier les credentials dans USCI
+
+  - Dans Vercel Dashboard → Settings → Environment Variables
+  - Copie KV_REST_API_URL et KV_REST_API_TOKEN
+  - Crée /usci/.env.local avec ces valeurs
+
+  🔥 Résultat final :
+
+  - Waitlist = Site qui collecte email + EVM address → écrit dans
+  Redis
+  - USCI Admin = Onglet "Waitlist" qui lit depuis le même Redis
+
+  Les deux projets partagent la même base de données Redis !
+
+  Tu veux que je t'aide à lancer le déploiement maintenant ?
+
+> je fait quoi la [Image #1] ?? 
+
+⏺ Parfait ! Voici ce que tu dois faire :
+
+  1. Environments (cocher tous) ✅
+
+  - ✅ Development (déjà coché)
+  - ✅ Preview (déjà coché)
+  - ✅ Production (déjà coché)
+
+  Garde tous les 3 cochés !
+
+  2. Custom Prefix
+
+  Change STORAGE en → KV
+
+  Donc dans le champ, remplace "STORAGE" par "KV" pour que ça
+  devienne :
+  - KV_REST_API_URL
+  - KV_REST_API_TOKEN
+
+  (C'est le nom que j'ai utilisé dans le code !)
+
+  3. Clique sur "Connect"
+
+  ✅ Et c'est tout ! Vercel va automatiquement créer les variables
+  d'environnement KV_REST_API_URL et KV_REST_API_TOKEN dans ton
+  projet.
+
+  Après tu pourras les copier pour les mettre dans le projet USCI !
+
+> maintenant j'ai sa [Image #1] 
+
+⏺ Parfait ! Redis est créé ! Maintenant il faut récupérer les
+  credentials :
+
+  Étape 1 : Voir les secrets
+
+  Dans l'onglet ".env.local" (en haut à gauche), clique sur "Show 
+  secret 👁" (en haut à droite) pour voir les vraies valeurs.
+
+  Ou sinon :
+
+  Étape 2 : Va dans Settings
+
+  1. Clique sur ton projet "waitlist" dans le menu de gauche
+  2. Settings → Environment Variables
+  3. Tu verras KV_REST_API_URL et KV_REST_API_TOKEN
+  4. Copie ces 2 valeurs
+
+  Étape 3 : Crée le fichier .env.local dans USCI
+
+  Après avoir copié les valeurs, crée ce fichier dans le projet USCI
+  :
+
+  # /usci/.env.local
+  KV_REST_API_URL=la_valeur_copiée
+  KV_REST_API_TOKEN=la_valeur_copiée
+
+  Tu veux que je t'aide à créer le fichier une fois que tu as copié
+  les valeurs ?
+
+> j'ai qu'une seul valeur c'est sa le probleme ! [Image #1] 
+
+⏺ Ah merde ! Il n'y a qu'une seule variable KV_REDIS_URL au lieu de
+  deux !
+
+  Clique sur l'œil 👁 à côté de KV_REDIS_URL pour voir la vraie
+  valeur. Normalement il devrait y avoir une URL complète.
+
+  OU :
+
+  Va directement dans la Database Redis :
+  1. Clique sur "Storage" dans le menu de gauche de Vercel
+  2. Clique sur ta database "waitlist" (celle que tu viens de créer)
+  3. Tu devrais voir REST API avec :
+    - UPSTASH_REDIS_REST_URL
+    - UPSTASH_REDIS_REST_TOKEN
+
+  Copie ces 2 valeurs et envoie-les moi (ou juste dis-moi si tu les
+  vois), je vais créer le fichier .env.local pour les deux projets !
+
+> j'ai sa KV_REDIS_URL="redis://default:8ehdEyjxkBAu5wEpMdl8AhyCG4VFT
+tsM@redis-17064.c17.us-east-1-4.ec2.redns.redis-cloud.com:17064" 
+
+⏺ OK, cette URL c'est pour Redis classique, MAIS on a besoin des
+  credentials REST API pour @upstash/redis.
+
+  Va chercher les vraies credentials :
+
+  1. Dans Vercel Dashboard → Storage (menu de gauche)
+  2. Clique sur ta database "waitlist"
+  3. Tu devrais voir une section "REST API" ou "Upstash Redis"
+  4. Copie :
+    - UPSTASH_REDIS_REST_URL (commence par https://)
+    - UPSTASH_REDIS_REST_TOKEN (un long token)
+
+  Si tu ne les vois pas, essaye :
+  - "Open in Redis" → ça t'ouvre le dashboard Upstash
+  - Là tu verras "REST API" avec les 2 credentials
+
+  Envoie-moi ces 2 valeurs quand tu les as !
+
+> tien regarde par toi meme ! [Image #1] 
+
+⏺ AH MERDE ! Vercel a créé un Redis Cloud au lieu d'un Upstash !
+
+  Redis Cloud ne donne pas de REST API, seulement l'URL redis://.
+  Mais notre code utilise @upstash/redis qui a besoin de REST API.
+
+  Clique sur "Open in Redis" (en haut à droite) pour voir s'il y a
+  quand même une REST API.
+
+  SI PAS DE REST API, il faut :
+
+  Option 1 : Supprimer et recréer avec Upstash
+
+  1. Retourne dans Storage → Supprime cette database
+  2. Create Database → Choisis bien "Upstash Redis" (pas Redis Cloud)
+
+  Option 2 : Je change le code pour utiliser Redis Cloud
+
+  Je peux modifier le code pour utiliser ioredis au lieu de
+  @upstash/redis, mais c'est plus compliqué.
+
+  Essaye d'abord "Open in Redis", dis-moi ce que tu vois !
+
+> tien j'ai sa maintenant 
+KV_URL="rediss://default:ASeUAAIncDIyZmRiYjllNGU1YTA0NzYyYjMzYzdlYzA1
+NTFiZDEyMnAyMTAxMzI@lucky-ringtail-10132.upstash.io:6379"
+KV_REST_API_URL="https://lucky-ringtail-10132.upstash.io"
+KV_REST_API_TOKEN="ASeUAAIncDIyZmRiYjllNGU1YTA0NzYyYjMzYzdlYzA1NTFiZD
+EyMnAyMTAxMzI"
+KV_REST_API_READ_ONLY_TOKEN="AieUAAIgcDIcopl0s2Lj4wIda8nPN8LO1MBdi1LZ
+iLT5rq69QxqDrg"
+KV_REDIS_URL="rediss://default:ASeUAAIncDIyZmRiYjllNGU1YTA0NzYyYjMzYz
+dlYzA1NTFiZDEyMnAyMTAxMzI@lucky-ringtail-10132.upstash.io:6379"[Image
+ #1] 
+  ⎿ API Error: 401 {"type":"error","error":{"type":"authentication_error"
+    ,"message":"OAuth token has expired. Please obtain a new token or 
+    refresh your existing 
+    token."},"request_id":"req_011CUf7QxZNNQJxyqFpST6bm"} · Please run 
+    /login
+
+> tu bug 
+  ⎿ API Error: 401 {"type":"error","error":{"type":"authentication_error"
+    ,"message":"OAuth token has expired. Please obtain a new token or 
+    refresh your existing 
+    token."},"request_id":"req_011CUf7V3HVFjyWKnrWLhzAM"} · Please run 
+    /login
