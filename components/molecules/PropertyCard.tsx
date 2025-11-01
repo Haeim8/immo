@@ -7,12 +7,7 @@ import { MapPin, TrendingUp, ExternalLink, Calendar, Home, Clock } from "lucide-
 import { Investment } from "@/lib/types";
 import GlassCard from "@/components/atoms/GlassCard";
 import AnimatedButton from "@/components/atoms/AnimatedButton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import PropertyModal from "@/components/molecules/PropertyModal";
 import { getIpfsUrl } from "@/lib/pinata/upload";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
@@ -295,62 +290,25 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
         </div>
       </motion.div>
 
-      {/* Modal - Bottom sheet on mobile, centered modal on desktop */}
-      <Dialog open={isOpen} onOpenChange={handleModalToggle}>
-        <AnimatePresence mode="wait">
-          {isOpen && (
-            <DialogContent forceMount className="flex w-full max-w-[100vw] md:max-w-[min(92vw,1100px)] justify-center p-0 md:p-6">
-              <motion.div
-                initial={{ opacity: 0, y: "100%" }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: "100%" }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="relative mx-auto grid w-full gap-6 md:gap-8 overflow-y-auto rounded-t-3xl md:rounded-3xl border border-white/10 bg-background/95 md:bg-background/80 px-4 py-6 md:px-6 md:py-8 sm:px-8 lg:grid-cols-[1.15fr,0.85fr] h-[100vh] md:h-auto md:max-h-[85vh] shadow-[0_-10px_50px_-10px_rgba(34,211,238,0.3)] md:shadow-[0_0_120px_-40px_rgba(34,211,238,0.45)]"
-              >
-                {/* Close button - Top right on mobile, hidden on desktop (uses default X) */}
-                <button
-                  onClick={() => handleModalToggle(false)}
-                  className="md:hidden absolute top-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 border border-white/20 backdrop-blur-sm hover:bg-white/20 transition-colors"
-                  aria-label="Close"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-
-                {/* Background effects - Reduced blur on mobile */}
-                <div className="pointer-events-none absolute inset-0 hidden md:block">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/6 via-transparent to-white/4 opacity-70" />
-                  <div className="absolute inset-0 rounded-[28px] border border-white/10" />
-                  <div className="absolute -top-36 left-[20%] h-96 w-96 rounded-full bg-cyan-500/20 blur-[180px]" />
-                  <div className="absolute -bottom-40 right-[15%] h-96 w-96 rounded-full bg-blue-600/20 blur-[200px]" />
-                </div>
-                <DialogHeader className="lg:col-span-2 space-y-4 border-b border-white/5 pb-6 text-left">
-                  <DialogTitle className="text-2xl font-semibold leading-tight text-foreground md:text-3xl">
-                    <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
-                      {investment.name}
-                    </span>
-                  </DialogTitle>
-                  <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase text-foreground">
+      {/* Modal */}
+      <PropertyModal isOpen={isOpen} onClose={() => handleModalToggle(false)}>
+        <div className="grid gap-8 sm:gap-9 lg:gap-12 xl:gap-16 px-4 sm:px-6 lg:px-10 pb-10 sm:pb-12 lg:pb-16">
+          {/* Header */}
+          <div className="lg:col-span-2 space-y-4 border-b border-white/5 pb-6 text-left">
+            <h2 className="text-2xl font-semibold leading-tight text-foreground md:text-3xl">
+              <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
+                {investment.name}
+              </span>
+            </h2>
+                  <div className="flex flex-wrap items-center gap-3 text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold tracking-[0.18em] uppercase text-foreground">
                       {investment.assetType}
                     </span>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase text-foreground">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold tracking-[0.18em] uppercase text-foreground">
                       {investment.type}
                     </span>
                     {investment.votingEnabled && (
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-foreground">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold tracking-[0.18em] text-foreground">
                         🗳️ {t("votingEnabled")}
                       </span>
                     )}
@@ -364,12 +322,12 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                       {t("priceEth", { amount: pricePerShareETH.toFixed(4) })}
                     </span>
                   </div>
-                </DialogHeader>
+          </div>
 
-                <div className="space-y-6 pb-6">
+                <div className="min-w-0 space-y-6 pb-6">
                   <motion.div
                     layout
-                    className="group relative aspect-[16/10] min-h-[320px] overflow-hidden rounded-3xl border border-white/20 bg-white/5 shadow-[0_25px_90px_-30px_rgba(6,182,212,0.45)] backdrop-blur-2xl"
+                    className="group relative aspect-[16/10] min-h-[300px] overflow-hidden rounded-3xl border border-white/20 bg-white/5 shadow-[0_25px_90px_-30px_rgba(6,182,212,0.45)] backdrop-blur-2xl"
                   >
                     <Image
                       src={displayImageUrl}
@@ -400,18 +358,18 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <GlassCard glow className="space-y-2 p-5 sm:p-6">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
                         {t("totalRaiseAmount")}
                       </p>
-                      <p className="text-xl md:text-2xl font-semibold text-cyan-400">
+                      <p className="text-2xl font-semibold text-cyan-400 sm:text-3xl">
                         {estimatedValueFormatted}
                       </p>
                     </GlassCard>
                     <GlassCard glow className="space-y-2 p-5 sm:p-6">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
                         {t("campaignDuration")}
                       </p>
-                      <p className="text-xl md:text-2xl font-semibold text-orange-400">
+                      <p className="text-2xl font-semibold text-orange-400 sm:text-3xl">
                         {t("campaignDurationValue", { count: campaignDurationDays })}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -470,44 +428,9 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                     </GlassCard>
                   </div>
 
-                  <GlassCard glow className="space-y-4 p-5 sm:p-6">
-                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-                      <span>{t("progress")}</span>
-                      <span className="font-semibold text-cyan-400">
-                        {investment.fundingProgress.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                      <motion.div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-600"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${investment.fundingProgress}%` }}
-                        transition={{ duration: 1, delay: 0.4 }}
-                      />
-                    </div>
-                    {investment.saleEnd > 0 && (
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          {saleClosed ? (
-                            <span className="font-medium text-red-400">{t("saleEnded")}</span>
-                          ) : daysLeft > 0 ? (
-                            <span>{t("daysLeft", { count: daysLeft })}</span>
-                          ) : hoursLeft > 0 ? (
-                            <span className="font-medium text-orange-400">
-                              {t("hoursLeft", { count: hoursLeft })}
-                            </span>
-                          ) : (
-                            <span className="font-medium text-red-400">{t("endingSoon")}</span>
-                          )}
-                        </div>
-                        <span>{t("saleEndDateLabel", { date: saleEndDateDisplay })}</span>
-                      </div>
-                    )}
-                  </GlassCard>
                 </div>
 
-                <div className="flex h-full flex-col gap-6 pb-6">
+                <div className="min-w-0 flex h-full flex-col gap-6 pb-6 lg:self-start lg:max-w-[520px] xl:max-w-[560px]">
                   <GlassCard glow className="space-y-4 p-5 sm:p-6">
                     <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-muted-foreground">
                       <MapPin className="h-4 w-4 text-cyan-400" />
@@ -527,7 +450,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                       <button
                         type="button"
                         onClick={() => setIsDescriptionExpanded((prev) => !prev)}
-                        className="text-xs font-semibold uppercase tracking-wide text-cyan-400 transition-colors hover:text-cyan-300"
+                        className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400 transition-colors hover:text-cyan-300"
                       >
                         {isDescriptionExpanded ? t("viewLess") : t("viewMore")}
                       </button>
@@ -536,7 +459,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
 
                   {investment.details.features.length > 0 && (
                     <GlassCard glow className="space-y-4 p-5 sm:p-6">
-                      <h3 className="text-xs uppercase tracking-wide text-muted-foreground">
+                      <h3 className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
                         {t("features")}
                       </h3>
                       <ul className="grid grid-cols-1 gap-2 text-sm text-muted-foreground sm:grid-cols-2">
@@ -556,7 +479,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                   <GlassCard glow className="space-y-4 p-5 sm:p-6">
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <h3 className="text-xs uppercase tracking-wide text-muted-foreground">
+                        <h3 className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
                           {t("contract")}
                         </h3>
                         <code className="mt-2 block text-xs text-muted-foreground break-all">
@@ -616,10 +539,10 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                       </div>
                     )}
 
-                  <GlassCard glow className="flex flex-col gap-5 p-5 sm:p-6">
+                  <GlassCard glow className="flex flex-col gap-5 p-5 sm:p-6 lg:p-8">
                     {canPurchase && (
                       <div className="space-y-3">
-                        <label className="text-xs uppercase tracking-wide text-muted-foreground">
+                        <label className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
                           {t("quantityLabel")}
                         </label>
                         <div className="flex items-center gap-4">
@@ -662,15 +585,15 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                     )}
 
                     <div className="space-y-3 rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 p-4">
-                      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                      <div className="flex items-center justify-between text-xs uppercase tracking-[0.22em] text-muted-foreground">
                         <span>{t("pricePerShare")}</span>
                         <span className="font-semibold text-foreground">
                           {pricePerShareFormatted}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-sm md:text-base font-semibold text-foreground">
+                      <div className="flex items-center justify-between text-base font-semibold text-foreground">
                         <span>{t("totalPrice")}</span>
-                        <span className="text-xl md:text-2xl font-bold text-cyan-400">
+                        <span className="text-2xl font-bold text-cyan-400">
                           {totalPriceFormatted}
                         </span>
                       </div>
@@ -682,7 +605,7 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                     <AnimatedButton
                       variant="primary"
                       size="lg"
-                      className="h-12 md:h-14 w-full text-xs md:text-sm font-semibold uppercase tracking-wide"
+                      className="h-14 w-full text-sm font-semibold uppercase tracking-[0.32em]"
                       onClick={handleInvest}
                       disabled={!canPurchase || isBuying || isTxPending || success}
                     >
@@ -690,11 +613,8 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
                     </AnimatedButton>
                   </GlassCard>
                 </div>
-              </motion.div>
-            </DialogContent>
-          )}
-        </AnimatePresence>
-      </Dialog>
+        </div>
+      </PropertyModal>
     </>
   );
 }
