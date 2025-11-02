@@ -115,17 +115,12 @@ export default function PropertyCard({ investment }: PropertyCardProps) {
     setSuccess(false)
 
     try {
-      const hashes: string[] = []
-
       for (let i = 0; i < quantity; i++) {
-        const hash = await buyPuzzle(investment.contractAddress as `0x${string}`, puzzlePriceWei)
-        if (hash) {
-          hashes.push(hash)
-        }
+        buyPuzzle(investment.contractAddress as `0x${string}`, puzzlePriceWei)
       }
 
       setSuccess(true)
-      console.log(`🎉 ${quantity} shares purchased successfully!`, hashes)
+      console.log(`🎉 ${quantity} shares purchased successfully!`)
 
       // Close modal after 2 seconds
       setTimeout(() => {
