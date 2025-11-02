@@ -1,16 +1,18 @@
-"use client";
+"use client"
 
-import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import type React from "react"
+
+import { motion, AnimatePresence } from "framer-motion"
+import { X } from "lucide-react"
 
 interface PropertyModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
+  isOpen: boolean
+  onClose: () => void
+  children: React.ReactNode
 }
 
 export default function PropertyModal({ isOpen, onClose, children }: PropertyModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <AnimatePresence>
@@ -32,7 +34,7 @@ export default function PropertyModal({ isOpen, onClose, children }: PropertyMod
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="relative w-full max-w-6xl lg:max-w-[1200px] max-h-[90vh] lg:max-h-none overflow-y-auto lg:overflow-visible rounded-3xl border border-white/10 bg-background/95 backdrop-blur-xl px-4 sm:px-6 lg:px-10 pb-10 sm:pb-12 lg:pb-16"
+              className="relative w-full max-w-6xl lg:max-w-[1200px] max-h-[90vh] lg:max-h-none overflow-y-auto overflow-x-hidden lg:overflow-visible rounded-3xl border border-white/10 bg-background/95 backdrop-blur-xl px-3 sm:px-6 lg:px-10 pb-10 sm:pb-12 lg:pb-16"
             >
               {/* Close Button */}
               <button
@@ -49,5 +51,5 @@ export default function PropertyModal({ isOpen, onClose, children }: PropertyMod
         </>
       )}
     </AnimatePresence>
-  );
+  )
 }
