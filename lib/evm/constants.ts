@@ -22,4 +22,5 @@ export const ETH_TO_USD_ESTIMATE = 3000;
 
 // Bloc de déploiement du contrat Factory sur Base Sepolia
 // Utilisé pour limiter la plage de recherche des événements
-export const FACTORY_DEPLOYMENT_BLOCK = 19900000n as const;
+// Updated for new factory deployment (2025-01-07)
+export const FACTORY_DEPLOYMENT_BLOCK = 20000000n as const;

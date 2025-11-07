@@ -715,13 +715,13 @@ const CreatePropertyForm: FC = () => {
 
         <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
           <p className="text-sm text-muted-foreground">
-            1 ETH ={' '}
+            Coût de déploiement estimé :{' '}
             <span className="text-cyan-400 font-semibold">
-              ${ethPrice.usd.toFixed(2)} USD
+              ~0.0015 ETH
             </span>
-            {' • '}
+            {' '}
             <span className="text-xs">
-              Mise à jour : {new Date(ethPrice.lastUpdated).toLocaleTimeString()}
+              (≈ ${(0.0015 * ethPrice.usd).toFixed(2)} USD)
             </span>
           </p>
         </div>
