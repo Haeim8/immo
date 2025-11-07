@@ -34,7 +34,7 @@ export default function MobileNav() {
               }`}
             >
               <Icon className={`h-5 w-5 ${isActive ? "scale-110" : ""}`} />
-              <span className="text-[10px] font-medium">{navT(item.labelKey)}</span>
+              <span className="text-[0.625rem] font-medium">{navT(item.labelKey)}</span>
             </Link>
           );
         })}

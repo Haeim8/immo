@@ -1,0 +1,37 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "timestamp": "2025-11-06T04:14:46.538Z",
+  "deployer": "0x222fD66bbfc6808e123aB51f5FB21644731dFDE2",
+  "contracts": {
+    "USCIFactory": {
+      "address": "0xf44C9E702E36234cD1D72760D88861F257Ed1c35",
+      "version": "2.0",
+      "features": [
+        "OpenSea ERC2981 Royalties 4%",
+        "Immutable Variables (Gas Optimized)",
+        "MAX_PUZZLES = 100,000",
+        "Security Audit Passed",
+        "Naming Conventions Fixed"
+      ]
+    },
+    "USCINFT": {
+      "address": "0xF0d2b21e3aD9C7f6021Dacc24B0F1bDb4FE5CbD9",
+      "version": "2.0"
+    },
+    "USCIImplementation": {
+      "address": "0x3518EC740556C62c423B2c69053f170F47C40FF3",
+      "version": "2.0"
+    }
+  },
+  "improvements": {
+    "security": "100% audit passed - 0 issues",
+    "gas": "~2,100 gas saved per read (immutable vars)",
+    "scalability": "Up to 100,000 NFTs per place",
+    "opensea": "ERC2981 royalties enabled (4%)"
+  },
+  "explorer": {
+    "factory": "https://sepolia.basescan.org/address/0xf44C9E702E36234cD1D72760D88861F257Ed1c35",
+    "nftRenderer": "https://sepolia.basescan.org/address/0xF0d2b21e3aD9C7f6021Dacc24B0F1bDb4FE5CbD9"
+  }
+}

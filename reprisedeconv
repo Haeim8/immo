@@ -1,0 +1,590 @@
+lockdown-install.js:1 Removing unpermitted intrinsics
+evmAsk.js:5 Uncaught TypeError: Cannot redefine property: ethereum
+    at Object.defineProperty (<anonymous>)
+    at r.inject (evmAsk.js:5:5106)
+    at window.addEventListener.once (evmAsk.js:5:9026)
+react-dom-client.development.js:25631 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+react-server-dom-webpack-client.browser.development.js:3423  Server   ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+react_stack_bottom_frame @ react-server-dom-webpack-client.browser.development.js:3423
+wagmi-provider.tsx:18 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID n'est pas defini. WalletConnect utilisera un identifiant de secours.
+eval @ wagmi-provider.tsx:18
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+sepolia.base.org/:1  Failed to load resource: the server responded with a status of 429 ()
+requestRelay.js:2 WebSocket connection to 'wss://www.walletlink.org/rpc' failed: WebSocket is closed before the connection is established.
+disconnect @ requestRelay.js:2
+QmTestCompleteMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 3)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xE5AF6D7D110BBC8dC278C00cb6F2DA3C3fAcB291 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 3)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 5)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xf0d67E065b6eCDd5697FB73A622dE8106Ef55a00 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 5)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+QmTestCompleteMetadata:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 1)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4798Ca05244803bdb3115485cc0755eF1228D45D Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 1)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+QmTestFinalMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 2)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x9fbAf9C12Da7DA5C2766d37BDf7fc399182071F5 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 2)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+reactive-element.js:63 Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+issueWarning @ reactive-element.js:63
+QmTestMetadata:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 0)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x00BFb2D0321D86A4E3eB2903566f3805dF02Ba2d Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 0)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 7)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xe2568938661586Da5CFd1BdBA9b526d0cB1B7124 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 7)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+QmTestFinalMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 2)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x9fbAf9C12Da7DA5C2766d37BDf7fc399182071F5 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 2)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+QmTestCompleteMetadata:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 1)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4798Ca05244803bdb3115485cc0755eF1228D45D Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 1)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+QmTestCompleteMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 4)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x389bAe92Fb4fE119C66f436b6e8DACb17f1301Ae Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 4)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 6)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x8A82a2f6CC1B0beb3858Df59A04961AD1B826538 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 6)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+QmTestCompleteMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 3)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xE5AF6D7D110BBC8dC278C00cb6F2DA3C3fAcB291 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 3)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 9)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x685507BCB79EC0F57A2454FE9b753adEbCB66a3a Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 9)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMetadata:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 0)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x00BFb2D0321D86A4E3eB2903566f3805dF02Ba2d Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 0)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+cca-lite.coinbase.com/metrics:1  Failed to load resource: net::ERR_BLOCKED_BY_ADBLOCKER
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 8)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4397Ab93cc235914aAee36283bFB22FdFA454B5b Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 8)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 11)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4FaC2c6Af58bF8434C7D1A300179911D8cAd1ad8 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 11)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestCompleteMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 4)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x389bAe92Fb4fE119C66f436b6e8DACb17f1301Ae Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 4)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 10)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x61c3E1Fd40c69A0c18A3ddd71fcF2f28D843b2B7 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 10)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+2index.mjs:140 You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.
+AnimatePresence @ index.mjs:140
+11intercept-console-error.js:57 Encountered two children with the same key, ``. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+error @ intercept-console-error.js:57
+cca-lite.coinbase.com/metrics:1  Failed to load resource: net::ERR_BLOCKED_BY_ADBLOCKER
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+gateway.pinata.cloud/ipfs/Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 7)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xe2568938661586Da5CFd1BdBA9b526d0cB1B7124 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 7)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 8)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4397Ab93cc235914aAee36283bFB22FdFA454B5b Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 8)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 9)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x685507BCB79EC0F57A2454FE9b753adEbCB66a3a Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 9)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 5)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xf0d67E065b6eCDd5697FB73A622dE8106Ef55a00 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 5)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 6)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x8A82a2f6CC1B0beb3858Df59A04961AD1B826538 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 6)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 11)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4FaC2c6Af58bF8434C7D1A300179911D8cAd1ad8 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 11)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 10)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x61c3E1Fd40c69A0c18A3ddd71fcF2f28D843b2B7 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 10)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+2index.mjs:140 You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.
+AnimatePresence @ index.mjs:140
+11intercept-console-error.js:57 Encountered two children with the same key, ``. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+error @ intercept-console-error.js:57
+image:1  Failed to load resource: the server responded with a status of 504 (Gateway Timeout)
+cca-lite.coinbase.com/metrics:1  Failed to load resource: net::ERR_BLOCKED_BY_ADBLOCKER
+2index.mjs:140 You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.
+AnimatePresence @ index.mjs:140
+11intercept-console-error.js:57 Encountered two children with the same key, ``. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+error @ intercept-console-error.js:57
+report-hmr-latency.js:14 [Fast Refresh] done in 45767ms
+gateway.pinata.cloud/ipfs/QmTestCompleteMetadata:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 1)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4798Ca05244803bdb3115485cc0755eF1228D45D Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 1)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 7)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xe2568938661586Da5CFd1BdBA9b526d0cB1B7124 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 7)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+cca-lite.coinbase.com/metrics:1  Failed to load resource: net::ERR_BLOCKED_BY_ADBLOCKER
+gateway.pinata.cloud/ipfs/QmTestCompleteMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 3)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xE5AF6D7D110BBC8dC278C00cb6F2DA3C3fAcB291 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 3)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestFinalMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 2)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x9fbAf9C12Da7DA5C2766d37BDf7fc399182071F5 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 2)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMetadata:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 0)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x00BFb2D0321D86A4E3eB2903566f3805dF02Ba2d Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 0)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 5)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0xf0d67E065b6eCDd5697FB73A622dE8106Ef55a00 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 5)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 9)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x685507BCB79EC0F57A2454FE9b753adEbCB66a3a Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 9)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestCompleteMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 4)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x389bAe92Fb4fE119C66f436b6e8DACb17f1301Ae Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 4)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/Qm:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 11)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4FaC2c6Af58bF8434C7D1A300179911D8cAd1ad8 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 11)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 6)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x8A82a2f6CC1B0beb3858Df59A04961AD1B826538 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 6)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 8)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x4397Ab93cc235914aAee36283bFB22FdFA454B5b Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 8)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+gateway.pinata.cloud/ipfs/QmTestMeta:1  Failed to load resource: the server responded with a status of 400 ()
+intercept-console-error.js:57 Error fetching property metadata: Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 10)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+intercept-console-error.js:57 Failed to fetch metadata for place: 0x61c3E1Fd40c69A0c18A3ddd71fcF2f28D843b2B7 Error: Failed to fetch metadata: 
+    at fetchPropertyMetadata (metadata.ts:112:13)
+    at async enrichWithMetadata (adapters.ts:103:9)
+    at async Promise.all (:3000/index 10)
+    at async loadInvestments (PropertyGrid.tsx:25:32)
+error @ intercept-console-error.js:57
+2index.mjs:140 You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.
+AnimatePresence @ index.mjs:140
+11intercept-console-error.js:57 Encountered two children with the same key, ``. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+error @ intercept-console-error.js:57
+image:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+react-server-dom-webpack-client.browser.development.js:3423  Server   ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+react_stack_bottom_frame @ react-server-dom-webpack-client.browser.development.js:3423
+2index.mjs:140 You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.
+AnimatePresence @ index.mjs:140
+11intercept-console-error.js:57 Encountered two children with the same key, ``. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+error @ intercept-console-error.js:57
+2index.mjs:140 You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.
+AnimatePresence @ index.mjs:140
+11intercept-console-error.js:57 Encountered two children with the same key, ``. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+error @ intercept-console-error.js:57
+batcher.mjs:27 [Violation] 'requestAnimationFrame' handler took 93ms
+useEthPrice.ts:15 [Violation] 'setInterval' handler took 106ms
+index.mjs:140 You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.
+AnimatePresence @ index.mjs:140
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6796
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10858
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopSync @ react-dom-client.development.js:15547
+renderRootSync @ react-dom-client.development.js:15527
+performWorkOnRoot @ react-dom-client.development.js:14991
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16816
+performWorkUntilDeadline @ scheduler.development.js:45
+index.mjs:140 You're attempting to animate multiple children within AnimatePresence, but its mode is set to "wait". This will lead to odd visual behaviour.
+AnimatePresence @ index.mjs:140
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10858
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopSync @ react-dom-client.development.js:15547
+renderRootSync @ react-dom-client.development.js:15527
+performWorkOnRoot @ react-dom-client.development.js:14991
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16816
+performWorkUntilDeadline @ scheduler.development.js:45
+11ErrorFilter.tsx:19 Encountered two children with the same key, ``. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+error @ intercept-console-error.js:57
+ErrorFilter.useEffect @ ErrorFilter.tsx:19
+eval @ react-dom-client.development.js:5735
+runWithFiberInDEV @ react-dom-client.development.js:872
+warnOnInvalidKey @ react-dom-client.development.js:5734
+reconcileChildrenArray @ react-dom-client.development.js:5776
+reconcileChildFibersImpl @ react-dom-client.development.js:6124
+eval @ react-dom-client.development.js:6229
+reconcileChildren @ react-dom-client.development.js:8784
+updateFunctionComponent @ react-dom-client.development.js:9264
+beginWork @ react-dom-client.development.js:10858
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopSync @ react-dom-client.development.js:15547
+renderRootSync @ react-dom-client.development.js:15527
+performWorkOnRoot @ react-dom-client.development.js:14991
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16816
+performWorkUntilDeadline @ scheduler.development.js:45
+scheduler.development.js:14 [Violation] 'message' handler took 469ms

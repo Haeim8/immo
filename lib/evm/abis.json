@@ -11,6 +11,11 @@
           "internalType": "address",
           "name": "_nftRenderer",
           "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_usciImplementation",
+          "type": "address"
         }
       ],
       "stateMutability": "nonpayable",
@@ -50,6 +55,27 @@
     {
       "inputs": [],
       "name": "ExpectedPause",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "FailedDeployment",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "balance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "needed",
+          "type": "uint256"
+        }
+      ],
+      "name": "InsufficientBalance",
       "type": "error"
     },
     {
@@ -430,7 +456,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_member",
+          "name": "member",
           "type": "address"
         }
       ],
@@ -456,82 +482,82 @@
       "inputs": [
         {
           "internalType": "string",
-          "name": "_assetType",
+          "name": "assetType",
           "type": "string"
         },
         {
           "internalType": "string",
-          "name": "_name",
+          "name": "name",
           "type": "string"
         },
         {
           "internalType": "string",
-          "name": "_city",
+          "name": "city",
           "type": "string"
         },
         {
           "internalType": "string",
-          "name": "_province",
+          "name": "province",
           "type": "string"
         },
         {
           "internalType": "string",
-          "name": "_country",
+          "name": "country",
           "type": "string"
         },
         {
           "internalType": "uint256",
-          "name": "_totalPuzzles",
+          "name": "totalPuzzles",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "_puzzlePrice",
+          "name": "puzzlePrice",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "_saleDuration",
+          "name": "saleDuration",
           "type": "uint256"
         },
         {
           "internalType": "uint32",
-          "name": "_surface",
+          "name": "surface",
           "type": "uint32"
         },
         {
           "internalType": "uint8",
-          "name": "_rooms",
+          "name": "rooms",
           "type": "uint8"
         },
         {
           "internalType": "uint32",
-          "name": "_expectedReturn",
+          "name": "expectedReturn",
           "type": "uint32"
         },
         {
           "internalType": "string",
-          "name": "_placeType",
+          "name": "placeType",
           "type": "string"
         },
         {
           "internalType": "uint16",
-          "name": "_yearBuilt",
+          "name": "yearBuilt",
           "type": "uint16"
         },
         {
           "internalType": "string",
-          "name": "_imageCid",
+          "name": "imageCid",
           "type": "string"
         },
         {
           "internalType": "string",
-          "name": "_metadataCid",
+          "name": "metadataCid",
           "type": "string"
         },
         {
           "internalType": "bool",
-          "name": "_votingEnabled",
+          "name": "votingEnabled",
           "type": "bool"
         }
       ],
@@ -550,7 +576,7 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "_placeId",
+          "name": "placeId",
           "type": "uint256"
         }
       ],
@@ -649,7 +675,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_member",
+          "name": "member",
           "type": "address"
         }
       ],
@@ -668,7 +694,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_place",
+          "name": "place",
           "type": "address"
         }
       ],
@@ -752,7 +778,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_member",
+          "name": "member",
           "type": "address"
         }
       ],
@@ -801,7 +827,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_newTreasury",
+          "name": "newTreasury",
           "type": "address"
         }
       ],
@@ -891,7 +917,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_newAdmin",
+          "name": "newAdmin",
           "type": "address"
         }
       ],
@@ -899,115 +925,22 @@
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
-    }
-  ],
-  "USCI": [
+    },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "usciImplementation",
+      "outputs": [
         {
           "internalType": "address",
-          "name": "_factory",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_nftRenderer",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_placeId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "_assetType",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_name",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_city",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_province",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_country",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_totalPuzzles",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_puzzlePrice",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_saleDuration",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint32",
-          "name": "_surface",
-          "type": "uint32"
-        },
-        {
-          "internalType": "uint8",
-          "name": "_rooms",
-          "type": "uint8"
-        },
-        {
-          "internalType": "uint32",
-          "name": "_expectedReturn",
-          "type": "uint32"
-        },
-        {
-          "internalType": "string",
-          "name": "_placeType",
-          "type": "string"
-        },
-        {
-          "internalType": "uint16",
-          "name": "_yearBuilt",
-          "type": "uint16"
-        },
-        {
-          "internalType": "string",
-          "name": "_imageCid",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_metadataCid",
-          "type": "string"
-        },
-        {
-          "internalType": "bool",
-          "name": "_votingEnabled",
-          "type": "bool"
-        },
-        {
-          "internalType": "address",
-          "name": "_treasury",
+          "name": "",
           "type": "address"
         }
       ],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "USCI": [
     {
       "inputs": [],
       "name": "AllPuzzlesTaken",
@@ -1026,6 +959,70 @@
     {
       "inputs": [],
       "name": "ClaimCooldownActive",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "numerator",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "denominator",
+          "type": "uint256"
+        }
+      ],
+      "name": "ERC2981InvalidDefaultRoyalty",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        }
+      ],
+      "name": "ERC2981InvalidDefaultRoyaltyReceiver",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "numerator",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "denominator",
+          "type": "uint256"
+        }
+      ],
+      "name": "ERC2981InvalidTokenRoyalty",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        }
+      ],
+      "name": "ERC2981InvalidTokenRoyaltyReceiver",
       "type": "error"
     },
     {
@@ -1158,6 +1155,11 @@
     },
     {
       "inputs": [],
+      "name": "InvalidInitialization",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "InvalidPrice",
       "type": "error"
     },
@@ -1204,6 +1206,11 @@
     {
       "inputs": [],
       "name": "NotCompleted",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotInitializing",
       "type": "error"
     },
     {
@@ -1365,6 +1372,19 @@
         }
       ],
       "name": "EmergencyUnpaused",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "version",
+          "type": "uint64"
+        }
+      ],
+      "name": "Initialized",
       "type": "event"
     },
     {
@@ -1801,17 +1821,17 @@
       "inputs": [
         {
           "internalType": "string",
-          "name": "_title",
+          "name": "title",
           "type": "string"
         },
         {
           "internalType": "string",
-          "name": "_description",
+          "name": "description",
           "type": "string"
         },
         {
           "internalType": "uint256",
-          "name": "_votingDuration",
+          "name": "votingDuration",
           "type": "uint256"
         }
       ],
@@ -2187,6 +2207,114 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "_factory",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_nftRenderer",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_placeId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "_assetType",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_city",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_province",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_country",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_totalPuzzles",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_puzzlePrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_saleDuration",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint32",
+          "name": "_surface",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_rooms",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint32",
+          "name": "_expectedReturn",
+          "type": "uint32"
+        },
+        {
+          "internalType": "string",
+          "name": "_placeType",
+          "type": "string"
+        },
+        {
+          "internalType": "uint16",
+          "name": "_yearBuilt",
+          "type": "uint16"
+        },
+        {
+          "internalType": "string",
+          "name": "_imageCid",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_metadataCid",
+          "type": "string"
+        },
+        {
+          "internalType": "bool",
+          "name": "_votingEnabled",
+          "type": "bool"
+        },
+        {
+          "internalType": "address",
+          "name": "_treasury",
+          "type": "address"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "owner",
           "type": "address"
         },
@@ -2445,6 +2573,35 @@
         {
           "internalType": "uint256",
           "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "salePrice",
+          "type": "uint256"
+        }
+      ],
+      "name": "royaltyInfo",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
           "type": "uint256"
         }
       ],

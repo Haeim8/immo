@@ -17,7 +17,8 @@ import {
   Loader2,
   Gavel,
   Wrench,
-  Mail
+  Mail,
+  X
 } from "lucide-react";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
@@ -41,6 +42,13 @@ import {
   useDepositRewards,
   useCloseSale,
   useCompletPlace,
+  usePausePlace,
+  useUnpausePlace,
+  usePauseFactory,
+  useUnpauseFactory,
+  useCreateProposal,
+  // useCastVote,
+  // useCloseProposal,
 } from "@/lib/evm/write-hooks";
 import { formatEther, parseEther } from "viem";
 
@@ -778,14 +786,264 @@ function DividendsTab() {
 }
 
 function GovernanceTab() {
+  const { places, isLoading: loadingPlaces } = useAllPlaces();
+  const [selectedProperty, setSelectedProperty] = useState<string>("");
+  const [proposalTitle, setProposalTitle] = useState("");
+  const [proposalDescription, setProposalDescription] = useState("");
+  const [votingDurationDays, setVotingDurationDays] = useState("7");
+  const [localError, setLocalError] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const {
+    createProposal,
+    isPending: isCreating,
+    isSuccess: createSuccess,
+    error: createError
+  } = useCreateProposal();
+
+  const selected = places.find((p) => p.address === selectedProperty);
+
+  // Reset form on success
+  useEffect(() => {
+    if (createSuccess) {
+      setTimeout(() => {
+        setShowCreateModal(false);
+        setProposalTitle("");
+        setProposalDescription("");
+        setVotingDurationDays("7");
+        setSelectedProperty("");
+        setLocalError("");
+      }, 2000);
+    }
+  }, [createSuccess]);
+
+  const handleCreateProposal = () => {
+    if (!selected) {
+      setLocalError("Veuillez sélectionner une propriété");
+      return;
+    }
+
+    if (!proposalTitle.trim()) {
+      setLocalError("Veuillez entrer un titre");
+      return;
+    }
+
+    if (!proposalDescription.trim()) {
+      setLocalError("Veuillez entrer une description");
+      return;
+    }
+
+    const days = parseInt(votingDurationDays, 10);
+    if (!Number.isInteger(days) || days < 1 || days > 30) {
+      setLocalError("La durée de vote doit être entre 1 et 30 jours");
+      return;
+    }
+
+    setLocalError("");
+    const durationSeconds = BigInt(days * 86400);
+    createProposal(selected.address, proposalTitle.trim(), proposalDescription.trim(), durationSeconds);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Create Proposal Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <GlassCard>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-bold">Create New Proposal</h3>
+                  <button
+                    onClick={() => setShowCreateModal(false)}
+                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Select Property</label>
+                  <select
+                    value={selectedProperty}
+                    onChange={(e) => setSelectedProperty(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
+                    disabled={isCreating || loadingPlaces}
+                  >
+                    <option value="">Select a property...</option>
+                    {places.filter(p => p.info.votingEnabled).map((place) => (
+                      <option key={place.address} value={place.address}>
+                        {place.info.name} - {place.info.city}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Only properties with voting enabled are shown
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Proposal Title</label>
+                  <input
+                    type="text"
+                    value={proposalTitle}
+                    onChange={(e) => setProposalTitle(e.target.value)}
+                    placeholder="Ex: Authorize renovation works"
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
+                    disabled={isCreating}
+                    maxLength={100}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Description</label>
+                  <textarea
+                    value={proposalDescription}
+                    onChange={(e) => setProposalDescription(e.target.value)}
+                    placeholder="Describe the proposal in detail..."
+                    rows={6}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none resize-none"
+                    disabled={isCreating}
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {proposalDescription.length}/500 characters
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Voting Duration (days)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={votingDurationDays}
+                    onChange={(e) => setVotingDurationDays(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
+                    disabled={isCreating}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Between 1 and 30 days
+                  </p>
+                </div>
+
+                {/* Transaction en cours */}
+                {isCreating && (
+                  <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
+                    <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Creating proposal...</p>
+                      <p className="text-xs text-muted-foreground">
+                        Please sign the transaction and wait for confirmation.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Success */}
+                {createSuccess && !isCreating && (
+                  <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/50 text-green-400 text-sm">
+                    ✅ Proposal created successfully!
+                  </div>
+                )}
+
+                {/* Error */}
+                {createError && !isCreating && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
+                    ❌ Error: {createError.message || "Transaction failed"}
+                  </div>
+                )}
+
+                {/* Local error */}
+                {localError && (
+                  <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/50 text-yellow-400 text-sm">
+                    ⚠️ {localError}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <AnimatedButton
+                    variant="outline"
+                    onClick={() => setShowCreateModal(false)}
+                    disabled={isCreating}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </AnimatedButton>
+                  <AnimatedButton
+                    variant="primary"
+                    onClick={handleCreateProposal}
+                    disabled={isCreating || !selectedProperty || !proposalTitle || !proposalDescription}
+                    className="flex-1"
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Proposal"
+                    )}
+                  </AnimatedButton>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h3 className="text-2xl font-bold">Community Governance</h3>
+          <p className="text-muted-foreground">
+            Create proposals for properties with voting enabled
+          </p>
+        </div>
+        <AnimatedButton variant="primary" onClick={() => setShowCreateModal(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Proposal
+        </AnimatedButton>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <GlassCard>
+          <MetricDisplay
+            icon={Gavel}
+            label="Active Proposals"
+            value="0"
+            iconColor="text-cyan-400"
+          />
+        </GlassCard>
+        <GlassCard>
+          <MetricDisplay
+            icon={CheckCircle2}
+            label="Passed Proposals"
+            value="0"
+            iconColor="text-green-400"
+            delay={0.1}
+          />
+        </GlassCard>
+        <GlassCard>
+          <MetricDisplay
+            icon={Users}
+            label="Total Votes Cast"
+            value="0"
+            iconColor="text-purple-400"
+            delay={0.2}
+          />
+        </GlassCard>
+      </div>
+
       <GlassCard>
         <div className="text-center py-12">
           <Gavel className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground">Governance feature coming soon</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Create and manage proposals for each property
+          <p className="text-muted-foreground mb-2">No proposals yet</p>
+          <p className="text-sm text-muted-foreground">
+            Create your first proposal to enable community voting
           </p>
         </div>
       </GlassCard>
@@ -812,6 +1070,34 @@ function OperationsTab() {
     isSuccess: completeSuccess,
     error: completeError
   } = useCompletPlace();
+
+  const {
+    pausePlace,
+    isPending: isPausingPlace,
+    isSuccess: pausePlaceSuccess,
+    error: pausePlaceError
+  } = usePausePlace();
+
+  const {
+    unpausePlace,
+    isPending: isUnpausingPlace,
+    isSuccess: unpausePlaceSuccess,
+    error: unpausePlaceError
+  } = useUnpausePlace();
+
+  const {
+    pauseFactory,
+    isPending: isPausingFactory,
+    isSuccess: pauseFactorySuccess,
+    error: pauseFactoryError
+  } = usePauseFactory();
+
+  const {
+    unpauseFactory,
+    isPending: isUnpausingFactory,
+    isSuccess: unpauseFactorySuccess,
+    error: unpauseFactoryError
+  } = useUnpauseFactory();
 
   const selected = places.find((p) => p.address === selectedProperty);
 
@@ -855,6 +1141,34 @@ function OperationsTab() {
     setLocalError("");
     const amountWei = parseEther(amountEthString);
     completePlace(selected.address, amountWei);
+  };
+
+  const handlePausePlace = () => {
+    if (!selected) {
+      setLocalError("Veuillez sélectionner une propriété");
+      return;
+    }
+    setLocalError("");
+    pausePlace(selected.address);
+  };
+
+  const handleUnpausePlace = () => {
+    if (!selected) {
+      setLocalError("Veuillez sélectionner une propriété");
+      return;
+    }
+    setLocalError("");
+    unpausePlace(selected.address);
+  };
+
+  const handlePauseFactory = () => {
+    setLocalError("");
+    pauseFactory();
+  };
+
+  const handleUnpauseFactory = () => {
+    setLocalError("");
+    unpauseFactory();
   };
 
   const saleEndDate = selected
@@ -1005,8 +1319,106 @@ function OperationsTab() {
         </div>
       </GlassCard>
 
+      {/* PAUSE/UNPAUSE CONTROLS */}
+      <GlassCard>
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-bold text-red-400 mb-2">🚨 Emergency Controls</h3>
+            <p className="text-sm text-muted-foreground">
+              Pause/Unpause individual campaigns or the entire factory. Use only in emergency situations.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Campaign Pause Controls */}
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-orange-400">Campaign Controls</h4>
+              <p className="text-sm text-muted-foreground">
+                Pause or resume the selected campaign to prevent/allow puzzle purchases.
+              </p>
+
+              <div className="flex gap-2">
+                <AnimatedButton
+                  variant="outline"
+                  onClick={handlePausePlace}
+                  disabled={!selected || isPausingPlace}
+                  className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10"
+                >
+                  {isPausingPlace ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Pausing...
+                    </>
+                  ) : (
+                    "⏸️ Pause Campaign"
+                  )}
+                </AnimatedButton>
+
+                <AnimatedButton
+                  variant="outline"
+                  onClick={handleUnpausePlace}
+                  disabled={!selected || isUnpausingPlace}
+                  className="flex-1 border-green-500/50 text-green-400 hover:bg-green-500/10"
+                >
+                  {isUnpausingPlace ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Unpausing...
+                    </>
+                  ) : (
+                    "▶️ Resume Campaign"
+                  )}
+                </AnimatedButton>
+              </div>
+            </div>
+
+            {/* Factory Pause Controls */}
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-red-400">Factory Controls</h4>
+              <p className="text-sm text-muted-foreground">
+                Pause or resume the entire factory to prevent/allow new campaign creation.
+              </p>
+
+              <div className="flex gap-2">
+                <AnimatedButton
+                  variant="outline"
+                  onClick={handlePauseFactory}
+                  disabled={isPausingFactory}
+                  className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10"
+                >
+                  {isPausingFactory ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Pausing...
+                    </>
+                  ) : (
+                    "🛑 Pause Factory"
+                  )}
+                </AnimatedButton>
+
+                <AnimatedButton
+                  variant="outline"
+                  onClick={handleUnpauseFactory}
+                  disabled={isUnpausingFactory}
+                  className="flex-1 border-green-500/50 text-green-400 hover:bg-green-500/10"
+                >
+                  {isUnpausingFactory ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Unpausing...
+                    </>
+                  ) : (
+                    "✅ Resume Factory"
+                  )}
+                </AnimatedButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
       {/* Messages de statut */}
-      {(isClosing || isCompleting) && (
+      {(isClosing || isCompleting || isPausingPlace || isUnpausingPlace || isPausingFactory || isUnpausingFactory) && (
         <GlassCard>
           <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
             <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
@@ -1016,6 +1428,39 @@ function OperationsTab() {
                 Veuillez signer dans votre wallet et attendre la confirmation.
               </p>
             </div>
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Success Messages */}
+      {pausePlaceSuccess && !isPausingPlace && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+            ✅ Campaign pausée avec succès !
+          </div>
+        </GlassCard>
+      )}
+
+      {unpausePlaceSuccess && !isUnpausingPlace && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+            ✅ Campaign reprise avec succès !
+          </div>
+        </GlassCard>
+      )}
+
+      {pauseFactorySuccess && !isPausingFactory && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+            ✅ Factory pausée avec succès ! Aucune nouvelle campaign ne peut être créée.
+          </div>
+        </GlassCard>
+      )}
+
+      {unpauseFactorySuccess && !isUnpausingFactory && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
+            ✅ Factory reprise avec succès ! Les campaigns peuvent à nouveau être créées.
           </div>
         </GlassCard>
       )}
@@ -1048,6 +1493,38 @@ function OperationsTab() {
         <GlassCard>
           <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
             ❌ Erreur lors de la complétion : {completeError.message || "Échec de la transaction"}
+          </div>
+        </GlassCard>
+      )}
+
+      {pausePlaceError && !isPausingPlace && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+            ❌ Erreur lors de la pause de la campaign : {pausePlaceError.message || "Échec de la transaction"}
+          </div>
+        </GlassCard>
+      )}
+
+      {unpausePlaceError && !isUnpausingPlace && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+            ❌ Erreur lors de la reprise de la campaign : {unpausePlaceError.message || "Échec de la transaction"}
+          </div>
+        </GlassCard>
+      )}
+
+      {pauseFactoryError && !isPausingFactory && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+            ❌ Erreur lors de la pause de la factory : {pauseFactoryError.message || "Échec de la transaction"}
+          </div>
+        </GlassCard>
+      )}
+
+      {unpauseFactoryError && !isUnpausingFactory && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
+            ❌ Erreur lors de la reprise de la factory : {unpauseFactoryError.message || "Échec de la transaction"}
           </div>
         </GlassCard>
       )}

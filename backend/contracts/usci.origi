@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/common/ERC2981.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./USCINFT.sol";
 
 /**
@@ -14,7 +13,7 @@ import "./USCINFT.sol";
  * @dev Enhanced security version with Pausable, rate limiting and ERC2981 royalties (4% to treasury)
  * @custom:security-contact security@usci.io
  */
-contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract USCI is ERC721, ERC2981, ReentrancyGuard, Pausable {
     // ============== STRUCTS ==============
 
     struct PlaceInfo {
@@ -61,9 +60,9 @@ contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, Reentranc
 
     // ============== STATE VARIABLES ==============
 
-    address public factory;
-    address public treasury;
-    address public nftRenderer;
+    address public immutable factory;
+    address public immutable treasury;
+    address public immutable nftRenderer;
     PlaceInfo public info;
 
     // NFT tracking
@@ -149,9 +148,9 @@ contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, Reentranc
         _;
     }
 
-    // ============== INITIALIZER ==============
+    // ============== CONSTRUCTOR ==============
 
-    function initialize(
+    constructor(
         address _factory,
         address _nftRenderer,
         uint256 _placeId,
@@ -172,20 +171,15 @@ contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, Reentranc
         string memory _metadataCid,
         bool _votingEnabled,
         address _treasury
-    ) external initializer {
+    ) ERC721(
+        string(abi.encodePacked("Puzzle NFT - ", _name)),
+        string(abi.encodePacked("PUZZLE-", _name))
+    ) {
         if (_factory == address(0)) revert InvalidFactory();
         if (_nftRenderer == address(0)) revert InvalidRenderer();
         if (_treasury == address(0)) revert InvalidTreasury();
         if (_totalPuzzles == 0) revert InvalidPuzzleCount();
         if (_puzzlePrice == 0) revert InvalidPrice();
-
-        __ERC721_init(
-            string(abi.encodePacked("Puzzle NFT - ", _name)),
-            string(abi.encodePacked("PUZZLE-", _name))
-        );
-        __ERC2981_init();
-        __ReentrancyGuard_init();
-        __Pausable_init();
 
         factory = _factory;
         nftRenderer = _nftRenderer;
@@ -533,7 +527,7 @@ contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, Reentranc
         public
         view
         virtual
-        override(ERC721Upgradeable, ERC2981Upgradeable)
+        override(ERC721, ERC2981)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

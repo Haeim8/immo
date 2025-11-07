@@ -268,3 +268,75 @@ export function useCloseProposal() {
 
   return { closeProposal, isPending: isPending || isConfirming, hash, error, isSuccess };
 }
+
+/**
+ * Hook pour pause une place
+ */
+export function usePausePlace() {
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const pausePlace = (placeAddress: `0x${string}`) => {
+    writeContract({
+      address: placeAddress,
+      abi: USCIABI,
+      functionName: 'pause',
+    });
+  };
+
+  return { pausePlace, isPending: isPending || isConfirming, hash, error, isSuccess };
+}
+
+/**
+ * Hook pour unpause une place
+ */
+export function useUnpausePlace() {
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const unpausePlace = (placeAddress: `0x${string}`) => {
+    writeContract({
+      address: placeAddress,
+      abi: USCIABI,
+      functionName: 'unpause',
+    });
+  };
+
+  return { unpausePlace, isPending: isPending || isConfirming, hash, error, isSuccess };
+}
+
+/**
+ * Hook pour pause la factory
+ */
+export function usePauseFactory() {
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const pauseFactory = () => {
+    writeContract({
+      address: FACTORY_ADDRESS,
+      abi: USCIFactoryABI,
+      functionName: 'pause',
+    });
+  };
+
+  return { pauseFactory, isPending: isPending || isConfirming, hash, error, isSuccess };
+}
+
+/**
+ * Hook pour unpause la factory
+ */
+export function useUnpauseFactory() {
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const unpauseFactory = () => {
+    writeContract({
+      address: FACTORY_ADDRESS,
+      abi: USCIFactoryABI,
+      functionName: 'unpause',
+    });
+  };
+
+  return { unpauseFactory, isPending: isPending || isConfirming, hash, error, isSuccess };
+}

@@ -22,19 +22,27 @@ if (!PROJECT_ID) {
 
 const chains = [base, baseSepolia] as const;
 
-const wagmiConfig = getDefaultConfig({
-  appName: APP_NAME,
-  projectId: PROJECT_ID ?? FALLBACK_PROJECT_ID,
-  chains,
-  ssr: true,
-  storage: createStorage({
-    storage: typeof window !== 'undefined' ? window.localStorage : noopStorage,
-  }),
-  transports: {
-    [base.id]: http('https://mainnet.base.org'),
-    [baseSepolia.id]: http('https://sepolia.base.org'),
-  },
-});
+// Singleton pour éviter la réinitialisation multiple
+let wagmiConfig: ReturnType<typeof getDefaultConfig> | null = null;
+
+function getWagmiConfig() {
+  if (!wagmiConfig) {
+    wagmiConfig = getDefaultConfig({
+      appName: APP_NAME,
+      projectId: PROJECT_ID ?? FALLBACK_PROJECT_ID,
+      chains,
+      ssr: true,
+      storage: createStorage({
+        storage: typeof window !== 'undefined' ? window.localStorage : noopStorage,
+      }),
+      transports: {
+        [base.id]: http('https://mainnet.base.org'),
+        [baseSepolia.id]: http('https://sepolia.base.org'),
+      },
+    });
+  }
+  return wagmiConfig;
+}
 
 const RainbowWrapper: FC<{ children: ReactNode }> = ({ children }) => {
   const [mounted, setMounted] = useState(false);
@@ -75,7 +83,7 @@ export const EVMWalletProvider: FC<{ children: ReactNode }> = ({ children }) => 
   );
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={getWagmiConfig()}>
       <QueryClientProvider client={queryClient}>
         <RainbowWrapper>{children}</RainbowWrapper>
       </QueryClientProvider>

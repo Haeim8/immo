@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "./USCI.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
  * @title USCIFactory
@@ -21,7 +22,7 @@ contract USCIFactory is AccessControl, Pausable {
     // ============== CONSTANTS ==============
 
     uint256 public constant MIN_PUZZLES = 5;
-    uint256 public constant MAX_PUZZLES = 10000;
+    uint256 public constant MAX_PUZZLES = 100_000; // Increased for high-value assets
     uint256 public constant MIN_SALE_DURATION = 1 days;
     uint256 public constant MAX_SALE_DURATION = 365 days;
 
@@ -29,7 +30,8 @@ contract USCIFactory is AccessControl, Pausable {
 
     address public admin;  // Kept for backwards compatibility
     address public treasury;
-    address public nftRenderer;  // USCINFT contract
+    address public immutable nftRenderer;  // USCINFT contract (never changes)
+    address public immutable usciImplementation;  // USCI implementation for cloning
     uint256 public placeCount;
 
     // Team management
@@ -83,13 +85,15 @@ contract USCIFactory is AccessControl, Pausable {
 
     // ============== CONSTRUCTOR ==============
 
-    constructor(address _treasury, address _nftRenderer) {
+    constructor(address _treasury, address _nftRenderer, address _usciImplementation) {
         if (_treasury == address(0)) revert InvalidAddress();
         if (_nftRenderer == address(0)) revert InvalidAddress();
+        if (_usciImplementation == address(0)) revert InvalidAddress();
 
         admin = msg.sender;
         treasury = _treasury;
         nftRenderer = _nftRenderer;
+        usciImplementation = _usciImplementation;
         placeCount = 0;
 
         // Setup roles
@@ -105,69 +109,73 @@ contract USCIFactory is AccessControl, Pausable {
      * @dev Enhanced parameter validation
      */
     function createPlace(
-        string memory _assetType,
-        string memory _name,
-        string memory _city,
-        string memory _province,
-        string memory _country,
-        uint256 _totalPuzzles,
-        uint256 _puzzlePrice,
-        uint256 _saleDuration,
-        uint32 _surface,
-        uint8 _rooms,
-        uint32 _expectedReturn,
-        string memory _placeType,
-        uint16 _yearBuilt,
-        string memory _imageCid,
-        string memory _metadataCid,
-        bool _votingEnabled
+        string memory assetType,
+        string memory name,
+        string memory city,
+        string memory province,
+        string memory country,
+        uint256 totalPuzzles,
+        uint256 puzzlePrice,
+        uint256 saleDuration,
+        uint32 surface,
+        uint8 rooms,
+        uint32 expectedReturn,
+        string memory placeType,
+        uint16 yearBuilt,
+        string memory imageCid,
+        string memory metadataCid,
+        bool votingEnabled
     ) external onlyAdminOrTeam whenNotPaused returns (address placeAddress) {
         // 🔒 Enhanced validation
-        if (_totalPuzzles < MIN_PUZZLES || _totalPuzzles > MAX_PUZZLES) {
+        if (totalPuzzles < MIN_PUZZLES || totalPuzzles > MAX_PUZZLES) {
             revert InvalidPuzzleCount();
         }
-        if (_puzzlePrice == 0) revert InvalidPrice();
-        if (_saleDuration < MIN_SALE_DURATION || _saleDuration > MAX_SALE_DURATION) {
+        if (puzzlePrice == 0) revert InvalidPrice();
+        if (saleDuration < MIN_SALE_DURATION || saleDuration > MAX_SALE_DURATION) {
             revert InvalidSaleDuration();
         }
 
-        // Deploy new place contract
-        USCI newPlace = new USCI(
-            address(this),
-            nftRenderer,
-            placeCount,
-            _assetType,
-            _name,
-            _city,
-            _province,
-            _country,
-            _totalPuzzles,
-            _puzzlePrice,
-            _saleDuration,
-            _surface,
-            _rooms,
-            _expectedReturn,
-            _placeType,
-            _yearBuilt,
-            _imageCid,
-            _metadataCid,
-            _votingEnabled,
-            treasury
-        );
+        // Clone USCI implementation (EIP-1167 Minimal Proxy)
+        placeAddress = Clones.clone(usciImplementation);
 
-        placeAddress = address(newPlace);
+        // Update state BEFORE external call (CEI pattern)
         places[placeCount] = placeAddress;
         isPlaceContract[placeAddress] = true;  // 🔒 Whitelist
 
-        emit PlaceCreated(
-            placeCount,
-            placeAddress,
-            _name,
-            _totalPuzzles,
-            _puzzlePrice
+        uint256 currentPlaceId = placeCount;
+        placeCount++;
+
+        // Initialize the clone (external call AFTER state changes)
+        USCI(placeAddress).initialize(
+            address(this),
+            nftRenderer,
+            currentPlaceId,
+            assetType,
+            name,
+            city,
+            province,
+            country,
+            totalPuzzles,
+            puzzlePrice,
+            saleDuration,
+            surface,
+            rooms,
+            expectedReturn,
+            placeType,
+            yearBuilt,
+            imageCid,
+            metadataCid,
+            votingEnabled,
+            treasury
         );
 
-        placeCount++;
+        emit PlaceCreated(
+            currentPlaceId,
+            placeAddress,
+            name,
+            totalPuzzles,
+            puzzlePrice
+        );
     }
 
     // ============== TEAM MANAGEMENT ==============
@@ -175,35 +183,35 @@ contract USCIFactory is AccessControl, Pausable {
     /**
      * @notice Add a team member with TEAM_ROLE
      */
-    function addTeamMember(address _member) external onlyAdmin {
-        if (_member == address(0)) revert InvalidAddress();
-        if (teamMembers[_member]) revert AlreadyTeamMember();
+    function addTeamMember(address member) external onlyAdmin {
+        if (member == address(0)) revert InvalidAddress();
+        if (teamMembers[member]) revert AlreadyTeamMember();
 
-        teamMembers[_member] = true;
-        teamMemberAddedAt[_member] = block.timestamp;
+        teamMembers[member] = true;
+        teamMemberAddedAt[member] = block.timestamp;
 
         // Grant TEAM_ROLE
-        grantRole(TEAM_ROLE, _member);
+        grantRole(TEAM_ROLE, member);
 
-        emit TeamMemberAdded(_member, msg.sender);
+        emit TeamMemberAdded(member, msg.sender);
     }
 
     /**
      * @notice Remove a team member
      */
-    function removeTeamMember(address _member) external onlyAdmin {
-        if (!teamMembers[_member]) revert NotATeamMember();
+    function removeTeamMember(address member) external onlyAdmin {
+        if (!teamMembers[member]) revert NotATeamMember();
 
-        teamMembers[_member] = false;
+        teamMembers[member] = false;
 
         // Revoke TEAM_ROLE
-        revokeRole(TEAM_ROLE, _member);
+        revokeRole(TEAM_ROLE, member);
 
-        emit TeamMemberRemoved(_member, msg.sender);
+        emit TeamMemberRemoved(member, msg.sender);
     }
 
-    function isTeamMember(address _member) external view returns (bool) {
-        return teamMembers[_member] || hasRole(TEAM_ROLE, _member);
+    function isTeamMember(address member) external view returns (bool) {
+        return teamMembers[member] || hasRole(TEAM_ROLE, member);
     }
 
     // ============== ADMIN ==============
@@ -211,30 +219,30 @@ contract USCIFactory is AccessControl, Pausable {
     /**
      * @notice Update admin with role transfer
      */
-    function updateAdmin(address _newAdmin) external onlyAdmin {
-        if (_newAdmin == address(0)) revert InvalidAddress();
+    function updateAdmin(address newAdmin) external onlyAdmin {
+        if (newAdmin == address(0)) revert InvalidAddress();
 
         address oldAdmin = admin;
-        admin = _newAdmin;
+        admin = newAdmin;
 
         // Transfer roles
-        grantRole(ADMIN_ROLE, _newAdmin);
-        grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
+        grantRole(ADMIN_ROLE, newAdmin);
+        grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         revokeRole(ADMIN_ROLE, oldAdmin);
 
-        emit AdminUpdated(oldAdmin, _newAdmin);
+        emit AdminUpdated(oldAdmin, newAdmin);
     }
 
     /**
      * @notice Update treasury address
      */
-    function setTreasury(address _newTreasury) external onlyAdmin {
-        if (_newTreasury == address(0)) revert InvalidAddress();
+    function setTreasury(address newTreasury) external onlyAdmin {
+        if (newTreasury == address(0)) revert InvalidAddress();
 
         address oldTreasury = treasury;
-        treasury = _newTreasury;
+        treasury = newTreasury;
 
-        emit TreasuryUpdated(oldTreasury, _newTreasury);
+        emit TreasuryUpdated(oldTreasury, newTreasury);
     }
 
     // ============== EMERGENCY ==============
@@ -258,11 +266,11 @@ contract USCIFactory is AccessControl, Pausable {
 
     // ============== VIEW FUNCTIONS ==============
 
-    function getPlaceAddress(uint256 _placeId) external view returns (address) {
-        return places[_placeId];
+    function getPlaceAddress(uint256 placeId) external view returns (address) {
+        return places[placeId];
     }
 
-    function isValidPlace(address _place) external view returns (bool) {
-        return isPlaceContract[_place];
+    function isValidPlace(address place) external view returns (bool) {
+        return isPlaceContract[place];
     }
 }

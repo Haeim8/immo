@@ -15,11 +15,20 @@ async function main() {
   const nftRendererAddress = await nftRenderer.getAddress();
   console.log("   ✅ USCINFT déployé à:", nftRendererAddress);
 
-  // 2. Deploy Factory
-  console.log("\n2️⃣  Déploiement de USCIFactory...");
+  // 2. Deploy USCI Implementation (for cloning)
+  console.log("\n2️⃣  Déploiement de USCI Implementation...");
+  const USCI = await hre.ethers.getContractFactory("USCI");
+  // Deploy with dummy parameters (will be initialized by clones)
+  const usciImplementation = await USCI.deploy();
+  await usciImplementation.waitForDeployment();
+  const usciImplementationAddress = await usciImplementation.getAddress();
+  console.log("   ✅ USCI Implementation déployé à:", usciImplementationAddress);
+
+  // 3. Deploy Factory
+  console.log("\n3️⃣  Déploiement de USCIFactory...");
   const treasury = deployer.address; // À changer avec votre trésorerie
   const USCIFactory = await hre.ethers.getContractFactory("USCIFactory");
-  const factory = await USCIFactory.deploy(treasury, nftRendererAddress);
+  const factory = await USCIFactory.deploy(treasury, nftRendererAddress, usciImplementationAddress);
   await factory.waitForDeployment();
 
   const factoryAddress = await factory.getAddress();
@@ -28,9 +37,10 @@ async function main() {
 
   console.log("\n📋 RÉSUMÉ DU DÉPLOIEMENT:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🎨 USCINFT:       ", nftRendererAddress);
-  console.log("🏭 USCIFactory:   ", factoryAddress);
-  console.log("💰 Treasury:      ", treasury);
+  console.log("🎨 USCINFT:            ", nftRendererAddress);
+  console.log("📄 USCI Implementation:", usciImplementationAddress);
+  console.log("🏭 USCIFactory:        ", factoryAddress);
+  console.log("💰 Treasury:           ", treasury);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   console.log("\n📋 Next steps:");

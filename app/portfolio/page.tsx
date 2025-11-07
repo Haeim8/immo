@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 export const dynamic = 'force-dynamic';
 import { motion } from "framer-motion";
@@ -14,6 +14,15 @@ import { useWalletAddress, useAllPlaces, useAllUserPuzzles, useEthPrice } from "
 import { useClaimRewards } from "@/lib/evm/write-hooks";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
 import { formatEther } from "viem";
+import { createPublicClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { USCIABI } from '@/lib/evm/abis';
+
+// Client public pour lecture
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http(),
+});
 
 export default function PortfolioPage() {
   const { address, isConnected } = useWalletAddress();
@@ -23,6 +32,8 @@ export default function PortfolioPage() {
   const { price: ethPrice } = useEthPrice();
   const { claimRewards } = useClaimRewards();
   const [claimingNFT, setClaimingNFT] = useState<string | null>(null);
+  const [rewardsData, setRewardsData] = useState<Record<string, { pending: bigint; earned: bigint }>>({});
+  const [, setLoadingRewards] = useState(false);
 
   const portfolioT = useTranslations("portfolio");
   const metricsT = useTranslations("portfolio.metrics");
@@ -30,11 +41,55 @@ export default function PortfolioPage() {
 
   const loading = loadingPlaces || loadingNFTs;
 
+  // Fetch pending rewards for all NFTs
+  useEffect(() => {
+    if (!isConnected || userNFTs.length === 0 || places.length === 0) {
+      setRewardsData({});
+      return;
+    }
+
+    async function fetchRewards() {
+      setLoadingRewards(true);
+      const newRewardsData: Record<string, { pending: bigint; earned: bigint }> = {};
+
+      try {
+        await Promise.all(
+          userNFTs.map(async (nft) => {
+            try {
+              const pending = await publicClient.readContract({
+                address: nft.placeAddress,
+                abi: USCIABI,
+                functionName: 'pendingRewards',
+                args: [nft.tokenId],
+              }) as bigint;
+
+              // TODO: Add totalRewardsClaimed tracking in contract for earned
+              const earned = 0n;
+
+              const key = `${nft.placeAddress}-${nft.tokenId.toString()}`;
+              newRewardsData[key] = { pending, earned };
+            } catch (err) {
+              console.error(`Error fetching rewards for token ${nft.tokenId}:`, err);
+            }
+          })
+        );
+
+        setRewardsData(newRewardsData);
+      } catch (error) {
+        console.error('Error fetching rewards:', error);
+      } finally {
+        setLoadingRewards(false);
+      }
+    }
+
+    fetchRewards();
+  }, [userNFTs, places, isConnected]);
+
   // Calculate totals from NFTs
   const { totalInvested, totalPendingDividends, totalDividendsEarned } = useMemo(() => {
     let invested = 0;
-    const pending = 0;
-    const earned = 0;
+    let pending = 0;
+    let earned = 0;
 
     userNFTs.forEach((nft) => {
       const place = places.find((p) => p.address.toLowerCase() === nft.placeAddress.toLowerCase());
@@ -43,8 +98,15 @@ export default function PortfolioPage() {
         const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
         invested += puzzlePriceUSD;
 
-        // TODO: Calculate actual pending and earned from contract
-        // For now, set to 0
+        // Get real pending and earned from contract
+        const key = `${nft.placeAddress}-${nft.tokenId.toString()}`;
+        const rewards = rewardsData[key];
+        if (rewards) {
+          const pendingETH = parseFloat(formatEther(rewards.pending));
+          const earnedETH = parseFloat(formatEther(rewards.earned));
+          pending += pendingETH * ethPrice.usd;
+          earned += earnedETH * ethPrice.usd;
+        }
       }
     });
 
@@ -53,7 +115,7 @@ export default function PortfolioPage() {
       totalPendingDividends: pending,
       totalDividendsEarned: earned,
     };
-  }, [userNFTs, places, ethPrice.usd]);
+  }, [userNFTs, places, ethPrice.usd, rewardsData]);
 
   const totalInvestedFormatted = formatCurrency(totalInvested);
   const totalDividendsEarnedFormatted = formatCurrency(totalDividendsEarned);
@@ -250,12 +312,19 @@ export default function PortfolioPage() {
                       const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
                       const priceFormatted = formatCurrency(puzzlePriceUSD, { maximumFractionDigits: 2 });
 
-                      // TODO: Get actual earned and pending from contract
-                      const earnedFormatted = formatCurrency(0, { maximumFractionDigits: 2 });
-                      const pendingFormatted = formatCurrency(0, { maximumFractionDigits: 2 });
-
+                      // Get actual earned and pending from contract
                       const tokenId = nft.tokenId.toString();
+                      const key = `${nft.placeAddress}-${tokenId}`;
+                      const rewards = rewardsData[key];
+                      const pendingETH = rewards ? parseFloat(formatEther(rewards.pending)) : 0;
+                      const earnedETH = rewards ? parseFloat(formatEther(rewards.earned)) : 0;
+                      const pendingUSD = pendingETH * ethPrice.usd;
+                      const earnedUSD = earnedETH * ethPrice.usd;
+                      const earnedFormatted = formatCurrency(earnedUSD, { maximumFractionDigits: 2 });
+                      const pendingFormatted = formatCurrency(pendingUSD, { maximumFractionDigits: 2 });
+
                       const isClaimingThis = claimingNFT === `${nft.placeAddress}-${tokenId}`;
+                      const roiPercent = puzzlePriceUSD > 0 ? ((earnedUSD / puzzlePriceUSD) * 100).toFixed(2) : '0.00';
 
                       return (
                         <motion.div
@@ -324,7 +393,9 @@ export default function PortfolioPage() {
                               <div className="pt-4 border-t border-white/10">
                                 <div className="flex justify-between text-sm">
                                   <span className="text-muted-foreground">{portfolioT("roiLabel")}</span>
-                                  <span className="font-semibold text-green-400">+0.00%</span>
+                                  <span className={`font-semibold ${parseFloat(roiPercent) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                    {parseFloat(roiPercent) >= 0 ? '+' : ''}{roiPercent}%
+                                  </span>
                                 </div>
                               </div>
                             </div>
