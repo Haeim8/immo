@@ -8,6 +8,7 @@ import AnimatedButton from "@/components/atoms/AnimatedButton";
 import { useAllPlaces } from "@/lib/evm/hooks";
 import { useMemo } from "react";
 import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
+import { FACTORY_ADDRESS, BLOCK_EXPLORER_URL } from "@/lib/evm/constants";
 
 export default function HeroSection() {
   const { places } = useAllPlaces();
@@ -25,7 +26,7 @@ export default function HeroSection() {
       totalProjectsFunded: totalProjects,
       totalValueDistributed,
       activeInvestors,
-      blockchainExplorerUrl: "https://sepolia.basescan.org/",
+      blockchainExplorerUrl: `${BLOCK_EXPLORER_URL}/address/${FACTORY_ADDRESS}`,
     };
   }, [places]);
 
