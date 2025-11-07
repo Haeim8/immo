@@ -8,8 +8,8 @@ import { baseSepolia } from 'viem/chains';
 export const CHAIN = baseSepolia;
 
 // Deployed contract addresses on Base Sepolia v2 (Proxy Pattern + OpenSea)
-export const USCINFT_ADDRESS = '0xF0d2b21e3aD9C7f6021Dacc24B0F1bDb4FE5CbD9' as const;
-export const FACTORY_ADDRESS = '0xf44C9E702E36234cD1D72760D88861F257Ed1c35' as const;
+export const USCINFT_ADDRESS = '0x2D2E411334f796dE445fD24aF64CaF4118D7551c' as const;
+export const FACTORY_ADDRESS = '0x1f03d4D72c23B226DF330Bd8D647253FEc4574FC' as const;
 
 // RPC Configuration
 export const BASE_SEPOLIA_RPC = 'https://sepolia.base.org';
