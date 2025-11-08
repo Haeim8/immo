@@ -3,58 +3,24 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "@/components/providers/IntlProvider";
-import { DiscordLogoIcon, TwitterLogoIcon, InstagramLogoIcon } from "@radix-ui/react-icons";
-import { Facebook, Linkedin } from "lucide-react";
+import { DiscordLogoIcon, TwitterLogoIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
 import { cn } from "@/lib/utils";
-
-const TikTokIcon = ({
-  className,
-  ...props
-}: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    {...props}
-  >
-    <path
-      d="M13.5 3v8.05a3.45 3.45 0 1 1-2.4-3.29V5.1A5.9 5.9 0 0 0 7 11.01 5.99 5.99 0 1 0 15 17V7.38a5.25 5.25 0 0 0 3.42 1.24V6.5A2.75 2.75 0 0 1 15.67 3h-2.17z"
-      fill="currentColor"
-    />
-  </svg>
-);
 
 const socials = [
   {
-    href: "https://usci.tech/discord",
+    href: "https://discord.gg/vPzTuH8Tj",
     Icon: DiscordLogoIcon,
     label: "Discord",
   },
   {
-    href: "https://usci.tech/x",
+    href: "https://x.com/usci_protocole?t=2trr-LLTAeEC3B8nQo9_mw&s=09",
     Icon: TwitterLogoIcon,
     label: "X",
   },
   {
-    href: "https://usci.tech/instagram",
-    Icon: InstagramLogoIcon,
-    label: "Instagram",
-  },
-  {
-    href: "https://usci.tech/tiktok",
-    Icon: TikTokIcon,
-    label: "TikTok",
-  },
-  {
-    href: "https://usci.tech/linkedin",
-    Icon: Linkedin,
-    label: "LinkedIn",
-  },
-  {
-    href: "https://usci.tech/facebook",
-    Icon: Facebook,
-    label: "Facebook",
+    href: "https://github.com/joyco-studio",
+    Icon: GitHubLogoIcon,
+    label: "GitHub",
   },
 ];
 
