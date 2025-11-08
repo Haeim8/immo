@@ -327,11 +327,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       admin: "Admin",
     },
     hero: {
-      titleLine1: "Immobilier tokenisé",
+      titleLine1: "Actifs tokenisés",
       titleLine2: "Plateforme d'investissement",
       subtitle:
-        "Accédez à des actifs immobiliers premium grâce à la blockchain. Investissez, gagnez des revenus passifs et suivez vos actifs en temps réel.",
-      exploreCTA: "Explorer les propriétés",
+        "Accédez à des actifs premium grâce à la blockchain. Investissez, gagnez des revenus passifs et suivez vos actifs en temps réel.",
+      exploreCTA: "Explorer les projets",
       explorerCTA: "Voir sur la blockchain",
       metrics: {
         projects: "Projets financés",
@@ -341,12 +341,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     propertyGrid: {
       title: "Opportunités d'investissement",
-      subtitle: "Découvrez notre sélection de propriétés immobilières tokenisées",
-      loading: "Chargement des propriétés depuis la blockchain...",
+      subtitle: "Découvrez notre sélection d'actifs tokenisés",
+      loading: "Chargement des projets depuis la blockchain...",
       errorTitle: "Opportunités d'investissement",
-      errorText: "Erreur lors du chargement des propriétés : {{error}}",
-      emptyText: "Aucune propriété disponible pour le moment. Soyez le premier à en créer une !",
-      createHint: "Connectez votre wallet et allez dans l'admin pour créer des propriétés.",
+      errorText: "Erreur lors du chargement des projets : {{error}}",
+      emptyText: "Aucun projet disponible actuellement.",
+      createHint: "Connectez votre wallet et allez dans l'admin pour créer des projets.",
     },
     propertyContainer: {
       searchPlaceholder: "Rechercher par nom ou localisation...",
@@ -357,13 +357,13 @@ export const dictionaries: Record<Locale, Dictionary> = {
       sortPriceAsc: "Prix croissant",
       sortPriceDesc: "Prix décroissant",
       sortReturnDesc: "Rendement décroissant",
-      propertyType: "Type de propriété",
+      propertyType: "Type de projet",
       fundingStatus: "Statut de financement",
       clearFilters: "Effacer les filtres",
-      clearFiltersToSeeAll: "Effacer les filtres pour voir toutes les propriétés",
+      clearFiltersToSeeAll: "Effacer les filtres pour voir tous les projets",
       showingResults: ({ start, end, total }) =>
-        `Affichage de ${start} à ${end} sur ${total} propriété${total > 1 ? "s" : ""}`,
-      noResults: "Aucune propriété ne correspond à vos critères.",
+        `Affichage de ${start} à ${end} sur ${total} projet${total > 1 ? "s" : ""}`,
+      noResults: "Aucun projet ne correspond à vos critères.",
       type: {
         all: "Tous types",
         residential: "Résidentiel",
@@ -600,7 +600,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       disabled: "Désactivé",
     },
     footer: {
-      copyright: "© 2025 USCI - Immobilier sur blockchain",
+      copyright: "© 2025 USCI - Actifs sur blockchain",
       contactLabel: "Contact",
       contactEmail: "contrat@usci.tech",
       cgv: "CGV",
@@ -639,11 +639,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       admin: "Admin",
     },
     hero: {
-      titleLine1: "Tokenized real estate",
+      titleLine1: "Tokenized assets",
       titleLine2: "Investment platform",
       subtitle:
-        "Access premium real estate through blockchain technology. Invest, earn passive income, and monitor your assets in real time.",
-      exploreCTA: "Explore properties",
+        "Access premium assets through blockchain technology. Invest, earn passive income, and monitor your assets in real time.",
+      exploreCTA: "Explore projects",
       explorerCTA: "View on blockchain",
       metrics: {
         projects: "Projects funded",
@@ -653,12 +653,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     propertyGrid: {
       title: "Investment opportunities",
-      subtitle: "Explore our curated selection of tokenized real estate properties",
-      loading: "Loading properties from the blockchain...",
+      subtitle: "Explore our curated selection of tokenized assets",
+      loading: "Loading projects from the blockchain...",
       errorTitle: "Investment opportunities",
-      errorText: "Error loading properties: {{error}}",
-      emptyText: "No properties available yet. Be the first to create one!",
-      createHint: "Connect your wallet and open the admin panel to create properties.",
+      errorText: "Error loading projects: {{error}}",
+      emptyText: "No projects available yet.",
+      createHint: "Connect your wallet and open the admin panel to create projects.",
     },
     propertyContainer: {
       searchPlaceholder: "Search by name or location...",
@@ -669,13 +669,13 @@ export const dictionaries: Record<Locale, Dictionary> = {
       sortPriceAsc: "Price (Low to High)",
       sortPriceDesc: "Price (High to Low)",
       sortReturnDesc: "Return (High to Low)",
-      propertyType: "Property type",
+      propertyType: "Project type",
       fundingStatus: "Funding status",
       clearFilters: "Clear filters",
-      clearFiltersToSeeAll: "Clear filters to see all properties",
+      clearFiltersToSeeAll: "Clear filters to see all projects",
       showingResults: ({ start, end, total }) =>
-        `Showing ${start} to ${end} of ${total} propert${total > 1 ? "ies" : "y"}`,
-      noResults: "No properties match your criteria.",
+        `Showing ${start} to ${end} of ${total} project${total > 1 ? "s" : ""}`,
+      noResults: "No projects match your criteria.",
       type: {
         all: "All types",
         residential: "Residential",
@@ -912,7 +912,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       disabled: "Disabled",
     },
     footer: {
-      copyright: "© 2025 USCI - Blockchain Real Estate",
+      copyright: "© 2025 USCI - Blockchain Assets",
       contactLabel: "Contact",
       contactEmail: "contrat@usci.tech",
       cgv: "Terms of Sale (CGV)",
@@ -951,11 +951,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       admin: "Admin",
     },
     hero: {
-      titleLine1: "Inmobiliaria tokenizada",
+      titleLine1: "Activos tokenizados",
       titleLine2: "Plataforma de inversión",
       subtitle:
-        "Accede a inmuebles premium a través de la tecnología blockchain. Invierte, genera ingresos pasivos y controla tus activos en tiempo real.",
-      exploreCTA: "Explorar propiedades",
+        "Accede a activos premium a través de la tecnología blockchain. Invierte, genera ingresos pasivos y controla tus activos en tiempo real.",
+      exploreCTA: "Explorar proyectos",
       explorerCTA: "Ver en la blockchain",
       metrics: {
         projects: "Proyectos financiados",
@@ -965,12 +965,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     propertyGrid: {
       title: "Oportunidades de inversión",
-      subtitle: "Explora nuestra selección de propiedades inmobiliarias tokenizadas",
-      loading: "Cargando propiedades desde la blockchain...",
+      subtitle: "Explora nuestra selección de activos tokenizados",
+      loading: "Cargando proyectos desde la blockchain...",
       errorTitle: "Oportunidades de inversión",
-      errorText: "Error al cargar las propiedades: {{error}}",
-      emptyText: "Aún no hay propiedades disponibles. ¡Sé el primero en crear una!",
-      createHint: "Conecta tu wallet y ve al panel de administración para crear propiedades.",
+      errorText: "Error al cargar los proyectos: {{error}}",
+      emptyText: "Aún no hay proyectos disponibles.",
+      createHint: "Conecta tu wallet y ve al panel de administración para crear proyectos.",
     },
     propertyContainer: {
       searchPlaceholder: "Buscar por nombre o ubicación...",
@@ -981,13 +981,13 @@ export const dictionaries: Record<Locale, Dictionary> = {
       sortPriceAsc: "Precio (Menor a Mayor)",
       sortPriceDesc: "Precio (Mayor a Menor)",
       sortReturnDesc: "Rentabilidad (Mayor a Menor)",
-      propertyType: "Tipo de propiedad",
+      propertyType: "Tipo de proyecto",
       fundingStatus: "Estado de financiación",
       clearFilters: "Limpiar filtros",
-      clearFiltersToSeeAll: "Limpiar filtros para ver todas las propiedades",
+      clearFiltersToSeeAll: "Limpiar filtros para ver todos los proyectos",
       showingResults: ({ start, end, total }) =>
-        `Mostrando ${start} a ${end} de ${total} propiedad${total > 1 ? "es" : ""}`,
-      noResults: "No hay propiedades que coincidan con tus criterios.",
+        `Mostrando ${start} a ${end} de ${total} proyecto${total > 1 ? "s" : ""}`,
+      noResults: "No hay proyectos que coincidan con tus criterios.",
       type: {
         all: "Todos los tipos",
         residential: "Residencial",
@@ -1224,7 +1224,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       disabled: "Desactivado",
     },
     footer: {
-      copyright: "© 2025 USCI - Bienes raíces en blockchain",
+      copyright: "© 2025 USCI - Activos en blockchain",
       contactLabel: "Contacto",
       contactEmail: "contrat@usci.tech",
       cgv: "Condiciones generales de venta (CGV)",

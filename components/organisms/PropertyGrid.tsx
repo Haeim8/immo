@@ -49,21 +49,21 @@ export default function PropertyGrid() {
 
   if (places.length === 0) {
     return (
-      <section className="py-20">
+      <section className="py-12 md:py-16">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-12"
+            className="text-center mb-8 md:mb-10"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4">
               <GradientText>{gridT("title")}</GradientText>
             </h2>
-            <p className="text-muted-foreground text-lg mb-4">
+            <p className="text-muted-foreground text-base mb-3">
               {gridT("emptyText")}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs md:text-sm text-muted-foreground">
               {gridT("createHint")}
             </p>
           </motion.div>

@@ -1,8 +1,8 @@
-# USCI - Tokenized Real Estate Investment
+# USCI - Tokenized Asset Investment
 
 ## Description
 
-Next.js application for tokenized real estate investment. This MVP features a modern interface to view and invest in blockchain-tokenized properties.
+Next.js application for tokenized asset investment. This MVP features a modern interface to view and invest in blockchain-tokenized assets.
 
 ## Fonctionnalités
 
@@ -24,9 +24,9 @@ Next.js application for tokenized real estate investment. This MVP features a mo
   - Lien vers l'explorateur blockchain
 
 - **Cards d'investissement:**
-  - Image du bien
+  - Image du projet
   - Prix en USD
-  - Localisation (ville, province)
+  - Localisation
   - Valeur estimée
   - Rendement attendu
   - Progression du financement
@@ -121,7 +121,7 @@ immo/
 
 Le projet utilise des données mockées pour la démonstration:
 
-- 4 propriétés d'investissement (Paris, Lyon, Nice, Bordeaux)
+- 4 projets d'investissement
 - Portfolio avec 2 investissements
 - Métriques globales de la plateforme
 - Historique de dividendes
@@ -136,7 +136,7 @@ Pour transformer ce MVP en application production:
    - Gestion des transactions blockchain
 
 2. **Backend:**
-   - API pour les données immobilières
+   - API pour les données de projets
    - Base de données (PostgreSQL, MongoDB)
    - Authentification utilisateur
 

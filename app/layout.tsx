@@ -14,8 +14,8 @@ import ErrorFilter from "@/components/ErrorFilter";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "USCI - Tokenized Real Estate Investment",
-  description: "Blockchain-powered real estate investment platform",
+  title: "USCI - Tokenized Asset Investment",
+  description: "Blockchain-powered asset investment platform",
   viewport: {
     width: "device-width",
     initialScale: 1,
