@@ -17,7 +17,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen px-2 md:px-0">
 
-      <main className="pb-20 md:pb-6">
+      <main className="pb-6">
         <div className="container mx-auto px-4 md:px-6 max-w-4xl">
           {/* Header */}
           <motion.div

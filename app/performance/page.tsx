@@ -54,7 +54,7 @@ export default function PerformancePage() {
 
   return (
     <div className="min-h-screen px-2 md:px-0">
-      <main className="pb-20 md:pb-6">
+      <main className="pb-6">
         <div className="container mx-auto px-4 md:px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -79,12 +79,12 @@ export default function PerformancePage() {
           )}
 
           {!loading && sortedPerformance.length === 0 && (
-            <GlassCard className="text-center py-24">
-              <BarChart3 className="h-16 w-16 mx-auto mb-6 text-cyan-400/50" />
-              <h2 className="text-2xl font-bold mb-4">
+            <GlassCard className="text-center py-10">
+              <BarChart3 className="h-12 w-12 mx-auto mb-4 text-cyan-400/50" />
+              <h2 className="text-lg font-bold mb-2">
                 <GradientText>{performanceT("noProperties")}</GradientText>
               </h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
                 {performanceT("noPropertiesText")}
               </p>
             </GlassCard>

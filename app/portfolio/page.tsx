@@ -139,7 +139,7 @@ export default function PortfolioPage() {
 
   return (
     <div className="min-h-screen px-2 md:px-0">
-      <main className="pb-20 md:pb-6">
+      <main className="pb-6">
         <div className="container mx-auto px-4 md:px-6">
           {/* Header */}
           <motion.div
@@ -202,11 +202,11 @@ export default function PortfolioPage() {
                   >
                     <AnimatedButton
                       variant="primary"
-                      size="lg"
+                      size="sm"
                       onClick={() => openConnectModal?.()}
-                      className="text-lg px-8 py-6"
+                      className="text-base px-6 py-3"
                     >
-                      <Wallet className="mr-2 h-5 w-5" />
+                      <Wallet className="mr-2 h-4 w-4" />
                       {portfolioT("connectButton")}
                     </AnimatedButton>
                   </motion.div>
@@ -215,7 +215,7 @@ export default function PortfolioPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.7 }}
-                    className="text-sm text-muted-foreground mt-6"
+                    className="text-xs text-muted-foreground mt-4"
                   >
                     {portfolioT("connectHint")}
                   </motion.p>

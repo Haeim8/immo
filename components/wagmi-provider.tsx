@@ -2,25 +2,11 @@
 
 import { FC, ReactNode, useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  RainbowKitProvider,
-  getDefaultConfig,
-} from '@rainbow-me/rainbowkit';
+import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
-import { WagmiProvider, http, createStorage, noopStorage } from 'wagmi';
-import { base, baseSepolia } from 'wagmi/chains';
-
-const APP_NAME = 'USCI';
-const PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-const FALLBACK_PROJECT_ID = '21fef48091f12692cad574a6f7753643';
-
-if (!PROJECT_ID) {
-  console.warn(
-    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID n'est pas defini. WalletConnect utilisera un identifiant de secours."
-  );
-}
-
-const chains = [base, baseSepolia] as const;
+import { WagmiProvider, http, createStorage, cookieStorage } from 'wagmi';
+import { APP_NAME, PROJECT_ID, chains } from '@/lib/wagmi-config';
+import { baseSepolia, base } from 'wagmi/chains';
 
 // Singleton pour éviter la réinitialisation multiple
 let wagmiConfig: ReturnType<typeof getDefaultConfig> | null = null;
@@ -29,11 +15,11 @@ function getWagmiConfig() {
   if (!wagmiConfig) {
     wagmiConfig = getDefaultConfig({
       appName: APP_NAME,
-      projectId: PROJECT_ID ?? FALLBACK_PROJECT_ID,
+      projectId: PROJECT_ID!,
       chains,
       ssr: true,
       storage: createStorage({
-        storage: typeof window !== 'undefined' ? window.localStorage : noopStorage,
+        storage: cookieStorage,
       }),
       transports: {
         [base.id]: http('https://mainnet.base.org'),

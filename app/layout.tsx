@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
 export const dynamic = 'force-dynamic';
 import { ThemeProvider } from "@/components/theme-provider";
 import { EVMWalletProvider } from "@/components/wagmi-provider";
-import MobileNav from "@/components/organisms/MobileNav";
 import { IntlProvider } from "@/components/providers/IntlProvider";
 import HeaderContent from "@/components/HeaderContent";
 import FooterContent from "@/components/FooterContent";
@@ -16,11 +15,12 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "USCI - Tokenized Asset Investment",
   description: "Blockchain-powered asset investment platform",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
@@ -40,17 +40,16 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <EVMWalletProvider>
-              <div className="fixed inset-0 border-0 md:border-[10px] border-background rounded-none md:rounded-[30px] flex flex-col m-0 md:m-[10px]">
-                <header className="bg-background flex-shrink-0 z-40 w-full flex items-center h-[50px] md:h-[80px]">
+              <div className="fixed inset-0 bg-background border-0 md:border-[10px] border-background rounded-none md:rounded-[30px] flex flex-col m-0 md:m-[10px]">
+                <header className="bg-background flex-shrink-0 z-40 w-full flex items-center h-[60px] md:h-[80px] pt-safe">
                   <HeaderContent />
                 </header>
-                <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide rounded-none md:rounded-tl-[15px] md:rounded-tr-[15px] md:rounded-bl-[15px] md:rounded-br-[15px] pb-20 md:pb-0" style={{ backgroundColor: 'hsl(var(--muted) / 0.6)' }}>
+                <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide rounded-none md:rounded-tl-[15px] md:rounded-tr-[15px] md:rounded-bl-[15px] md:rounded-br-[15px] md:pb-0" style={{ backgroundColor: 'hsl(var(--muted) / 0.6)' }}>
                   {children}
                 </div>
                 <footer className="hidden md:block bg-background flex-shrink-0 w-full px-6 py-5">
                   <FooterContent />
                 </footer>
-                <MobileNav />
               </div>
             </EVMWalletProvider>
           </ThemeProvider>

@@ -53,7 +53,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen px-2 md:px-0">
-      <main className="pb-20 md:pb-6">
+      <main className="pb-6">
         <div className="container mx-auto px-4 md:px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -74,15 +74,15 @@ export default function LeaderboardPage() {
               <p className="text-muted-foreground">{leaderboardT("loading")}</p>
             </div>
           ) : leaderboardData.length === 0 ? (
-            <GlassCard className="text-center py-24">
-              <div className="max-w-2xl mx-auto px-4">
-                <div className="p-6 rounded-full bg-gradient-to-br from-yellow-400/20 to-amber-600/20 border border-yellow-400/30 inline-flex mb-6">
-                  <Trophy className="h-12 w-12 text-yellow-400" />
+            <GlassCard className="text-center py-10">
+              <div className="max-w-md mx-auto px-4">
+                <div className="p-4 rounded-full bg-gradient-to-br from-yellow-400/20 to-amber-600/20 border border-yellow-400/30 inline-flex mb-4">
+                  <Trophy className="h-10 w-10 text-yellow-400" />
                 </div>
-                <h2 className="text-2xl font-bold mb-4">
+                <h2 className="text-lg font-bold mb-2">
                   <GradientText>{leaderboardT("noInvestors")}</GradientText>
                 </h2>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-sm text-muted-foreground">
                   {leaderboardT("noInvestorsText")}
                 </p>
               </div>
