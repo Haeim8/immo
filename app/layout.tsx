@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Tomorrow } from "next/font/google";
 import "./globals.css";
 
 export const dynamic = 'force-dynamic';
@@ -10,11 +10,15 @@ import HeaderContent from "@/components/HeaderContent";
 import FooterContent from "@/components/FooterContent";
 import ErrorFilter from "@/components/ErrorFilter";
 
-const inter = Inter({ subsets: ["latin"] });
+const tomorrow = Tomorrow({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
+});
 
 export const metadata: Metadata = {
-  title: "USCI - Tokenized Asset Investment",
-  description: "Blockchain-powered asset investment platform",
+  title: "USCI - Tokenized Claims & Real Assets",
+  description: " RWA Multi Blockchain-powered ",
 };
 
 export const viewport: Viewport = {
@@ -29,8 +33,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={tomorrow.className}>
         <ErrorFilter />
         <IntlProvider>
           <ThemeProvider

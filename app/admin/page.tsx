@@ -47,8 +47,8 @@ import {
   usePauseFactory,
   useUnpauseFactory,
   useCreateProposal,
-  // useCastVote,
-  // useCloseProposal,
+  useCastVote,
+  useCloseProposal,
 } from "@/lib/evm/write-hooks";
 import { formatEther, parseEther } from "viem";
 
