@@ -252,7 +252,7 @@ export default function AccessCodePage() {
                       size="lg"
                       className="w-full h-14 text-lg font-semibold rounded-[30px] transition-all hover:bg-secondary/80 backdrop-blur-xl bg-secondary/60 border-border/40 shadow-lg"
                     >
-                      Back to waitlist
+                      Get your access
                     </Button>
                   </Link>
                 </div>
