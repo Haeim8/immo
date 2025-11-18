@@ -602,7 +602,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     footer: {
       copyright: "© 2025 USCI - Actifs sur blockchain",
       contactLabel: "Contact",
-      contactEmail: "contrat@usci.tech",
+      contactEmail: "contact@usci.tech",
       cgv: "CGV",
       cgu: "CGU",
     },
@@ -914,7 +914,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     footer: {
       copyright: "© 2025 USCI - Blockchain Assets",
       contactLabel: "Contact",
-      contactEmail: "contrat@usci.tech",
+      contactEmail: "contact@usci.tech",
       cgv: "Terms of Sale (CGV)",
       cgu: "Terms of Use (CGU)",
     },
@@ -1226,7 +1226,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     footer: {
       copyright: "© 2025 USCI - Activos en blockchain",
       contactLabel: "Contacto",
-      contactEmail: "contrat@usci.tech",
+      contactEmail: "contact@usci.tech",
       cgv: "Condiciones generales de venta (CGV)",
       cgu: "Condiciones generales de uso (CGU)",
     },
