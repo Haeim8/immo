@@ -10,7 +10,7 @@ export default function MobileNav() {
   const navT = useTranslations("navbar");
 
   const navItems = [
-    { href: "/", icon: Home, labelKey: "home" },
+    { href: "/home", icon: Home, labelKey: "home" },
     { href: "/portfolio", icon: TrendingUp, labelKey: "portfolio" },
     { href: "/leaderboard", icon: Trophy, labelKey: "leaderboard" },
     { href: "/performance", icon: BarChart3, labelKey: "performance" },

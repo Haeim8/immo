@@ -39,7 +39,7 @@ export default function HeaderContent() {
   const canAccessAdmin = isAdmin || (isTeamMember ?? false);
 
   const mobileMenuItems = [
-    { href: "/", label: navT("home"), icon: Home },
+    { href: "/home", label: navT("home"), icon: Home },
     { href: "/portfolio", label: navT("portfolio"), icon: Wallet },
     { href: "/leaderboard", label: navT("leaderboard"), icon: Trophy },
     { href: "/performance", label: navT("performance"), icon: BarChart3 },
@@ -77,9 +77,9 @@ export default function HeaderContent() {
         {/* Navigation Links - centered */}
         <div className="flex-1 flex justify-start min-w-0 pl-12">
           <div className="hidden md:flex items-stretch gap-2 p-1.5 rounded-3xl backdrop-blur-xl bg-muted/40 border border-border/50 shadow-[0_8px_32px_0_rgba(255,255,255,0.1)] max-w-full">
-            <NavLink href="/" active={pathname === "/"}>
-              <div className={`px-5 py-2.5 rounded-2xl transition-all duration-300 ${pathname === "/" ? "bg-background/90 backdrop-blur-sm shadow-[0_4px_16px_0_rgba(255,255,255,0.2)]" : "hover:bg-background/40"}`}>
-                <span className={`text-sm font-medium ${pathname === "/" ? "text-foreground" : "text-muted-foreground"}`}>
+            <NavLink href="/home" active={pathname === "/home"}>
+              <div className={`px-5 py-2.5 rounded-2xl transition-all duration-300 ${pathname === "/home" ? "bg-background/90 backdrop-blur-sm shadow-[0_4px_16px_0_rgba(255,255,255,0.2)]" : "hover:bg-background/40"}`}>
+                <span className={`text-sm font-medium ${pathname === "/home" ? "text-foreground" : "text-muted-foreground"}`}>
                   {navT("home")}
                 </span>
               </div>
@@ -119,7 +119,7 @@ export default function HeaderContent() {
 
           {/* Network Selector - Base - Hidden on mobile */}
           <div className="hidden sm:block">
-            <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+            <Select value={selectedNetwork} onValueChange={(value) => setSelectedNetwork(value as "sepolia" | "mainnet")}>
               <SelectTrigger className="w-auto whitespace-nowrap bg-white/5 border-white/10 px-2 md:px-3 text-xs md:text-sm">
                 <SelectValue />
               </SelectTrigger>
