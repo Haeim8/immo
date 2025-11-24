@@ -246,7 +246,7 @@ export default function AccessCodePage() {
                     {isVerifying ? 'Verifying...' : 'Verify code'}
                   </Button>
 
-                  <Link href="https://waitlist.usci.tech" target="_blank" className="block">
+                  <Link href="https://waitlist.cantorfi.tech" target="_blank" className="block">
                     <Button
                       variant="outline"
                       size="lg"

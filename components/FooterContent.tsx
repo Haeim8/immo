@@ -13,12 +13,12 @@ const socials = [
     label: "Discord",
   },
   {
-    href: "https://x.com/usci_protocole?t=2trr-LLTAeEC3B8nQo9_mw&s=09",
+    href: "https://x.com/cantorfi_protocole?t=2trr-LLTAeEC3B8nQo9_mw&s=09",
     Icon: TwitterLogoIcon,
     label: "X",
   },
   {
-    href: "https://github.com/usci",
+    href: "https://github.com/cantorfi",
     Icon: GitHubLogoIcon,
     label: "GitHub",
   },

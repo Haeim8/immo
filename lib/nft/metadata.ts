@@ -1,6 +1,6 @@
 /**
  * NFT Metadata Generator
- * Creates ERC-721 compatible metadata for USCI share NFTs
+ * Creates ERC-721 compatible metadata for CANTORFI share NFTs
  */
 
 const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || "";
@@ -85,7 +85,7 @@ export function generateNFTMetadata(
     property.description ??
     `Ownership certificate for 1 share of ${property.name}. This NFT represents fractional participation in a ${assetType} asset located in ${property.city}, ${property.country}. Share #${shareNumber} out of ${totalShares} total shares.`;
   const externalUrl = property.propertyId
-    ? `https://usci.com/property/${property.propertyId}`
+    ? `https://cantorfi.com/property/${property.propertyId}`
     : undefined;
 
   return {
@@ -181,10 +181,10 @@ export function generateNFTMetadata(
         : undefined,
     },
     seller_fee_basis_points: 250, // 2.5% secondary sales royalty
-    symbol: "USCI",
+    symbol: "CANTORFI",
     collection: {
-      name: "USCI Real Estate",
-      family: "USCI",
+      name: "CANTORFI Real Estate",
+      family: "CANTORFI",
     },
   };
 }

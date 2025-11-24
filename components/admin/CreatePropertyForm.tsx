@@ -20,7 +20,7 @@ import { createPropertyMetadata, uploadPropertyMetadata } from '@/lib/pinata/met
 import { ASSET_TYPE_OPTIONS, PLACE_TYPE_OPTIONS, COUNTRY_CODES } from '@/lib/data/propertyOptions';
 import { useIntl } from '@/components/providers/IntlProvider';
 
-const FORM_STORAGE_KEY = 'usci:admin:create-form';
+const FORM_STORAGE_KEY = 'cantorfi:admin:create-form';
 
 // Types d'actifs où le nombre de pièces n'a pas de sens
 const ASSET_TYPES_WITHOUT_ROOMS = ['vehicle', 'boat', 'motorcycle', 'equipment', 'land'];
@@ -365,7 +365,7 @@ const CreatePropertyForm: FC = () => {
         sharePrice: sharePriceValue,
         expectedReturn: expectedReturnPct,
         votingEnabled: formData.votingEnabled,
-        externalUrl: 'https://usci.com/property/',
+        externalUrl: 'https://cantorfi.com/property/',
       });
       metadataCid = await uploadPropertyMetadata(metadata);
     } catch (metadataError) {

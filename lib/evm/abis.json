@@ -1,5 +1,5 @@
 {
-  "USCIFactory": [
+  "CANTORFIFactory": [
     {
       "inputs": [
         {
@@ -14,7 +14,7 @@
         },
         {
           "internalType": "address",
-          "name": "_usciImplementation",
+          "name": "_cantorfiImplementation",
           "type": "address"
         }
       ],
@@ -928,7 +928,7 @@
     },
     {
       "inputs": [],
-      "name": "usciImplementation",
+      "name": "cantorfiImplementation",
       "outputs": [
         {
           "internalType": "address",
@@ -940,7 +940,7 @@
       "type": "function"
     }
   ],
-  "USCI": [
+  "CANTORFI": [
     {
       "inputs": [],
       "name": "AllPuzzlesTaken",
@@ -1992,7 +1992,7 @@
               "type": "bool"
             }
           ],
-          "internalType": "struct USCI.PlaceInfo",
+          "internalType": "struct CANTORFI.PlaceInfo",
           "name": "",
           "type": "tuple"
         }
@@ -2063,7 +2063,7 @@
               "type": "bool"
             }
           ],
-          "internalType": "struct USCI.Proposal",
+          "internalType": "struct CANTORFI.Proposal",
           "name": "",
           "type": "tuple"
         }
@@ -2805,7 +2805,7 @@
       "type": "function"
     }
   ],
-  "USCINFT": [
+  "CANTORFINFT": [
     {
       "inputs": [
         {
@@ -2841,7 +2841,7 @@
               "type": "string"
             }
           ],
-          "internalType": "struct USCINFT.PlaceMetadata",
+          "internalType": "struct CANTORFINFT.PlaceMetadata",
           "name": "metadata",
           "type": "tuple"
         },

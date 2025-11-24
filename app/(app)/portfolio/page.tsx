@@ -16,7 +16,7 @@ import { useTranslations, useCurrencyFormatter } from "@/components/providers/In
 import { formatEther } from "viem";
 import { createPublicClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { USCIABI } from '@/lib/evm/abis';
+import { CANTORFIABI } from '@/lib/evm/abis';
 
 // Client public pour lecture
 const publicClient = createPublicClient({
@@ -58,7 +58,7 @@ export default function PortfolioPage() {
             try {
               const pending = await publicClient.readContract({
                 address: nft.placeAddress,
-                abi: USCIABI,
+                abi: CANTORFIABI,
                 functionName: 'pendingRewards',
                 args: [nft.tokenId],
               }) as bigint;

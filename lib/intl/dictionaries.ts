@@ -470,7 +470,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     leaderboard: {
       title: "Top participants",
-      subtitle: "Découvrez les meilleurs performeurs de l'écosystème USCI",
+      subtitle: "Découvrez les meilleurs performeurs de l'écosystème CANTORFI",
       comingSoonTitle: "Bientôt disponible",
       comingSoonText:
         "Le classement mettra en avant les participants selon leurs puzzles et leurs rendements. Revenez vite voir votre position !",
@@ -532,7 +532,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         returns: "Rendement moyen",
         countries: "Pays couverts",
       },
-      whyTitle: "Pourquoi USCI ?",
+      whyTitle: "Pourquoi CANTORFI ?",
       whySubtitle: "Une plateforme complète pour participer aux actifs réels tokenisés",
       feature1Title: "100 % sécurisé",
       feature1Text: "Smart contracts audités. Vos actifs sont protégés sur la blockchain.",
@@ -600,9 +600,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       disabled: "Désactivé",
     },
     footer: {
-      copyright: "© 2025 USCI - Actifs sur blockchain",
+      copyright: "© 2025 CANTORFI - Actifs sur blockchain",
       contactLabel: "Contact",
-      contactEmail: "contact@usci.tech",
+      contactEmail: "contact@cantorfi.tech",
       cgv: "CGV",
       cgu: "CGU",
     },
@@ -782,7 +782,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     leaderboard: {
       title: "Top participants",
-      subtitle: "See the top performers in the USCI ecosystem",
+      subtitle: "See the top performers in the CANTORFI ecosystem",
       comingSoonTitle: "Coming soon",
       comingSoonText:
         "The leaderboard will showcase top participants based on puzzles and returns. Check back soon to see where you rank!",
@@ -844,7 +844,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         returns: "Average return",
         countries: "Countries covered",
       },
-      whyTitle: "Why USCI?",
+      whyTitle: "Why CANTORFI?",
       whySubtitle: "A complete platform to participate in tokenized real-world assets",
       feature1Title: "100% secure",
       feature1Text: "Audited smart contracts keep your assets protected on-chain.",
@@ -912,9 +912,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       disabled: "Disabled",
     },
     footer: {
-      copyright: "© 2025 USCI - Blockchain Assets",
+      copyright: "© 2025 CANTORFI - Blockchain Assets",
       contactLabel: "Contact",
-      contactEmail: "contact@usci.tech",
+      contactEmail: "contact@cantorfi.tech",
       cgv: "Terms of Sale (CGV)",
       cgu: "Terms of Use (CGU)",
     },
@@ -1094,7 +1094,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     leaderboard: {
       title: "Mejores participantes",
-      subtitle: "Descubre a los mejores del ecosistema USCI",
+      subtitle: "Descubre a los mejores del ecosistema CANTORFI",
       comingSoonTitle: "Próximamente",
       comingSoonText:
         "La clasificación mostrará a los principales participantes según sus puzzles y sus rendimientos. ¡Vuelve pronto para ver tu posición!",
@@ -1156,7 +1156,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         returns: "Rentabilidad media",
         countries: "Países",
       },
-      whyTitle: "¿Por qué USCI?",
+      whyTitle: "¿Por qué CANTORFI?",
       whySubtitle: "Una plataforma integral para participar en activos tokenizados",
       feature1Title: "100% seguro",
       feature1Text: "Smart contracts auditados protegen tus activos en la blockchain.",
@@ -1224,9 +1224,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       disabled: "Desactivado",
     },
     footer: {
-      copyright: "© 2025 USCI - Activos en blockchain",
+      copyright: "© 2025 CANTORFI - Activos en blockchain",
       contactLabel: "Contacto",
-      contactEmail: "contact@usci.tech",
+      contactEmail: "contact@cantorfi.tech",
       cgv: "Condiciones generales de venta (CGV)",
       cgu: "Condiciones generales de uso (CGU)",
     },

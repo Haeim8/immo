@@ -57,7 +57,7 @@ export default function HeaderContent() {
           <span className="relative block h-12 w-12 md:h-16 md:w-16">
             <Image
               src="/logo-light.png"
-              alt="USCI logo light theme"
+              alt="CANTORFI logo light theme"
               fill
               sizes="64px"
               priority
@@ -65,7 +65,7 @@ export default function HeaderContent() {
             />
             <Image
               src="/logo-dark.png"
-              alt="USCI logo dark theme"
+              alt="CANTORFI logo dark theme"
               fill
               sizes="64px"
               priority

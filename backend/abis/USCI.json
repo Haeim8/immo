@@ -1050,7 +1050,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct USCI.PlaceInfo",
+        "internalType": "struct CANTORFI.PlaceInfo",
         "name": "",
         "type": "tuple"
       }
@@ -1121,7 +1121,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct USCI.Proposal",
+        "internalType": "struct CANTORFI.Proposal",
         "name": "",
         "type": "tuple"
       }

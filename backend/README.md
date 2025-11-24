@@ -1,4 +1,4 @@
-# 🧩 USCI - Interactive Places (Solidity)
+# 🧩 CANTORFI - Interactive Places (Solidity)
 
 Contrats intelligents pour tokeniser des "places" interactives basées sur des puzzles NFT, avec toutes les corrections d'audit intégrées.
 
@@ -13,8 +13,8 @@ Contrats intelligents pour tokeniser des "places" interactives basées sur des p
 - ✅ **Original minter** : Track marché primaire vs secondaire
 
 ### 🏗️ Architecture
-- `USCIFactory.sol` : Factory principale (création / gestion des places)
-- `USCI.sol` : Contrat par place (NFT puzzles ERC721)
+- `CANTORFIFactory.sol` : Factory principale (création / gestion des places)
+- `CANTORFI.sol` : Contrat par place (NFT puzzles ERC721)
 
 ### 💎 Fonctionnalités
 1. **Puzzle NFT** (ERC721) - Chaque puzzle = 1 NFT unique

@@ -5,6 +5,6 @@
 
 import abisJson from './abis.json';
 
-export const USCIFactoryABI = abisJson.USCIFactory as const;
-export const USCIABI = abisJson.USCI as const;
-export const USCINFTABI = abisJson.USCINFT as const;
+export const CANTORFIFactoryABI = abisJson.CANTORFIFactory as const;
+export const CANTORFIABI = abisJson.CANTORFI as const;
+export const CANTORFINFTABI = abisJson.CANTORFINFT as const;

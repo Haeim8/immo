@@ -6,15 +6,15 @@ import "@openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./USCINFT.sol";
+import "./CANTORFINFT.sol";
 
 /**
- * @title USCI
+ * @title CANTORFI
  * @notice Interactive place tokenization with puzzle pieces as ERC721 NFTs
  * @dev Enhanced security version with Pausable, rate limiting and ERC2981 royalties (4% to treasury)
- * @custom:security-contact security@usci.io
+ * @custom:security-contact security@cantorfi.io
  */
-contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract CANTORFI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     // ============== STRUCTS ==============
 
     struct PlaceInfo {
@@ -143,8 +143,8 @@ contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, Reentranc
     modifier onlyFactoryOrTeam() {
         if (
             msg.sender != factory &&
-            !IUSCIFactory(factory).isTeamMember(msg.sender) &&
-            msg.sender != IUSCIFactory(factory).admin()
+            !ICANTORFIFactory(factory).isTeamMember(msg.sender) &&
+            msg.sender != ICANTORFIFactory(factory).admin()
         ) revert NotAuthorized();
         _;
     }
@@ -507,7 +507,7 @@ contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, Reentranc
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         if (ownerOf(tokenId) == address(0)) revert TokenDoesNotExist();
 
-        USCINFT.PlaceMetadata memory metadata = USCINFT.PlaceMetadata({
+        CANTORFINFT.PlaceMetadata memory metadata = CANTORFINFT.PlaceMetadata({
             placeId: info.placeId,
             assetType: info.assetType,
             name: info.name,
@@ -515,7 +515,7 @@ contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, Reentranc
             province: info.province
         });
 
-        return USCINFT(nftRenderer).generateTokenURI(
+        return CANTORFINFT(nftRenderer).generateTokenURI(
             tokenId,
             metadata,
             originalMinter[tokenId],
@@ -541,7 +541,7 @@ contract USCI is Initializable, ERC721Upgradeable, ERC2981Upgradeable, Reentranc
 }
 
 // Interface for factory calls
-interface IUSCIFactory {
+interface ICANTORFIFactory {
     function admin() external view returns (address);
     function isTeamMember(address member) external view returns (bool);
 }

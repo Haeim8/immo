@@ -10,10 +10,10 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: [
-      'https://usci.tech/sitemap.xml',
-      'https://usci.ca/sitemap.xml',
-      'https://usci.fund/sitemap.xml',
+      'https://cantorfi.tech/sitemap.xml',
+      'https://cantorfi.ca/sitemap.xml',
+      'https://cantorfi.fund/sitemap.xml',
     ],
-    host: 'https://usci.tech',
+    host: 'https://cantorfi.tech',
   }
 }

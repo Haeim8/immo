@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./USCI.sol";
+import "./CANTORFI.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
- * @title USCIFactory
+ * @title CANTORFIFactory
  * @notice Factory contract to create and manage interactive place tokenization
  * @dev Enhanced security with AccessControl and Pausable
- * @custom:security-contact security@usci.io
+ * @custom:security-contact security@cantorfi.io
  */
-contract USCIFactory is AccessControl, Pausable {
+contract CANTORFIFactory is AccessControl, Pausable {
     // ============== ROLES ==============
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -30,8 +30,8 @@ contract USCIFactory is AccessControl, Pausable {
 
     address public admin;  // Kept for backwards compatibility
     address public treasury;
-    address public immutable nftRenderer;  // USCINFT contract (never changes)
-    address public immutable usciImplementation;  // USCI implementation for cloning
+    address public immutable nftRenderer;  // CANTORFINFT contract (never changes)
+    address public immutable cantorfiImplementation;  // CANTORFI implementation for cloning
     uint256 public placeCount;
 
     // Team management
@@ -85,15 +85,15 @@ contract USCIFactory is AccessControl, Pausable {
 
     // ============== CONSTRUCTOR ==============
 
-    constructor(address _treasury, address _nftRenderer, address _usciImplementation) {
+    constructor(address _treasury, address _nftRenderer, address _cantorfiImplementation) {
         if (_treasury == address(0)) revert InvalidAddress();
         if (_nftRenderer == address(0)) revert InvalidAddress();
-        if (_usciImplementation == address(0)) revert InvalidAddress();
+        if (_cantorfiImplementation == address(0)) revert InvalidAddress();
 
         admin = msg.sender;
         treasury = _treasury;
         nftRenderer = _nftRenderer;
-        usciImplementation = _usciImplementation;
+        cantorfiImplementation = _cantorfiImplementation;
         placeCount = 0;
 
         // Setup roles
@@ -135,8 +135,8 @@ contract USCIFactory is AccessControl, Pausable {
             revert InvalidSaleDuration();
         }
 
-        // Clone USCI implementation (EIP-1167 Minimal Proxy)
-        placeAddress = Clones.clone(usciImplementation);
+        // Clone CANTORFI implementation (EIP-1167 Minimal Proxy)
+        placeAddress = Clones.clone(cantorfiImplementation);
 
         // Update state BEFORE external call (CEI pattern)
         places[placeCount] = placeAddress;
@@ -146,7 +146,7 @@ contract USCIFactory is AccessControl, Pausable {
         placeCount++;
 
         // Initialize the clone (external call AFTER state changes)
-        USCI(placeAddress).initialize(
+        CANTORFI(placeAddress).initialize(
             address(this),
             nftRenderer,
             currentPlaceId,

@@ -1,446 +1,306 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, X } from "lucide-react";
-import PropertyCard from "@/components/molecules/PropertyCard";
-import GlassCard from "@/components/atoms/GlassCard";
-import { Investment } from "@/lib/types";
-import { useTranslations } from "@/components/providers/IntlProvider";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  TrendingUp,
+  Search,
+  Car,
+  Ship,
+  Home,
+  Wrench,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Filter,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  mockVaults,
+  mockUserPositions,
+  Category,
+  Vault,
+  Position,
+} from "@/data/mockVaults";
 
-interface PropertyContainerProps {
-  properties: Investment[];
-}
-
-type SortOption = "price-asc" | "price-desc" | "return-desc" | "name-asc";
-type FilterType = "all" | "residential" | "commercial" | "mixed";
-type FilterStatus = "all" | "funding" | "funded";
-
-const PROPERTIES_PER_PAGE = 12;
-
-export default function PropertyContainer({ properties }: PropertyContainerProps) {
-  const [currentPage, setCurrentPage] = useState(1);
+export default function PropertyContainer(_props?: { properties?: unknown }) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("name-asc");
-  const [filterType, setFilterType] = useState<FilterType>("all");
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
 
-  const propertyContainerT = useTranslations("propertyContainer");
+  const vaults: Vault[] = mockVaults;
+  const userPositions: Position[] = mockUserPositions;
 
-  // Filtrage et tri
-  const filteredAndSortedProperties = useMemo(() => {
-    let filtered = [...properties];
+  const filteredVaults = vaults.filter((vault) => {
+    const matchesSearch =
+      vault.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      vault.location.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "All" || vault.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-    // Recherche par nom ou localisation
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((property) => {
-        const locationValues = [
-          property.location.city,
-          property.location.province,
-          property.location.country,
-        ]
-          .filter(Boolean)
-          .map((value) => value.toLowerCase());
-
-        return (
-          property.name.toLowerCase().includes(query) ||
-          locationValues.some((value) => value.includes(query))
-        );
-      });
-    }
-
-    // Filtre par type
-    if (filterType !== "all") {
-      filtered = filtered.filter((property) => property.type.toLowerCase() === filterType);
-    }
-
-    // Filtre par statut
-    if (filterStatus !== "all") {
-      if (filterStatus === "funding") {
-        filtered = filtered.filter((property) => property.fundingProgress < 100);
-      } else if (filterStatus === "funded") {
-        filtered = filtered.filter((property) => property.fundingProgress >= 100);
-      }
-    }
-
-    // Tri
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "price-asc":
-          return a.priceUSD - b.priceUSD;
-        case "price-desc":
-          return b.priceUSD - a.priceUSD;
-        case "return-desc":
-          return b.expectedReturn - a.expectedReturn;
-        case "name-asc":
-          return a.name.localeCompare(b.name);
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [properties, searchQuery, sortBy, filterType, filterStatus]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedProperties.length / PROPERTIES_PER_PAGE);
-  const startIndex = (currentPage - 1) * PROPERTIES_PER_PAGE;
-  const endIndex = startIndex + PROPERTIES_PER_PAGE;
-  const currentProperties = filteredAndSortedProperties.slice(startIndex, endIndex);
-
-  // Reset à la page 1 quand les filtres changent
-  const handleFilterChange = () => {
-    setCurrentPage(1);
-  };
-
-  // Gestion des pages
-  const goToPage = (page: number) => {
-    setCurrentPage(page);
-    // Scroll smooth vers le haut du conteneur
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    handleFilterChange();
-  };
-
-  const handleSortChange = (value: SortOption) => {
-    setSortBy(value);
-    handleFilterChange();
-  };
-
-  const handleTypeFilter = (value: FilterType) => {
-    setFilterType(value);
-    handleFilterChange();
-  };
-
-  const handleStatusFilter = (value: FilterStatus) => {
-    setFilterStatus(value);
-    handleFilterChange();
-  };
-
-  const clearFilters = () => {
-    setSearchQuery("");
-    setSortBy("name-asc");
-    setFilterType("all");
-    setFilterStatus("all");
-    setCurrentPage(1);
-  };
-
-  const hasActiveFilters = searchQuery || sortBy !== "name-asc" || filterType !== "all" || filterStatus !== "all";
+  const categories: { id: Category | "All"; label: string; icon: any }[] = [
+    { id: "All", label: "All Assets", icon: Filter },
+    { id: "Real Estate", label: "Real Estate", icon: Home },
+    { id: "Vehicles", label: "Vehicles", icon: Car },
+    { id: "Marine", label: "Marine", icon: Ship },
+    { id: "Equipment", label: "Equipment", icon: Wrench },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Barre de recherche et filtres - Responsive */}
-      <div className="space-y-4">
-        {/* Ligne 1: Recherche + Bouton filtres (mobile) */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Barre de recherche */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={propertyContainerT("searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl backdrop-blur-xl bg-white/5 border border-white/10
-                       text-foreground placeholder:text-muted-foreground
-                       focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50
-                       transition-all duration-300 text-sm"
-            />
+    <div className="w-full space-y-8">
+      {userPositions.length > 0 && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-primary" />
+            Your Positions
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="rounded-xl border border-border/40 bg-card/30 shadow-lg backdrop-blur-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-border/40 bg-muted/20 flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Your Supplies
+                </span>
+                <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  Earn 8.45% APY
+                </span>
+              </div>
+              <div className="p-4">
+                {userPositions
+                  .filter((p) => p.type === "supply")
+                  .map((pos) => {
+                    const vault = vaults.find((v) => v.id === pos.vaultId);
+                    if (!vault) return null;
+                    return (
+                      <div
+                        key={pos.vaultId}
+                        className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={vault.image || "/placeholder.svg"}
+                            alt={vault.name}
+                            className="w-10 h-10 rounded-md object-cover"
+                          />
+                          <div>
+                            <div className="font-semibold">{vault.name}</div>
+                            <div className="text-xs text-muted-foreground">{vault.category}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-foreground">${pos.amount.toLocaleString()}</div>
+                          <div className="text-xs text-emerald-500 flex items-center justify-end gap-1">
+                            <ArrowUpRight className="w-3 h-3" />
+                            Earned: $245.20
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/40 bg-card/30 shadow-lg backdrop-blur-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-border/40 bg-muted/20 flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Your Borrows</span>
+                <span className="text-xs font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">
+                  Rate 4.5% APY
+                </span>
+              </div>
+              <div className="p-4">
+                {userPositions
+                  .filter((p) => p.type === "borrow")
+                  .map((pos) => {
+                    const vault = vaults.find((v) => v.id === pos.vaultId);
+                    if (!vault) return null;
+                    return (
+                      <div
+                        key={pos.vaultId}
+                        className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={vault.image || "/placeholder.svg"}
+                            alt={vault.name}
+                            className="w-10 h-10 rounded-md object-cover"
+                          />
+                          <div>
+                            <div className="font-semibold">{vault.name}</div>
+                            <div className="text-xs text-muted-foreground">{vault.category}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-foreground">${pos.amount.toLocaleString()}</div>
+                          <div className="text-xs text-blue-500 flex items-center justify-end gap-1">
+                            <ArrowDownLeft className="w-3 h-3" />
+                            Interest: $12.50
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
           </div>
-
-          {/* Bouton filtres (visible sur mobile) */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="sm:hidden flex items-center justify-center gap-2 px-4 py-3 rounded-xl
-                     backdrop-blur-xl bg-white/5 border border-white/10 hover:border-cyan-500/50
-                     transition-all duration-300 text-sm font-medium"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            {propertyContainerT("filters")}
-            {hasActiveFilters && (
-              <span className="flex h-2 w-2 rounded-full bg-cyan-400" />
-            )}
-          </button>
-        </div>
-
-        {/* Filtres - Toujours visibles sur desktop, toggle sur mobile */}
-        <AnimatePresence>
-          {(showFilters || true) && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="hidden sm:block"
-            >
-              <GlassCard className="p-4">
-                <div className="flex flex-wrap gap-3 items-center">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    {propertyContainerT("filterBy")}
-                  </span>
-
-                  {/* Tri */}
-                  <select
-                    value={sortBy}
-                    onChange={(e) => handleSortChange(e.target.value as SortOption)}
-                    className="px-3 py-2 rounded-lg backdrop-blur-xl bg-white/5 border border-white/10
-                             text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50
-                             hover:border-cyan-500/50 transition-all duration-300 cursor-pointer"
-                  >
-                    <option value="name-asc">{propertyContainerT("sortNameAsc")}</option>
-                    <option value="price-asc">{propertyContainerT("sortPriceAsc")}</option>
-                    <option value="price-desc">{propertyContainerT("sortPriceDesc")}</option>
-                    <option value="return-desc">{propertyContainerT("sortReturnDesc")}</option>
-                  </select>
-
-                  {/* Type de propriété */}
-                  <div className="flex gap-2">
-                    {(["all", "residential", "commercial", "mixed"] as FilterType[]).map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => handleTypeFilter(type)}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300
-                          ${filterType === type
-                            ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
-                            : "backdrop-blur-xl bg-white/5 border-white/10 hover:border-cyan-500/30"
-                          } border`}
-                      >
-                        {propertyContainerT(`type.${type}`)}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Statut */}
-                  <div className="flex gap-2">
-                    {(["all", "funding", "funded"] as FilterStatus[]).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => handleStatusFilter(status)}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300
-                          ${filterStatus === status
-                            ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
-                            : "backdrop-blur-xl bg-white/5 border-white/10 hover:border-blue-500/30"
-                          } border`}
-                      >
-                        {propertyContainerT(`status.${status}`)}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Bouton clear filters */}
-                  {hasActiveFilters && (
-                    <button
-                      onClick={clearFilters}
-                      className="ml-auto px-3 py-2 rounded-lg text-xs font-medium
-                               backdrop-blur-xl bg-red-500/10 border border-red-500/30 text-red-400
-                               hover:bg-red-500/20 transition-all duration-300 flex items-center gap-2"
-                    >
-                      <X className="h-3 w-3" />
-                      {propertyContainerT("clearFilters")}
-                    </button>
-                  )}
-                </div>
-              </GlassCard>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Filtres mobile (dropdown) */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="sm:hidden"
-            >
-              <GlassCard className="p-4 space-y-4">
-                {/* Tri */}
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
-                    {propertyContainerT("sortBy")}
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => handleSortChange(e.target.value as SortOption)}
-                    className="w-full px-3 py-2 rounded-lg backdrop-blur-xl bg-white/5 border border-white/10
-                             text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  >
-                    <option value="name-asc">{propertyContainerT("sortNameAsc")}</option>
-                    <option value="price-asc">{propertyContainerT("sortPriceAsc")}</option>
-                    <option value="price-desc">{propertyContainerT("sortPriceDesc")}</option>
-                    <option value="return-desc">{propertyContainerT("sortReturnDesc")}</option>
-                  </select>
-                </div>
-
-                {/* Type */}
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
-                    {propertyContainerT("propertyType")}
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["all", "residential", "commercial", "mixed"] as FilterType[]).map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => handleTypeFilter(type)}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300
-                          ${filterType === type
-                            ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
-                            : "backdrop-blur-xl bg-white/5 border-white/10"
-                          } border`}
-                      >
-                        {propertyContainerT(`type.${type}`)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Statut */}
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
-                    {propertyContainerT("fundingStatus")}
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["all", "funding", "funded"] as FilterStatus[]).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => handleStatusFilter(status)}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300
-                          ${filterStatus === status
-                            ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
-                            : "backdrop-blur-xl bg-white/5 border-white/10"
-                          } border`}
-                      >
-                        {propertyContainerT(`status.${status}`)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Clear filters */}
-                {hasActiveFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="w-full px-3 py-2 rounded-lg text-sm font-medium
-                             backdrop-blur-xl bg-red-500/10 border border-red-500/30 text-red-400
-                             hover:bg-red-500/20 transition-all duration-300 flex items-center justify-center gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    {propertyContainerT("clearFilters")}
-                  </button>
-                )}
-              </GlassCard>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Résultats */}
-      <div className="text-sm text-muted-foreground">
-        {propertyContainerT("showingResults", {
-          start: filteredAndSortedProperties.length > 0 ? startIndex + 1 : 0,
-          end: Math.min(endIndex, filteredAndSortedProperties.length),
-          total: filteredAndSortedProperties.length,
-        })}
-      </div>
-
-      {/* Grille de propriétés */}
-      {currentProperties.length === 0 ? (
-        <GlassCard className="text-center py-12">
-          <p className="text-muted-foreground">{propertyContainerT("noResults")}</p>
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="mt-4 text-cyan-400 hover:text-cyan-300 transition-colors text-sm underline"
-            >
-              {propertyContainerT("clearFiltersToSeeAll")}
-            </button>
-          )}
-        </GlassCard>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
-          <AnimatePresence mode="wait">
-            {currentProperties.map((property, index) => (
-              <motion.div
-                key={property.publicKey}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -30 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                layout
-              >
-                <PropertyCard investment={property} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-8">
-          {/* Bouton précédent */}
-          <button
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="p-2 rounded-lg backdrop-blur-xl bg-white/5 border border-white/10
-                     hover:border-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-all duration-300"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar w-full md:w-auto">
+          {categories.map((cat) => (
+            <Button
+              key={cat.id}
+              variant={selectedCategory === cat.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`h-9 gap-2 whitespace-nowrap ${
+                selectedCategory === cat.id
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "border-border/50 text-muted-foreground hover:text-foreground hover:bg-primary/5"
+              }`}
+            >
+              <cat.icon className="w-4 h-4" />
+              {cat.label}
+            </Button>
+          ))}
+        </div>
 
-          {/* Numéros de page */}
-          <div className="flex gap-2">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-              // Sur mobile, n'afficher que quelques pages autour de la page actuelle
-              const isMobileView = typeof window !== "undefined" && window.innerWidth < 640;
-              if (isMobileView && totalPages > 5) {
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  // Afficher la page
-                } else if (page === currentPage - 2 || page === currentPage + 2) {
-                  return <span key={page} className="px-2 text-muted-foreground">...</span>;
-                } else {
-                  return null;
-                }
-              }
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search assets..."
+            className="pl-9 bg-background/50 border-border/50 focus:bg-background transition-colors"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
 
-              return (
-                <button
-                  key={page}
-                  onClick={() => goToPage(page)}
-                  className={`min-w-[40px] h-[40px] rounded-lg font-medium transition-all duration-300
-                    ${currentPage === page
-                      ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400 border"
-                      : "backdrop-blur-xl bg-white/5 border border-white/10 hover:border-cyan-500/50"
-                    }`}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-foreground">Active Vaults</h2>
+          <span className="flex h-5 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-medium text-primary">
+            {filteredVaults.length}
+          </span>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-border/40 bg-card/30 shadow-lg backdrop-blur-sm">
+        <div className="w-full text-sm">
+          <div className="grid grid-cols-12 gap-4 border-b border-border/40 bg-muted/20 px-6 py-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <div className="col-span-4">Asset Name</div>
+            <div className="col-span-2 text-right">Net APY</div>
+            <div className="col-span-3 text-right">Liquidity</div>
+            <div className="col-span-3 text-right">Actions</div>
+          </div>
+
+          <div className="divide-y divide-border/40">
+            {filteredVaults.length > 0 ? (
+              filteredVaults.map((vault) => (
+                <div
+                  key={vault.id}
+                  onClick={() => router.push(`/vault/${vault.id}`)}
+                  className="group grid grid-cols-12 items-center gap-4 bg-background/20 px-6 py-5 transition-all duration-200 hover:bg-primary/5 hover:shadow-[inset_2px_0_0_0_hsl(var(--primary))] cursor-pointer"
                 >
-                  {page}
-                </button>
-              );
-            })}
-          </div>
+                  <div className="col-span-4 flex items-center gap-4">
+                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border/50 shadow-sm">
+                      <img
+                        src={vault.image || "/placeholder.svg"}
+                        alt={vault.name}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {vault.name}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50">
+                          {vault.category}
+                        </span>
+                        <span className="text-xs text-muted-foreground">• {vault.tokens.map((t) => t.symbol).join(" / ")}</span>
+                      </div>
+                    </div>
+                  </div>
 
-          {/* Bouton suivant */}
-          <button
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="p-2 rounded-lg backdrop-blur-xl bg-white/5 border border-white/10
-                     hover:border-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-all duration-300"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+                  <div className="col-span-2 text-right">
+                    <div className="flex items-center justify-end gap-1 font-bold text-emerald-500 dark:text-emerald-400">
+                      <TrendingUp className="h-3 w-3" />
+                      {vault.netApy}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Annualized</div>
+                  </div>
+
+                  <div className="col-span-3 text-right">
+                    <div className="font-medium text-foreground">${(vault.liquidity / 1000000).toFixed(2)}M</div>
+                    <div className="mt-1.5 flex flex-col items-end gap-1">
+                      <Progress value={vault.utilization} className="h-1.5 w-24 bg-muted/50 [&>div]:bg-primary/80" />
+                      <span className="text-[10px] text-muted-foreground">{vault.utilization}% Utilization</span>
+                    </div>
+                  </div>
+
+                  <div className="col-span-3 flex justify-end gap-2">
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-9 min-w-[80px] border-emerald-500/20 bg-emerald-500/5 text-emerald-600 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
+                          >
+                            Supply
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Deposit assets to earn APY</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-9 min-w-[80px] border-primary/20 bg-primary/5 text-primary hover:border-primary/40 hover:bg-primary/10"
+                          >
+                            Borrow
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Borrow against your collateral</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="py-12 text-center text-muted-foreground">
+                <Search className="mx-auto h-12 w-12 opacity-20 mb-4" />
+                <p>No vaults found matching your criteria.</p>
+                <Button
+                  variant="link"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("All");
+                  }}
+                  className="mt-2 text-primary"
+                >
+                  Clear filters
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

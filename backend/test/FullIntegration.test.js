@@ -14,8 +14,8 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
     [admin, treasury, teamMember, user1, user2, user3, user4] = await ethers.getSigners();
 
     // Deploy Factory
-    const USCIFactory = await ethers.getContractFactory("USCIFactory");
-    factory = await USCIFactory.deploy(treasury.address);
+    const CANTORFIFactory = await ethers.getContractFactory("CANTORFIFactory");
+    factory = await CANTORFIFactory.deploy(treasury.address);
     await factory.waitForDeployment();
   });
 
@@ -111,7 +111,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
     });
 
     it("✅ Treasury reçoit l'argent des achats de puzzles", async function () {
@@ -205,7 +205,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
     });
 
     it("✅ NFT est minté avec le bon owner", async function () {
@@ -325,7 +325,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       // User1 achète
       await place.connect(user1).takePuzzle({ value: PUZZLE_PRICE });
@@ -350,7 +350,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       // Team crée une proposition
       await expect(
@@ -373,7 +373,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       await time.increase(SALE_DURATION + 1);
 
@@ -393,7 +393,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       // Team pause
       await expect(place.connect(teamMember).pause()).to.not.be.reverted;
@@ -412,7 +412,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       // Vendre tous les puzzles
       for (let i = 0; i < 10; i++) {
@@ -439,7 +439,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
     });
 
     it("✅ originalMinter est set correctement à l'achat", async function () {
@@ -519,7 +519,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       // 3 users achètent des puzzles
       await place.connect(user1).takePuzzle({ value: PUZZLE_PRICE });
@@ -627,7 +627,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       // 3 users achètent tous les puzzles
       await place.connect(user1).takePuzzle({ value: PUZZLE_PRICE });
@@ -714,7 +714,7 @@ describe("🎯 TESTS COMPLETS - INTÉGRATION FULL STACK", function () {
       );
 
       const placeAddress = await factory.getPlaceAddress(0);
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
     });
 
     it("✅ getPlaceInfo retourne toutes les infos", async function () {

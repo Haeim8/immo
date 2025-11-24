@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
-describe("Tests Complets - USCI Places", function () {
+describe("Tests Complets - CANTORFI Places", function () {
   let factory, place;
   let admin, treasury, teamMember, user1, user2, user3;
 
@@ -13,8 +13,8 @@ describe("Tests Complets - USCI Places", function () {
   beforeEach(async function () {
     [admin, treasury, teamMember, user1, user2, user3] = await ethers.getSigners();
 
-    const USCIFactory = await ethers.getContractFactory("USCIFactory");
-    factory = await USCIFactory.deploy(treasury.address);
+    const CANTORFIFactory = await ethers.getContractFactory("CANTORFIFactory");
+    factory = await CANTORFIFactory.deploy(treasury.address);
     await factory.waitForDeployment();
   });
 
@@ -203,7 +203,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const placeAddress = factory.interface.parseLog(event).args.placeAddress;
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
     });
 
     it("✅ Peut acheter un puzzle", async function () {
@@ -294,7 +294,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const placeAddress = factory.interface.parseLog(event).args.placeAddress;
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       await factory.addTeamMember(teamMember.address);
     });
@@ -332,7 +332,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const placeAddress = factory.interface.parseLog(event).args.placeAddress;
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       await factory.addTeamMember(teamMember.address);
 
@@ -400,7 +400,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const place2Address = factory.interface.parseLog(event2).args.placeAddress;
-      const place2 = await ethers.getContractAt("USCI", place2Address);
+      const place2 = await ethers.getContractAt("CANTORFI", place2Address);
 
       await expect(
         place2.connect(teamMember).depositRewards({ value: ethers.parseEther("1") })
@@ -424,7 +424,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const place2Address = factory.interface.parseLog(event2).args.placeAddress;
-      const place2 = await ethers.getContractAt("USCI", place2Address);
+      const place2 = await ethers.getContractAt("CANTORFI", place2Address);
 
       await time.increase(SALE_DURATION + 1);
       await place2.connect(teamMember).closeSale();
@@ -473,7 +473,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const placeAddress = factory.interface.parseLog(event).args.placeAddress;
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       await factory.addTeamMember(teamMember.address);
 
@@ -614,7 +614,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const placeAddress = factory.interface.parseLog(event).args.placeAddress;
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       await factory.addTeamMember(teamMember.address);
 
@@ -652,7 +652,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const place2Address = factory.interface.parseLog(event2).args.placeAddress;
-      const place2 = await ethers.getContractAt("USCI", place2Address);
+      const place2 = await ethers.getContractAt("CANTORFI", place2Address);
 
       await expect(
         place2.connect(teamMember).complete({ value: ethers.parseEther("10") })
@@ -714,7 +714,7 @@ describe("Tests Complets - USCI Places", function () {
       });
 
       const placeAddress = factory.interface.parseLog(event).args.placeAddress;
-      place = await ethers.getContractAt("USCI", placeAddress);
+      place = await ethers.getContractAt("CANTORFI", placeAddress);
 
       await place.connect(user1).takePuzzle({ value: PUZZLE_PRICE });
     });

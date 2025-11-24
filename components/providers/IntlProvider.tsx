@@ -26,8 +26,8 @@ interface IntlContextValue {
 
 const IntlContext = createContext<IntlContextValue | undefined>(undefined);
 
-const LANGUAGE_STORAGE_KEY = "usci:language";
-const CURRENCY_STORAGE_KEY = "usci:currency";
+const LANGUAGE_STORAGE_KEY = "cantorfi:language";
+const CURRENCY_STORAGE_KEY = "cantorfi:currency";
 
 const FALLBACK_RATES: Record<CurrencyCode, number> = {
   usd: 1,

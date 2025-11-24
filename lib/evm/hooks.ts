@@ -7,7 +7,7 @@ import { useAccount } from 'wagmi';
 import { createPublicClient, http, formatEther } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { FACTORY_ADDRESS, BLOCK_EXPLORER_URL, FACTORY_DEPLOYMENT_BLOCK } from './constants';
-import { USCIFactoryABI, USCIABI } from './abis';
+import { CANTORFIFactoryABI, CANTORFIABI } from './abis';
 import { PlaceData, PlaceInfo } from './adapters';
 import { useEthPrice } from './useEthPrice';
 
@@ -75,7 +75,7 @@ export function usePlaceCount() {
       try {
         const count = await publicClient.readContract({
           address: FACTORY_ADDRESS,
-          abi: USCIFactoryABI,
+          abi: CANTORFIFactoryABI,
           functionName: 'placeCount',
         });
         setPlaceCount(Number(count));
@@ -106,7 +106,7 @@ export function useAllPlaces() {
         // Get place count
         const count = await publicClient.readContract({
           address: FACTORY_ADDRESS,
-          abi: USCIFactoryABI,
+          abi: CANTORFIFactoryABI,
           functionName: 'placeCount',
         });
 
@@ -121,7 +121,7 @@ export function useAllPlaces() {
         const addressPromises = Array.from({ length: placeCount }, (_, i) =>
           publicClient.readContract({
             address: FACTORY_ADDRESS,
-            abi: USCIFactoryABI,
+            abi: CANTORFIFactoryABI,
             functionName: 'getPlaceAddress',
             args: [BigInt(i)],
           })
@@ -133,7 +133,7 @@ export function useAllPlaces() {
         const infoPromises = addresses.map((addr) =>
           publicClient.readContract({
             address: addr as `0x${string}`,
-            abi: USCIABI,
+            abi: CANTORFIABI,
             functionName: 'getPlaceInfo',
           })
         );
@@ -181,7 +181,7 @@ export function useIsAdmin(address: `0x${string}` | undefined) {
       try {
         const admin = await publicClient.readContract({
           address: FACTORY_ADDRESS,
-          abi: USCIFactoryABI,
+          abi: CANTORFIFactoryABI,
           functionName: 'admin',
         });
         setIsAdmin((admin as string).toLowerCase() === address.toLowerCase());
@@ -217,7 +217,7 @@ export function useIsTeamMember(address: `0x${string}` | undefined) {
       try {
         const isMember = await publicClient.readContract({
           address: FACTORY_ADDRESS,
-          abi: USCIFactoryABI,
+          abi: CANTORFIFactoryABI,
           functionName: 'isTeamMember',
           args: [address],
         });
@@ -280,7 +280,7 @@ export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
                 try {
                   const owner = (await publicClient.readContract({
                     address: place.address,
-                    abi: USCIABI,
+                    abi: CANTORFIABI,
                     functionName: 'ownerOf',
                     args: [tokenId],
                   })) as `0x${string}`;
@@ -466,7 +466,7 @@ export function useLeaderboardData() {
                 try {
                   const owner = (await publicClient.readContract({
                     address: place.address,
-                    abi: USCIABI,
+                    abi: CANTORFIABI,
                     functionName: 'ownerOf',
                     args: [tokenId],
                   })) as `0x${string}`;

@@ -13,8 +13,8 @@ describe("📅💰 TESTS DATES + FLOW ARGENT DÉTAILLÉ", function () {
   beforeEach(async function () {
     [admin, treasury, teamMember, user1, user2, user3] = await ethers.getSigners();
 
-    const USCIFactory = await ethers.getContractFactory("USCIFactory");
-    factory = await USCIFactory.deploy(treasury.address);
+    const CANTORFIFactory = await ethers.getContractFactory("CANTORFIFactory");
+    factory = await CANTORFIFactory.deploy(treasury.address);
     await factory.waitForDeployment();
 
     // Créer une place
@@ -25,7 +25,7 @@ describe("📅💰 TESTS DATES + FLOW ARGENT DÉTAILLÉ", function () {
     );
 
     const placeAddress = await factory.getPlaceAddress(0);
-    place = await ethers.getContractAt("USCI", placeAddress);
+    place = await ethers.getContractAt("CANTORFI", placeAddress);
   });
 
   describe("📅 1. DATES DE CLÔTURE - VENTE DE PUZZLES", function () {

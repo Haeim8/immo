@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
-describe("🔒 Tests Sécurité - USCI_Secured & USCIFactory_Secured", function () {
+describe("🔒 Tests Sécurité - CANTORFI_Secured & CANTORFIFactory_Secured", function () {
   let factory, place;
   let admin, treasury, teamMember, user1, user2, user3;
 
@@ -13,8 +13,8 @@ describe("🔒 Tests Sécurité - USCI_Secured & USCIFactory_Secured", function 
   beforeEach(async function () {
     [admin, treasury, teamMember, user1, user2, user3] = await ethers.getSigners();
 
-    const USCIFactory = await ethers.getContractFactory("USCIFactory_Secured");
-    factory = await USCIFactory.deploy(treasury.address);
+    const CANTORFIFactory = await ethers.getContractFactory("CANTORFIFactory_Secured");
+    factory = await CANTORFIFactory.deploy(treasury.address);
     await factory.waitForDeployment();
 
     // Create a test place
@@ -26,7 +26,7 @@ describe("🔒 Tests Sécurité - USCI_Secured & USCIFactory_Secured", function 
 
     const receipt = await tx.wait();
     const placeAddress = await factory.getPlaceAddress(0);
-    place = await ethers.getContractAt("USCI_Secured", placeAddress);
+    place = await ethers.getContractAt("CANTORFI_Secured", placeAddress);
   });
 
   describe("🏭 FACTORY - Sécurité de base", function () {

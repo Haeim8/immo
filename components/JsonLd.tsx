@@ -2,18 +2,18 @@ export default function JsonLd() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "USCI",
-    "url": "https://usci.tech",
-    "logo": "https://usci.tech/logo-dark.png",
+    "name": "CANTORFI",
+    "url": "https://cantorfi.tech",
+    "logo": "https://cantorfi.tech/logo-dark.png",
     "sameAs": [
-      "https://usci.ca",
-      "https://usci.fund"
+      "https://cantorfi.ca",
+      "https://cantorfi.fund"
     ],
     "description": "RWA Multi Blockchain-powered",
     "foundingDate": "2024",
     "contactPoint": {
       "@type": "ContactPoint",
-      "email": "contact@usci.tech",
+      "email": "contact@cantorfi.tech",
       "contactType": "customer service"
     }
   };
@@ -21,11 +21,11 @@ export default function JsonLd() {
   const websiteData = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "USCI",
-    "url": "https://usci.tech",
+    "name": "CANTORFI",
+    "url": "https://cantorfi.tech",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://usci.tech/search?q={search_term_string}",
+      "target": "https://cantorfi.tech/search?q={search_term_string}",
       "query-input": "required name=search_term_string"
     }
   };

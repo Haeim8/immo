@@ -1,6 +1,6 @@
 import { base, baseSepolia } from 'wagmi/chains';
 
-export const APP_NAME = 'USCI';
+export const APP_NAME = 'CANTORFI';
 export const PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 if (!PROJECT_ID) {

@@ -1,45 +1,45 @@
 const hre = require("hardhat");
 
 async function main() {
-  console.log("🚀 Déploiement des contrats USCI...\n");
+  console.log("🚀 Déploiement des contrats CANTORFI...\n");
 
   const [deployer] = await hre.ethers.getSigners();
   console.log("📝 Deploying with account:", deployer.address);
   console.log("💰 Balance:", hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address)), "ETH\n");
 
-  // 1. Deploy USCINFT (NFT Renderer)
-  console.log("1️⃣  Déploiement de USCINFT (NFT Renderer)...");
-  const USCINFT = await hre.ethers.getContractFactory("USCINFT");
-  const nftRenderer = await USCINFT.deploy();
+  // 1. Deploy CANTORFINFT (NFT Renderer)
+  console.log("1️⃣  Déploiement de CANTORFINFT (NFT Renderer)...");
+  const CANTORFINFT = await hre.ethers.getContractFactory("CANTORFINFT");
+  const nftRenderer = await CANTORFINFT.deploy();
   await nftRenderer.waitForDeployment();
   const nftRendererAddress = await nftRenderer.getAddress();
-  console.log("   ✅ USCINFT déployé à:", nftRendererAddress);
+  console.log("   ✅ CANTORFINFT déployé à:", nftRendererAddress);
 
-  // 2. Deploy USCI Implementation (for cloning)
-  console.log("\n2️⃣  Déploiement de USCI Implementation...");
-  const USCI = await hre.ethers.getContractFactory("USCI");
+  // 2. Deploy CANTORFI Implementation (for cloning)
+  console.log("\n2️⃣  Déploiement de CANTORFI Implementation...");
+  const CANTORFI = await hre.ethers.getContractFactory("CANTORFI");
   // Deploy with dummy parameters (will be initialized by clones)
-  const usciImplementation = await USCI.deploy();
-  await usciImplementation.waitForDeployment();
-  const usciImplementationAddress = await usciImplementation.getAddress();
-  console.log("   ✅ USCI Implementation déployé à:", usciImplementationAddress);
+  const cantorfiImplementation = await CANTORFI.deploy();
+  await cantorfiImplementation.waitForDeployment();
+  const cantorfiImplementationAddress = await cantorfiImplementation.getAddress();
+  console.log("   ✅ CANTORFI Implementation déployé à:", cantorfiImplementationAddress);
 
   // 3. Deploy Factory
-  console.log("\n3️⃣  Déploiement de USCIFactory...");
+  console.log("\n3️⃣  Déploiement de CANTORFIFactory...");
   const treasury = deployer.address; // À changer avec votre trésorerie
-  const USCIFactory = await hre.ethers.getContractFactory("USCIFactory");
-  const factory = await USCIFactory.deploy(treasury, nftRendererAddress, usciImplementationAddress);
+  const CANTORFIFactory = await hre.ethers.getContractFactory("CANTORFIFactory");
+  const factory = await CANTORFIFactory.deploy(treasury, nftRendererAddress, cantorfiImplementationAddress);
   await factory.waitForDeployment();
 
   const factoryAddress = await factory.getAddress();
-  console.log("   ✅ USCIFactory déployée à:", factoryAddress);
+  console.log("   ✅ CANTORFIFactory déployée à:", factoryAddress);
   console.log("   💰 Treasury:", treasury);
 
   console.log("\n📋 RÉSUMÉ DU DÉPLOIEMENT:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🎨 USCINFT:            ", nftRendererAddress);
-  console.log("📄 USCI Implementation:", usciImplementationAddress);
-  console.log("🏭 USCIFactory:        ", factoryAddress);
+  console.log("🎨 CANTORFINFT:            ", nftRendererAddress);
+  console.log("📄 CANTORFI Implementation:", cantorfiImplementationAddress);
+  console.log("🏭 CANTORFIFactory:        ", factoryAddress);
   console.log("💰 Treasury:           ", treasury);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 

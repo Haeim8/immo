@@ -13,7 +13,7 @@
       },
       {
         "internalType": "address",
-        "name": "_usciImplementation",
+        "name": "_cantorfiImplementation",
         "type": "address"
       }
     ],
@@ -927,7 +927,7 @@
   },
   {
     "inputs": [],
-    "name": "usciImplementation",
+    "name": "cantorfiImplementation",
     "outputs": [
       {
         "internalType": "address",

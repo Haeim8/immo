@@ -1,112 +1,43 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { TrendingUp, Users, Building2, ExternalLink } from "lucide-react";
-import GradientText from "@/components/atoms/GradientText";
-import StatCard from "@/components/molecules/StatCard";
-import AnimatedButton from "@/components/atoms/AnimatedButton";
-import { useAllPlaces } from "@/lib/evm/hooks";
-import { useMemo } from "react";
-import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
-import { FACTORY_ADDRESS, BLOCK_EXPLORER_URL } from "@/lib/evm/constants";
+import { Building2 } from "lucide-react";
 
 export default function HeroSection() {
-  const { places } = useAllPlaces();
-  const heroT = useTranslations("hero");
-  const { formatCurrency } = useCurrencyFormatter();
-
-  const globalMetrics = useMemo(() => {
-    const totalProjects = places.length;
-    const totalValueDistributed = places.reduce((sum, place) =>
-      sum + Number(place.info.totalRewardsDeposited), 0
-    );
-    const activeInvestors = 0; // TODO: Calculer avec leaderboard data
-
-    return {
-      totalProjectsFunded: totalProjects,
-      totalValueDistributed,
-      activeInvestors,
-      blockchainExplorerUrl: `${BLOCK_EXPLORER_URL}/address/${FACTORY_ADDRESS}`,
-    };
-  }, [places]);
-
-  const metrics = [
-    {
-      icon: Building2,
-      label: heroT("metrics.projects"),
-      value: globalMetrics.totalProjectsFunded.toLocaleString(),
-      iconColor: "text-cyan-400",
-      delay: 0.2,
-    },
-    {
-      icon: TrendingUp,
-      label: heroT("metrics.dividends"),
-      value: formatCurrency(globalMetrics.totalValueDistributed, {
-        notation: "compact",
-        maximumFractionDigits: 2,
-      }),
-      iconColor: "text-blue-400",
-      delay: 0.4,
-    },
-    {
-      icon: Users,
-      label: heroT("metrics.investors"),
-      value: globalMetrics.activeInvestors.toLocaleString(),
-      iconColor: "text-purple-400",
-      delay: 0.6,
-    },
-  ];
-
   return (
-    <section className="relative min-h-[45vh] md:min-h-[50vh] flex items-center justify-center py-6 md:py-8">
+    <section className="relative py-12 md:py-16 overflow-hidden">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-primary/10 rounded-[100%] blur-[100px] pointer-events-none" />
 
-      <div className="container mx-auto px-4 md:px-6 relative z-10">
-        <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
-          {/* Hero Title */}
-          <motion.div
-            className="text-center space-y-3 md:space-y-4"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-bold leading-tight px-2">
-            <GradientText from="from-cyan-400" to="to-blue-600">
-              {heroT("titleLine1")}
-            </GradientText>
+      <div className="container relative mx-auto px-4 md:px-6">
+        <div className="flex flex-col items-center text-center space-y-6 max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider">
+            <Building2 className="w-3 h-3" />
+            RWA Protocol Markets
+          </div>
+
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/70">
+            Real World Assets
             <br />
-            <span className="text-foreground">{heroT("titleLine2")}</span>
+            <span className="text-primary">On-Chain Liquidity</span>
           </h1>
-          <p className="text-sm sm:text-base md:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
-            {heroT("subtitle")}
+
+          <p className="text-lg text-muted-foreground max-w-xl">
+            Access premium real estate yields through diversified vaults. Supply liquidity or borrow against your assets
+            instantly.
           </p>
-        </motion.div>
 
-        {/* CTA Buttons */}
-        <motion.div
-            className="flex flex-row items-center justify-center gap-2 md:gap-3 px-4"
-            initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <AnimatedButton variant="primary" size="lg" className="flex-1 sm:flex-none text-xs sm:text-sm md:text-base">
-            {heroT("exploreCTA")}
-          </AnimatedButton>
-          <AnimatedButton
-            variant="outline"
-            size="lg"
-            className="flex-1 sm:flex-none text-xs sm:text-sm md:text-base"
-            onClick={() => window.open(globalMetrics.blockchainExplorerUrl, "_blank")}
-          >
-            <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-2" />
-            {heroT("explorerCTA")}
-          </AnimatedButton>
-        </motion.div>
-
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-3 gap-3 md:gap-6">
-            {metrics.map((metric, index) => (
-              <StatCard key={index} {...metric} />
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-16 pt-8 w-full max-w-2xl border-t border-border/50 mt-8">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Value Locked</p>
+              <p className="text-3xl font-bold font-mono">$12.4M</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Active Vaults</p>
+              <p className="text-3xl font-bold font-mono">3</p>
+            </div>
+            <div className="space-y-1 col-span-2 md:col-span-1">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Yield Paid</p>
+              <p className="text-3xl font-bold font-mono text-green-500">+$842k</p>
+            </div>
           </div>
         </div>
       </div>

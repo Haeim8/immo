@@ -5,15 +5,15 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "./USCINFT.sol";
+import "./CANTORFINFT.sol";
 
 /**
- * @title USCI
+ * @title CANTORFI
  * @notice Interactive place tokenization with puzzle pieces as ERC721 NFTs
  * @dev Enhanced security version with Pausable, rate limiting and ERC2981 royalties (4% to treasury)
- * @custom:security-contact security@usci.io
+ * @custom:security-contact security@cantorfi.io
  */
-contract USCI is ERC721, ERC2981, ReentrancyGuard, Pausable {
+contract CANTORFI is ERC721, ERC2981, ReentrancyGuard, Pausable {
     // ============== STRUCTS ==============
 
     struct PlaceInfo {
@@ -142,8 +142,8 @@ contract USCI is ERC721, ERC2981, ReentrancyGuard, Pausable {
     modifier onlyFactoryOrTeam() {
         if (
             msg.sender != factory &&
-            !IUSCIFactory(factory).isTeamMember(msg.sender) &&
-            msg.sender != IUSCIFactory(factory).admin()
+            !ICANTORFIFactory(factory).isTeamMember(msg.sender) &&
+            msg.sender != ICANTORFIFactory(factory).admin()
         ) revert NotAuthorized();
         _;
     }
@@ -501,7 +501,7 @@ contract USCI is ERC721, ERC2981, ReentrancyGuard, Pausable {
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         if (ownerOf(tokenId) == address(0)) revert TokenDoesNotExist();
 
-        USCINFT.PlaceMetadata memory metadata = USCINFT.PlaceMetadata({
+        CANTORFINFT.PlaceMetadata memory metadata = CANTORFINFT.PlaceMetadata({
             placeId: info.placeId,
             assetType: info.assetType,
             name: info.name,
@@ -509,7 +509,7 @@ contract USCI is ERC721, ERC2981, ReentrancyGuard, Pausable {
             province: info.province
         });
 
-        return USCINFT(nftRenderer).generateTokenURI(
+        return CANTORFINFT(nftRenderer).generateTokenURI(
             tokenId,
             metadata,
             originalMinter[tokenId],
@@ -535,7 +535,7 @@ contract USCI is ERC721, ERC2981, ReentrancyGuard, Pausable {
 }
 
 // Interface for factory calls
-interface IUSCIFactory {
+interface ICANTORFIFactory {
     function admin() external view returns (address);
     function isTeamMember(address member) external view returns (bool);
 }

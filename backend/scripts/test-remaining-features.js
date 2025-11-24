@@ -10,10 +10,10 @@ async function main() {
   console.log("👤 Deployer:", deployer.address);
   console.log("📍 Place:", placeAddress, "\n");
 
-  const usci = await hre.ethers.getContractAt("USCI", placeAddress);
+  const cantorfi = await hre.ethers.getContractAt("CANTORFI", placeAddress);
 
   // Vérifier l'état initial
-  let placeInfo = await usci.getPlaceInfo();
+  let placeInfo = await cantorfi.getPlaceInfo();
   console.log("📊 État Initial:");
   console.log("   Total puzzles:", placeInfo.totalPuzzles.toString());
   console.log("   Puzzles sold:", placeInfo.puzzlesSold.toString());
@@ -26,11 +26,11 @@ async function main() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   console.log("🔒 Fermeture manuelle de la vente...");
-  const closeTx = await usci.closeSaleEarly();
+  const closeTx = await cantorfi.closeSaleEarly();
   await closeTx.wait();
   console.log("✅ Vente fermée manuellement");
 
-  placeInfo = await usci.getPlaceInfo();
+  placeInfo = await cantorfi.getPlaceInfo();
   console.log("✓ Is active:", placeInfo.isActive);
 
   if (placeInfo.isActive) {
@@ -40,7 +40,7 @@ async function main() {
 
   // Tenter d'acheter après fermeture (devrait échouer)
   try {
-    await usci.takePuzzle({ value: placeInfo.puzzlePrice });
+    await cantorfi.takePuzzle({ value: placeInfo.puzzlePrice });
     console.log("❌ ERREUR: Achat possible après fermeture!");
     process.exit(1);
   } catch (error) {
@@ -57,7 +57,7 @@ async function main() {
   const rewardAmount = hre.ethers.parseEther("0.001");
   console.log("💰 Dépôt rewards:", hre.ethers.formatEther(rewardAmount), "ETH");
 
-  const depositTx = await usci.depositRewards({ value: rewardAmount });
+  const depositTx = await cantorfi.depositRewards({ value: rewardAmount });
   const depositReceipt = await depositTx.wait();
   console.log("✅ Rewards déposés");
   console.log("   TX:", depositReceipt.hash);
@@ -70,11 +70,11 @@ async function main() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   console.log("⏸️  Pause campagne...");
-  const pauseTx = await usci.pause();
+  const pauseTx = await cantorfi.pause();
   await pauseTx.wait();
   console.log("✅ Campagne pausée");
 
-  const isPaused = await usci.paused();
+  const isPaused = await cantorfi.paused();
   console.log("✓ Status paused:", isPaused);
 
   if (!isPaused) {
@@ -83,11 +83,11 @@ async function main() {
   }
 
   console.log("\n▶️  Unpause campagne...");
-  const unpauseTx = await usci.unpause();
+  const unpauseTx = await cantorfi.unpause();
   await unpauseTx.wait();
   console.log("✅ Campagne unpaused");
 
-  const isPausedAfter = await usci.paused();
+  const isPausedAfter = await cantorfi.paused();
   if (isPausedAfter) {
     console.log("❌ ERREUR: Campagne toujours pausée!");
     process.exit(1);
@@ -104,11 +104,11 @@ async function main() {
   const completionAmount = placeInfo.puzzlePrice * placeInfo.totalPuzzles;
   console.log("💰 Dépôt completion:", hre.ethers.formatEther(completionAmount), "ETH");
 
-  const completeTx = await usci.markPlaceAsCompleted({ value: completionAmount });
+  const completeTx = await cantorfi.markPlaceAsCompleted({ value: completionAmount });
   await completeTx.wait();
   console.log("✅ Place marquée comme completed");
 
-  const infoCompleted = await usci.getPlaceInfo();
+  const infoCompleted = await cantorfi.getPlaceInfo();
   console.log("✓ Is completed:", infoCompleted.isCompleted);
 
   if (!infoCompleted.isCompleted) {

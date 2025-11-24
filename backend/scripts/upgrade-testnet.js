@@ -27,40 +27,40 @@ async function main() {
   }
 
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("📦 ÉTAPE 1: Déploiement USCINFT (v2)");
+  console.log("📦 ÉTAPE 1: Déploiement CANTORFINFT (v2)");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  const USCINFT = await hre.ethers.getContractFactory("USCINFT");
-  const uscinft = await USCINFT.deploy();
-  await uscinft.waitForDeployment();
+  const CANTORFINFT = await hre.ethers.getContractFactory("CANTORFINFT");
+  const cantorfinft = await CANTORFINFT.deploy();
+  await cantorfinft.waitForDeployment();
 
-  const nftRendererAddress = await uscinft.getAddress();
-  console.log("✅ USCINFT déployé:", nftRendererAddress);
+  const nftRendererAddress = await cantorfinft.getAddress();
+  console.log("✅ CANTORFINFT déployé:", nftRendererAddress);
 
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("📦 ÉTAPE 2: Déploiement USCI Implementation");
+  console.log("📦 ÉTAPE 2: Déploiement CANTORFI Implementation");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  const USCI = await hre.ethers.getContractFactory("USCI");
-  const usciImpl = await USCI.deploy();
-  await usciImpl.waitForDeployment();
+  const CANTORFI = await hre.ethers.getContractFactory("CANTORFI");
+  const cantorfiImpl = await CANTORFI.deploy();
+  await cantorfiImpl.waitForDeployment();
 
-  const usciImplAddress = await usciImpl.getAddress();
-  console.log("✅ USCI Implementation déployé:", usciImplAddress);
+  const cantorfiImplAddress = await cantorfiImpl.getAddress();
+  console.log("✅ CANTORFI Implementation déployé:", cantorfiImplAddress);
 
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("📦 ÉTAPE 3: Déploiement USCIFactory (v2)");
+  console.log("📦 ÉTAPE 3: Déploiement CANTORFIFactory (v2)");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   const treasury = deployer.address;
   console.log("💰 Treasury configuré:", treasury);
 
-  const USCIFactory = await hre.ethers.getContractFactory("USCIFactory");
-  const factory = await USCIFactory.deploy(treasury, nftRendererAddress, usciImplAddress);
+  const CANTORFIFactory = await hre.ethers.getContractFactory("CANTORFIFactory");
+  const factory = await CANTORFIFactory.deploy(treasury, nftRendererAddress, cantorfiImplAddress);
   await factory.waitForDeployment();
 
   const factoryAddress = await factory.getAddress();
-  console.log("✅ USCIFactory déployé:", factoryAddress);
+  console.log("✅ CANTORFIFactory déployé:", factoryAddress);
 
   // Vérifier le déploiement
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -87,7 +87,7 @@ async function main() {
     timestamp: new Date().toISOString(),
     deployer: deployer.address,
     contracts: {
-      USCIFactory: {
+      CANTORFIFactory: {
         address: factoryAddress,
         version: "2.0",
         features: [
@@ -98,12 +98,12 @@ async function main() {
           "Naming Conventions Fixed"
         ]
       },
-      USCINFT: {
+      CANTORFINFT: {
         address: nftRendererAddress,
         version: "2.0"
       },
-      USCIImplementation: {
-        address: usciImplAddress,
+      CANTORFIImplementation: {
+        address: cantorfiImplAddress,
         version: "2.0"
       }
     },
@@ -157,29 +157,29 @@ async function main() {
     fs.mkdirSync(abiDir, { recursive: true });
   }
 
-  // Copier USCI ABI
-  const usciArtifact = await hre.artifacts.readArtifact("USCI");
+  // Copier CANTORFI ABI
+  const cantorfiArtifact = await hre.artifacts.readArtifact("CANTORFI");
   fs.writeFileSync(
-    path.join(abiDir, "USCI.json"),
-    JSON.stringify(usciArtifact.abi, null, 2)
+    path.join(abiDir, "CANTORFI.json"),
+    JSON.stringify(cantorfiArtifact.abi, null, 2)
   );
-  console.log("✅ USCI.json exporté");
+  console.log("✅ CANTORFI.json exporté");
 
-  // Copier USCIFactory ABI
-  const factoryArtifact = await hre.artifacts.readArtifact("USCIFactory");
+  // Copier CANTORFIFactory ABI
+  const factoryArtifact = await hre.artifacts.readArtifact("CANTORFIFactory");
   fs.writeFileSync(
-    path.join(abiDir, "USCIFactory.json"),
+    path.join(abiDir, "CANTORFIFactory.json"),
     JSON.stringify(factoryArtifact.abi, null, 2)
   );
-  console.log("✅ USCIFactory.json exporté");
+  console.log("✅ CANTORFIFactory.json exporté");
 
-  // Copier USCINFT ABI
-  const nftArtifact = await hre.artifacts.readArtifact("USCINFT");
+  // Copier CANTORFINFT ABI
+  const nftArtifact = await hre.artifacts.readArtifact("CANTORFINFT");
   fs.writeFileSync(
-    path.join(abiDir, "USCINFT.json"),
+    path.join(abiDir, "CANTORFINFT.json"),
     JSON.stringify(nftArtifact.abi, null, 2)
   );
-  console.log("✅ USCINFT.json exporté");
+  console.log("✅ CANTORFINFT.json exporté");
 
   console.log("\n💡 Copiez ces ABIs vers votre frontend !");
 

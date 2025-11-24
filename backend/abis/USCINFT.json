@@ -34,7 +34,7 @@
             "type": "string"
           }
         ],
-        "internalType": "struct USCINFT.PlaceMetadata",
+        "internalType": "struct CANTORFINFT.PlaceMetadata",
         "name": "metadata",
         "type": "tuple"
       },

@@ -4,7 +4,7 @@
 
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { FACTORY_ADDRESS } from './constants';
-import { USCIFactoryABI, USCIABI } from './abis';
+import { CANTORFIFactoryABI, CANTORFIABI } from './abis';
 
 /**
  * Hook pour créer une place
@@ -35,7 +35,7 @@ export function useCreatePlace() {
   const createPlace = (params: CreatePlaceParams) => {
     writeContract({
       address: FACTORY_ADDRESS,
-      abi: USCIFactoryABI,
+      abi: CANTORFIFactoryABI,
       functionName: 'createPlace',
       args: [
         params.assetType,
@@ -71,7 +71,7 @@ export function useAddTeamMember() {
   const addTeamMember = (memberAddress: `0x${string}`) => {
     writeContract({
       address: FACTORY_ADDRESS,
-      abi: USCIFactoryABI,
+      abi: CANTORFIFactoryABI,
       functionName: 'addTeamMember',
       args: [memberAddress],
     });
@@ -90,7 +90,7 @@ export function useRemoveTeamMember() {
   const removeTeamMember = (memberAddress: `0x${string}`) => {
     writeContract({
       address: FACTORY_ADDRESS,
-      abi: USCIFactoryABI,
+      abi: CANTORFIFactoryABI,
       functionName: 'removeTeamMember',
       args: [memberAddress],
     });
@@ -109,7 +109,7 @@ export function useDepositRewards() {
   const depositRewards = (placeAddress: `0x${string}`, amount: bigint) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'depositRewards',
       value: amount,
     });
@@ -128,7 +128,7 @@ export function useCloseSale() {
   const closeSale = (placeAddress: `0x${string}`) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'closeSale',
     });
   };
@@ -146,7 +146,7 @@ export function useCompletPlace() {
   const completePlace = (placeAddress: `0x${string}`, amount: bigint) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'complete',
       value: amount,
     });
@@ -174,7 +174,7 @@ export function useClaimRewards() {
   const claimRewards = (placeAddress: `0x${string}`, tokenId: bigint) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'claimRewards',
       args: [tokenId],
     });
@@ -193,7 +193,7 @@ export function useBuyPuzzle() {
   const buyPuzzle = (placeAddress: `0x${string}`, puzzlePrice: bigint) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'takePuzzle',
       value: puzzlePrice,
     });
@@ -217,7 +217,7 @@ export function useCreateProposal() {
   ) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'createProposal',
       args: [title, description, votingDuration],
     });
@@ -241,7 +241,7 @@ export function useCastVote() {
   ) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'castVote',
       args: [proposalId, tokenId, vote],
     });
@@ -260,7 +260,7 @@ export function useCloseProposal() {
   const closeProposal = (placeAddress: `0x${string}`, proposalId: bigint) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'closeProposal',
       args: [proposalId],
     });
@@ -279,7 +279,7 @@ export function usePausePlace() {
   const pausePlace = (placeAddress: `0x${string}`) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'pause',
     });
   };
@@ -297,7 +297,7 @@ export function useUnpausePlace() {
   const unpausePlace = (placeAddress: `0x${string}`) => {
     writeContract({
       address: placeAddress,
-      abi: USCIABI,
+      abi: CANTORFIABI,
       functionName: 'unpause',
     });
   };
@@ -315,7 +315,7 @@ export function usePauseFactory() {
   const pauseFactory = () => {
     writeContract({
       address: FACTORY_ADDRESS,
-      abi: USCIFactoryABI,
+      abi: CANTORFIFactoryABI,
       functionName: 'pause',
     });
   };
@@ -333,7 +333,7 @@ export function useUnpauseFactory() {
   const unpauseFactory = () => {
     writeContract({
       address: FACTORY_ADDRESS,
-      abi: USCIFactoryABI,
+      abi: CANTORFIFactoryABI,
       functionName: 'unpause',
     });
   };

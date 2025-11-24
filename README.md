@@ -1,4 +1,4 @@
-# USCI - Tokenized Asset Investment
+# CANTORFI - Tokenized Asset Investment
 
 ## Description
 

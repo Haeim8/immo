@@ -5,11 +5,11 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
- * @title USCINFT
- * @notice NFT metadata generator for USCI puzzles
+ * @title CANTORFINFT
+ * @notice NFT metadata generator for CANTORFI puzzles
  * @dev Generates on-chain SVG and metadata for puzzle NFTs
  */
-contract USCINFT {
+contract CANTORFINFT {
     struct PlaceMetadata {
         uint256 placeId;
         string assetType;

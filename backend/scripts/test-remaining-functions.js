@@ -7,7 +7,7 @@ async function main() {
   const [deployer] = await hre.ethers.getSigners();
 
   const FACTORY_ADDRESS = "0xf44C9E702E36234cD1D72760D88861F257Ed1c35";
-  const factory = await hre.ethers.getContractAt("USCIFactory", FACTORY_ADDRESS);
+  const factory = await hre.ethers.getContractAt("CANTORFIFactory", FACTORY_ADDRESS);
 
   console.log("📍 Factory:", FACTORY_ADDRESS);
   console.log("👤 Deployer:", deployer.address);
@@ -25,24 +25,24 @@ async function main() {
   const placeAddress = await factory.places(3);
   console.log("🏠 Place testée (ID 3):", placeAddress);
 
-  const usci = await hre.ethers.getContractAt("USCI", placeAddress);
+  const cantorfi = await hre.ethers.getContractAt("CANTORFI", placeAddress);
   
-  const placeInfo = await usci.getPlaceInfo();
+  const placeInfo = await cantorfi.getPlaceInfo();
   console.log("📍 Place:", placeAddress);
   console.log("📊 Puzzles vendus:", placeInfo.puzzlesSold.toString(), "/", placeInfo.totalPuzzles.toString());
 
-  //TESTS USCI - WRITE FUNCTIONS
+  //TESTS CANTORFI - WRITE FUNCTIONS
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🧪 TESTS WRITE FUNCTIONS USCI");
+  console.log("🧪 TESTS WRITE FUNCTIONS CANTORFI");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   // Vérifier si pause
-  const isPaused = await usci.paused();
+  const isPaused = await cantorfi.paused();
 
   if (isPaused) {
     console.log("⏸️  Contrat PAUSED - Unpause requis\n");
     console.log("🔓 TEST W1: unpause");
-    const unpauseTx = await usci.unpause();
+    const unpauseTx = await cantorfi.unpause();
     const unpauseReceipt = await unpauseTx.wait();
     console.log("   ✅ TX:", unpauseReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -50,17 +50,17 @@ async function main() {
   }
 
   // Rafraîchir info après unpause
-  const currentInfo = await usci.getPlaceInfo();
+  const currentInfo = await cantorfi.getPlaceInfo();
 
   // TEST takePuzzle
   if (currentInfo.isActive && currentInfo.puzzlesSold < currentInfo.totalPuzzles) {
     console.log("🛒 TEST W2: takePuzzle");
     console.log("   Prix:", hre.ethers.formatEther(currentInfo.puzzlePrice), "ETH");
-    const buyTx = await usci.takePuzzle({ value: currentInfo.puzzlePrice });
+    const buyTx = await cantorfi.takePuzzle({ value: currentInfo.puzzlePrice });
     const buyReceipt = await buyTx.wait();
     console.log("   ✅ TX:", buyReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
-    const newInfo = await usci.getPlaceInfo();
+    const newInfo = await cantorfi.getPlaceInfo();
     console.log("   Puzzles vendus:", newInfo.puzzlesSold.toString(), "/", newInfo.totalPuzzles.toString());
     console.log("   ✅ PASSÉ\n");
   } else {
@@ -68,12 +68,12 @@ async function main() {
   }
 
   // Rafraîchir après achat
-  const infoAfterBuy = await usci.getPlaceInfo();
+  const infoAfterBuy = await cantorfi.getPlaceInfo();
 
   // TEST closeSale si deadline passée
   if (infoAfterBuy.isActive && Date.now()/1000 > Number(infoAfterBuy.saleEnd)) {
     console.log("🔒 TEST W3: closeSale");
-    const closeTx = await usci.closeSale();
+    const closeTx = await cantorfi.closeSale();
     const closeReceipt = await closeTx.wait();
     console.log("   ✅ TX:", closeReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -82,13 +82,13 @@ async function main() {
     console.log("⚠️  TEST W3: closeSale SKIPPED (vente pas terminée)\n");
   }
 
-  const infoAfterClose = await usci.getPlaceInfo();
+  const infoAfterClose = await cantorfi.getPlaceInfo();
 
   // TEST depositRewards
   if (!infoAfterClose.isActive && infoAfterClose.puzzlesSold > 0) {
     console.log("💰 TEST W4: depositRewards");
     const rewardAmt = "54"; // 54 wei
-    const depositTx = await usci.depositRewards({ value: rewardAmt });
+    const depositTx = await cantorfi.depositRewards({ value: rewardAmt });
     const depositReceipt = await depositTx.wait();
     console.log("   ✅ TX:", depositReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -98,10 +98,10 @@ async function main() {
   }
 
   // TEST claimRewards
-  const canClaimNow = await usci.canClaimRewards(0);
+  const canClaimNow = await cantorfi.canClaimRewards(0);
   if (canClaimNow) {
     console.log("💎 TEST W5: claimRewards");
-    const claimTx = await usci.claimRewards(0);
+    const claimTx = await cantorfi.claimRewards(0);
     const claimReceipt = await claimTx.wait();
     console.log("   ✅ TX:", claimReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -113,22 +113,22 @@ async function main() {
   // TEST createProposal
   if (infoAfterClose.votingEnabled) {
     console.log("📝 TEST W6: createProposal");
-    const propTx = await usci.createProposal("Test Security", "Test proposal", 86400);
+    const propTx = await cantorfi.createProposal("Test Security", "Test proposal", 86400);
     const propReceipt = await propTx.wait();
     console.log("   ✅ TX:", propReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
-    const newProposalId = await usci._proposalIdCounter ? await usci._proposalIdCounter() : "unknown";
+    const newProposalId = await cantorfi._proposalIdCounter ? await cantorfi._proposalIdCounter() : "unknown";
     console.log("   ✅ PASSÉ\n");
   } else {
     console.log("⚠️  TEST W6: createProposal SKIPPED\n");
   }
 
   // TEST castVote
-  const lastProposal = await usci.proposals(0);
-  const hasVotedAlready = await usci.hasVoted(0, 0);
+  const lastProposal = await cantorfi.proposals(0);
+  const hasVotedAlready = await cantorfi.hasVoted(0, 0);
   if (lastProposal.isActive && !hasVotedAlready) {
     console.log("🗳️  TEST W7: castVote");
-    const voteTx = await usci.castVote(0, 0, true);
+    const voteTx = await cantorfi.castVote(0, 0, true);
     const voteReceipt = await voteTx.wait();
     console.log("   ✅ TX:", voteReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -138,10 +138,10 @@ async function main() {
   }
 
   // TEST closeProposal si le vote est fini
-  const proposalToClose = await usci.proposals(0);
+  const proposalToClose = await cantorfi.proposals(0);
   if (proposalToClose.isActive && Date.now()/1000 > Number(proposalToClose.votingEndsAt)) {
     console.log("🔐 TEST W8: closeProposal");
-    const closePropTx = await usci.closeProposal(0);
+    const closePropTx = await cantorfi.closeProposal(0);
     const closePropReceipt = await closePropTx.wait();
     console.log("   ✅ TX:", closePropReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -152,7 +152,7 @@ async function main() {
 
   // TEST pause
   console.log("⏸️  TEST W9: pause");
-  const pauseTx = await usci.pause();
+  const pauseTx = await cantorfi.pause();
   const pauseReceipt = await pauseTx.wait();
   console.log("   ✅ TX:", pauseReceipt.hash);
   await new Promise(resolve => setTimeout(resolve, 3000));
@@ -160,18 +160,18 @@ async function main() {
 
   // Unpause pour continuer les tests
   console.log("▶️  TEST W10: unpause (2)");
-  const unpause2Tx = await usci.unpause();
+  const unpause2Tx = await cantorfi.unpause();
   const unpause2Receipt = await unpause2Tx.wait();
   console.log("   ✅ TX:", unpause2Receipt.hash);
   await new Promise(resolve => setTimeout(resolve, 3000));
   console.log("   ✅ PASSÉ\n");
 
   // TEST complete si tous les puzzles sont vendus
-  const finalInfo = await usci.getPlaceInfo();
+  const finalInfo = await cantorfi.getPlaceInfo();
   if (!finalInfo.isActive && finalInfo.puzzlesSold >= finalInfo.totalPuzzles && !isCompleted) {
     console.log("🏁 TEST W11: complete");
     const completeAmount = finalInfo.puzzlePrice * finalInfo.totalPuzzles;
-    const completeTx = await usci.complete({ value: completeAmount });
+    const completeTx = await cantorfi.complete({ value: completeAmount });
     const completeReceipt = await completeTx.wait();
     console.log("   ✅ TX:", completeReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -181,10 +181,10 @@ async function main() {
   }
 
   // TEST claimCompletion
-  const isCompletedNow = await usci.isCompleted();
+  const isCompletedNow = await cantorfi.isCompleted();
   if (isCompletedNow) {
     console.log("💰 TEST W12: claimCompletion");
-    const claimCompTx = await usci.claimCompletion(0);
+    const claimCompTx = await cantorfi.claimCompletion(0);
     const claimCompReceipt = await claimCompTx.wait();
     console.log("   ✅ TX:", claimCompReceipt.hash);
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -195,10 +195,10 @@ async function main() {
 
   //TESTS VIEW
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🧪 TESTS VIEW FUNCTIONS USCI");
+  console.log("🧪 TESTS VIEW FUNCTIONS CANTORFI");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  const placeInfoAfterBuy = await usci.getPlaceInfo();
+  const placeInfoAfterBuy = await cantorfi.getPlaceInfo();
 
   console.log("📋 TEST 1: getPlaceInfo");
   console.log("   Name:", placeInfoAfterBuy.name);
@@ -211,69 +211,69 @@ async function main() {
   console.log("   ✅ PASSÉ\n");
 
   console.log("🎨 TEST 2: tokenURI NFT #0");
-  const tokenURI = await usci.tokenURI(0);
+  const tokenURI = await cantorfi.tokenURI(0);
   console.log("   URI:", tokenURI.substring(0, 80), "...");
   console.log("   ✅ PASSÉ\n");
 
   console.log("💎 TEST 3: royaltyInfo (ERC2981)");
   const salePrice = hre.ethers.parseEther("0.000000000000054");
-  const [receiver, royaltyAmount] = await usci.royaltyInfo(0, salePrice);
+  const [receiver, royaltyAmount] = await cantorfi.royaltyInfo(0, salePrice);
   console.log("   Royalty:", hre.ethers.formatEther(royaltyAmount), "ETH (", (Number(royaltyAmount) / Number(salePrice) * 100).toFixed(2), "%)");
   console.log("   Receiver:", receiver);
   console.log("   ✅ PASSÉ\n");
 
   console.log("📊 TEST 4: ownerOf + balanceOf");
-  const owner0 = await usci.ownerOf(0);
-  const balance = await usci.balanceOf(deployer.address);
+  const owner0 = await cantorfi.ownerOf(0);
+  const balance = await cantorfi.balanceOf(deployer.address);
   console.log("   Owner NFT #0:", owner0);
   console.log("   Balance deployer:", balance.toString());
   console.log("   ✅ PASSÉ\n");
 
   console.log("⚙️  TEST 5: canClaimRewards");
-  const canClaim = await usci.canClaimRewards(0);
+  const canClaim = await cantorfi.canClaimRewards(0);
   console.log("   Can claim:", canClaim);
   console.log("   ✅ PASSÉ\n");
 
   console.log("📈 TEST 6: totalRewardsDeposited + totalRewardsClaimed");
-  const totalRewards = await usci.totalRewardsDeposited();
-  const totalClaimed = await usci.totalRewardsClaimed();
+  const totalRewards = await cantorfi.totalRewardsDeposited();
+  const totalClaimed = await cantorfi.totalRewardsClaimed();
   console.log("   Total rewards deposited:", hre.ethers.formatEther(totalRewards), "ETH");
   console.log("   Total rewards claimed:", hre.ethers.formatEther(totalClaimed), "ETH");
   console.log("   ✅ PASSÉ\n");
 
   console.log("🔢 TEST 7: rewardRemainder + puzzlesSoldAtLastDeposit");
-  const remainder = await usci.rewardRemainder();
-  const soldAtDeposit = await usci.puzzlesSoldAtLastDeposit();
+  const remainder = await cantorfi.rewardRemainder();
+  const soldAtDeposit = await cantorfi.puzzlesSoldAtLastDeposit();
   console.log("   Reward remainder:", hre.ethers.formatEther(remainder), "ETH");
   console.log("   Puzzles sold at last deposit:", soldAtDeposit.toString());
   console.log("   ✅ PASSÉ\n");
 
   console.log("🎭 TEST 8: rewardsClaimed + lastClaimTime (mappings)");
-  const claimedForToken0 = await usci.rewardsClaimed(0);
-  const lastClaim0 = await usci.lastClaimTime(0);
+  const claimedForToken0 = await cantorfi.rewardsClaimed(0);
+  const lastClaim0 = await cantorfi.lastClaimTime(0);
   console.log("   Rewards claimed token #0:", hre.ethers.formatEther(claimedForToken0), "ETH");
   console.log("   Last claim time token #0:", lastClaim0.toString());
   console.log("   ✅ PASSÉ\n");
 
   console.log("👤 TEST 9: originalMinter + isOriginalMinter");
-  const originalMinter0 = await usci.originalMinter(0);
-  const isOriginal = await usci.isOriginalMinter(0);
+  const originalMinter0 = await cantorfi.originalMinter(0);
+  const isOriginal = await cantorfi.isOriginalMinter(0);
   console.log("   Original minter token #0:", originalMinter0);
   console.log("   Is original minter:", isOriginal);
   console.log("   ✅ PASSÉ\n");
 
   console.log("🏛️  TEST 10: factory + treasury + nftRenderer");
-  const factoryAddr = await usci.factory();
-  const treasuryAddr = await usci.treasury();
-  const nftRendererAddr = await usci.nftRenderer();
+  const factoryAddr = await cantorfi.factory();
+  const treasuryAddr = await cantorfi.treasury();
+  const nftRendererAddr = await cantorfi.nftRenderer();
   console.log("   Factory:", factoryAddr);
   console.log("   Treasury:", treasuryAddr);
   console.log("   NFT Renderer:", nftRendererAddr);
   console.log("   ✅ PASSÉ\n");
 
   console.log("🗳️  TEST 11: proposals + hasVoted (governance mappings)");
-  const proposal0 = await usci.proposals(0);
-  const voted0_0 = await usci.hasVoted(0, 0);
+  const proposal0 = await cantorfi.proposals(0);
+  const voted0_0 = await cantorfi.hasVoted(0, 0);
   console.log("   Proposal #0 title:", proposal0.title);
   console.log("   Proposal #0 yes votes:", proposal0.yesVotes.toString());
   console.log("   Proposal #0 no votes:", proposal0.noVotes.toString());
@@ -281,52 +281,52 @@ async function main() {
   console.log("   ✅ PASSÉ\n");
 
   console.log("🎯 TEST 12: getProposal");
-  const proposalData = await usci.getProposal(0);
+  const proposalData = await cantorfi.getProposal(0);
   console.log("   Proposal description:", proposalData.description.substring(0, 30), "...");
   console.log("   Creator:", proposalData.creator);
   console.log("   Is active:", proposalData.isActive);
   console.log("   ✅ PASSÉ\n");
 
   console.log("🏁 TEST 13: isCompleted + completionAmount + completionClaimed");
-  const completed = await usci.isCompleted();
-  const compAmount = await usci.completionAmount();
-  const compClaimed = await usci.completionClaimed();
+  const completed = await cantorfi.isCompleted();
+  const compAmount = await cantorfi.completionAmount();
+  const compClaimed = await cantorfi.completionClaimed();
   console.log("   Is completed:", completed);
   console.log("   Completion amount:", hre.ethers.formatEther(compAmount), "ETH");
   console.log("   Completion claimed:", hre.ethers.formatEther(compClaimed), "ETH");
   console.log("   ✅ PASSÉ\n");
 
   console.log("⏸️  TEST 14: paused");
-  const isPausedNow = await usci.paused();
+  const isPausedNow = await cantorfi.paused();
   console.log("   Is paused:", isPausedNow);
   console.log("   ✅ PASSÉ\n");
 
   console.log("🔐 TEST 15: CLAIM_COOLDOWN + MIN_VOTING_DURATION + MAX_VOTING_DURATION");
-  const cooldown = await usci.CLAIM_COOLDOWN();
-  const minVoting = await usci.MIN_VOTING_DURATION();
-  const maxVoting = await usci.MAX_VOTING_DURATION();
+  const cooldown = await cantorfi.CLAIM_COOLDOWN();
+  const minVoting = await cantorfi.MIN_VOTING_DURATION();
+  const maxVoting = await cantorfi.MAX_VOTING_DURATION();
   console.log("   Claim cooldown:", cooldown.toString(), "seconds");
   console.log("   Min voting duration:", minVoting.toString(), "seconds");
   console.log("   Max voting duration:", maxVoting.toString(), "seconds");
   console.log("   ✅ PASSÉ\n");
 
   console.log("🎨 TEST 16: name + symbol (ERC721)");
-  const nftName = await usci.name();
-  const nftSymbol = await usci.symbol();
+  const nftName = await cantorfi.name();
+  const nftSymbol = await cantorfi.symbol();
   console.log("   Name:", nftName);
   console.log("   Symbol:", nftSymbol);
   console.log("   ✅ PASSÉ\n");
 
   console.log("🔍 TEST 17: supportsInterface (ERC165)");
-  const supportsERC721 = await usci.supportsInterface("0x80ac58cd");
-  const supportsERC2981 = await usci.supportsInterface("0x2a55205a");
+  const supportsERC721 = await cantorfi.supportsInterface("0x80ac58cd");
+  const supportsERC2981 = await cantorfi.supportsInterface("0x2a55205a");
   console.log("   Supports ERC721:", supportsERC721);
   console.log("   Supports ERC2981:", supportsERC2981);
   console.log("   ✅ PASSÉ\n");
 
   // ============================================================
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("✅ TOUS LES TESTS USCI PASSÉS (17 TESTS)!");
+  console.log("✅ TOUS LES TESTS CANTORFI PASSÉS (17 TESTS)!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   console.log("📊 TESTS FACTORY:");
@@ -339,11 +339,11 @@ async function main() {
   console.log("   Admin:", admin);
   console.log("   ✅ PASSÉ\n");
 
-  console.log("🎨 TEST 19: Factory - nftRenderer + usciImplementation");
+  console.log("🎨 TEST 19: Factory - nftRenderer + cantorfiImplementation");
   const nftRenderer = await factory.nftRenderer();
-  const usciImpl = await factory.usciImplementation();
+  const cantorfiImpl = await factory.cantorfiImplementation();
   console.log("   NFT Renderer:", nftRenderer);
-  console.log("   USCI Implementation:", usciImpl);
+  console.log("   CANTORFI Implementation:", cantorfiImpl);
   console.log("   ✅ PASSÉ\n");
 
   console.log("📊 TEST 20: Factory - placeCount + places(uint256)");
@@ -508,7 +508,7 @@ async function main() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   console.log("📊 RÉSUMÉ COMPLET:");
-  console.log("\n✅ USCI CONTRACT - WRITE (12 fonctions):");
+  console.log("\n✅ CANTORFI CONTRACT - WRITE (12 fonctions):");
   console.log("   W1. unpause");
   console.log("   W2. takePuzzle");
   console.log("   W3. closeSale");
@@ -521,7 +521,7 @@ async function main() {
   console.log("   W10. unpause (2)");
   console.log("   W11. complete");
   console.log("   W12. claimCompletion");
-  console.log("\n✅ USCI CONTRACT - VIEW (17 fonctions):");
+  console.log("\n✅ CANTORFI CONTRACT - VIEW (17 fonctions):");
   console.log("   V1. getPlaceInfo");
   console.log("   V2. tokenURI");
   console.log("   V3. royaltyInfo");
@@ -541,7 +541,7 @@ async function main() {
   console.log("   V17. supportsInterface (ERC721 + ERC2981)");
   console.log("\n✅ FACTORY CONTRACT - VIEW (13 fonctions):");
   console.log("   V18. treasury + admin");
-  console.log("   V19. nftRenderer + usciImplementation");
+  console.log("   V19. nftRenderer + cantorfiImplementation");
   console.log("   V20. placeCount + places");
   console.log("   V21. isPlaceContract + isValidPlace");
   console.log("   V22. teamMembers + teamMemberAddedAt");
@@ -568,7 +568,7 @@ async function main() {
 
   // Utiliser la place qu'on a créée pour les tests de sécurité
   const newPlaceAddr = await factory.places(newPlaceCount - 1n);
-  const newPlace = await hre.ethers.getContractAt("USCI", newPlaceAddr);
+  const newPlace = await hre.ethers.getContractAt("CANTORFI", newPlaceAddr);
 
   // SEC 1: Access Control - Tenter pause sans permission
   console.log("🔐 SEC 1: Access Control - pause sans permission");
@@ -702,7 +702,7 @@ async function main() {
 
     const newCount = await factory.placeCount();
     const activePlaceAddr = await factory.places(newCount - 1n);
-    const activePlace = await hre.ethers.getContractAt("USCI", activePlaceAddr);
+    const activePlace = await hre.ethers.getContractAt("CANTORFI", activePlaceAddr);
 
     await activePlace.depositRewards({ value: "100" });
     console.log("   ❌ VULNÉRABILITÉ! depositRewards possible avec vente active\n");
@@ -715,7 +715,7 @@ async function main() {
   try {
     const newCount = await factory.placeCount();
     const testPlaceAddr = await factory.places(newCount - 1n);
-    const testPlace = await hre.ethers.getContractAt("USCI", testPlaceAddr);
+    const testPlace = await hre.ethers.getContractAt("CANTORFI", testPlaceAddr);
 
     const testInfo = await testPlace.getPlaceInfo();
     const completeAmt = testInfo.puzzlePrice * testInfo.totalPuzzles;
@@ -733,7 +733,7 @@ async function main() {
   try {
     // Claim rewards une première fois
     const testPlace2Addr = await factory.places(newPlaceCount - 1n);
-    const testPlace2 = await hre.ethers.getContractAt("USCI", testPlace2Addr);
+    const testPlace2 = await hre.ethers.getContractAt("CANTORFI", testPlace2Addr);
 
     const canClaim = await testPlace2.canClaimRewards(0);
     if (canClaim) {
@@ -765,7 +765,7 @@ async function main() {
   console.log("🔢 SEC 14: Integer overflow - depositRewards");
   try {
     const testPlaceAddr = await factory.places(newPlaceCount - 1n);
-    const testPlace = await hre.ethers.getContractAt("USCI", testPlaceAddr);
+    const testPlace = await hre.ethers.getContractAt("CANTORFI", testPlaceAddr);
 
     // Tenter de déposer un montant énorme
     const hugeAmount = "999999999999999999999999999999";
@@ -780,7 +780,7 @@ async function main() {
   try {
     const [deployer, otherUser] = await hre.ethers.getSigners();
     const testPlaceAddr = await factory.places(newPlaceCount - 1n);
-    const testPlace = await hre.ethers.getContractAt("USCI", testPlaceAddr);
+    const testPlace = await hre.ethers.getContractAt("CANTORFI", testPlaceAddr);
 
     // Vérifier s'il y a un NFT
     const balance = await testPlace.balanceOf(deployer.address);
@@ -829,7 +829,7 @@ async function main() {
   console.log("💰 SEC 17: claimCompletion sans completion");
   try {
     const testPlaceAddr = await factory.places(newPlaceCount - 1n);
-    const testPlace = await hre.ethers.getContractAt("USCI", testPlaceAddr);
+    const testPlace = await hre.ethers.getContractAt("CANTORFI", testPlaceAddr);
 
     await testPlace.claimCompletion(0);
     console.log("   ❌ VULNÉRABILITÉ! claimCompletion possible sans completion\n");
@@ -841,7 +841,7 @@ async function main() {
   console.log("💸 SEC 18: depositRewards avec montant 0");
   try {
     const testPlaceAddr = await factory.places(newPlaceCount - 1n);
-    const testPlace = await hre.ethers.getContractAt("USCI", testPlaceAddr);
+    const testPlace = await hre.ethers.getContractAt("CANTORFI", testPlaceAddr);
 
     await testPlace.depositRewards({ value: "0" });
     console.log("   ❌ VULNÉRABILITÉ! depositRewards possible avec 0 ETH\n");
@@ -853,7 +853,7 @@ async function main() {
   console.log("💰 SEC 19: complete avec mauvais montant");
   try {
     const testPlaceAddr = await factory.places(newPlaceCount - 1n);
-    const testPlace = await hre.ethers.getContractAt("USCI", testPlaceAddr);
+    const testPlace = await hre.ethers.getContractAt("CANTORFI", testPlaceAddr);
 
     // Essayer avec un montant incorrect
     await testPlace.complete({ value: "100" });
