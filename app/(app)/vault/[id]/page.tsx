@@ -10,7 +10,6 @@ import type { Investment } from "@/lib/types";
 import { useCurrencyFormatter } from "@/components/providers/IntlProvider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { mockVaults } from "@/data/mockVaults";
 
 export default function VaultPage() {
   const params = useParams<{ id: string }>();
@@ -26,35 +25,6 @@ export default function VaultPage() {
   useEffect(() => {
     async function loadVault() {
       if (!vaultId) return;
-
-      // Chercher d'abord dans les mockVaults (données de dev)
-      const mockVault = mockVaults.find((v) => v.id === vaultId);
-      if (mockVault) {
-        // Convertir mockVault en Investment pour la page
-        const investment: Investment = {
-          id: mockVault.id,
-          name: mockVault.name,
-          description: mockVault.name,
-          location: {
-            city: mockVault.location.split(",")[0],
-            province: mockVault.location.split(",")[1] || "",
-          },
-          details: {
-            longDescription: `Vault: ${mockVault.name}\nCategory: ${mockVault.category}\nAPY: ${mockVault.netApy}%`,
-          },
-          priceUSD: mockVault.liquidity / mockVault.maxLiquidity,
-          estimatedValue: mockVault.liquidity,
-          sharesSold: (mockVault.utilization / 100) * mockVault.maxLiquidity,
-          totalShares: mockVault.maxLiquidity,
-          contractAddress: "0x" + mockVault.id.padStart(40, "0"),
-          votingEnabled: true,
-        } as Investment;
-        setVault(investment);
-        setLoadingVault(false);
-        return;
-      }
-
-      // Fallback sur les places du blockchain
       if (isLoading) return;
       const place = places.find(
         (p) => p.info.placeId.toString() === vaultId || p.address.toLowerCase() === vaultId.toLowerCase()
@@ -116,11 +86,6 @@ export default function VaultPage() {
       </main>
     );
   }
-
-  const priceLabel = formatCurrency(vault.estimatedValue);
-  const contractShort = vault.contractAddress
-    ? `${vault.contractAddress.slice(0, 4)}...${vault.contractAddress.slice(-4)}`
-    : undefined;
 
   return (
     <section className="py-6 md:py-10">
