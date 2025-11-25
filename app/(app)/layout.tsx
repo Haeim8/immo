@@ -13,16 +13,41 @@ export default function AppLayout({
     <IntlProvider>
       <EVMWalletProvider>
         <ErrorFilter />
-        <div className="fixed inset-0 bg-background border-0 md:border-[10px] border-background rounded-none md:rounded-[30px] flex flex-col m-0 md:m-[10px]">
-          <header className="bg-background flex-shrink-0 z-40 w-full flex items-center h-[50px] md:h-[65px] pt-safe">
-            <HeaderContent />
-          </header>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide rounded-none md:rounded-tl-[15px] md:rounded-tr-[15px] md:rounded-bl-[15px] md:rounded-br-[15px] md:pb-0" style={{ backgroundColor: 'hsl(var(--muted) / 0.6)' }}>
-            {children}
+        
+        {/* FOND DE PAGE SIMPLE : Gris très clair (Light) / Noir (Dark) */}
+        <div className="fixed inset-0 -z-20 bg-gray-50 dark:bg-black transition-colors duration-300" />
+
+        {/* CADRE PRINCIPAL */}
+        <div className="fixed inset-0 flex flex-col p-0 md:p-3 lg:p-4 transition-all duration-300">
+          <div className="relative flex-1 flex flex-col w-full h-full
+            /* COULEUR DE FOND DU CADRE : Blanc pur (Light) / Noir légèrement plus clair (Dark) */
+            bg-white dark:bg-[#0a0a0a]
+            
+            /* BORDURES */
+            border-0 md:border border-gray-200 dark:border-white/10
+            
+            /* ARRONDIS ET OMBRES SIMPLES */
+            rounded-none md:rounded-[30px] 
+            shadow-xl dark:shadow-none
+            overflow-hidden">
+            
+            {/* Header */}
+            <header className="flex-shrink-0 z-50 w-full h-16 md:h-20 border-b border-gray-100 dark:border-white/5 bg-white dark:bg-[#0a0a0a]">
+              <HeaderContent />
+            </header>
+
+            {/* Contenu Principal */}
+            <main className="flex-1 relative overflow-y-auto overflow-x-hidden custom-scrollbar bg-white dark:bg-[#0a0a0a]">
+              <div className="min-h-full flex flex-col relative z-10 text-black dark:text-white">
+                 {children}
+              </div>
+            </main>
+
+            {/* Footer */}
+            <footer className="flex-shrink-0 w-full border-t border-gray-100 dark:border-white/5 bg-white dark:bg-[#0a0a0a] py-2">
+              <FooterContent />
+            </footer>
           </div>
-          <footer className="hidden md:block bg-background flex-shrink-0 w-full px-6 py-3">
-            <FooterContent />
-          </footer>
         </div>
       </EVMWalletProvider>
     </IntlProvider>

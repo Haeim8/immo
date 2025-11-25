@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
 export const dynamic = 'force-dynamic';
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield,
   Plus,
@@ -18,7 +17,11 @@ import {
   Gavel,
   Wrench,
   Mail,
-  X
+  X,
+  AlertTriangle,
+  Search,
+  ChevronRight,
+  Activity
 } from "lucide-react";
 import GlassCard from "@/components/atoms/GlassCard";
 import GradientText from "@/components/atoms/GradientText";
@@ -49,6 +52,60 @@ import {
   useCreateProposal,
 } from "@/lib/evm/write-hooks";
 import { formatEther, parseEther } from "viem";
+import { cn } from "@/lib/utils";
+
+// --- COMPOSANTS UI INTERNES STYLISÉS ---
+
+const TabButton = ({ id, label, icon: Icon, active, onClick }: any) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 z-10",
+      active ? "text-white" : "text-muted-foreground hover:text-white hover:bg-white/5"
+    )}
+  >
+    {active && (
+      <motion.div
+        layoutId="activeTab"
+        className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full -z-10 shadow-[0_0_20px_rgba(124,58,237,0.4)]"
+        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+      />
+    )}
+    <Icon className="h-4 w-4 relative z-10" />
+    <span className="relative z-10">{label}</span>
+  </button>
+);
+
+const SectionHeader = ({ title, subtitle, icon: Icon, color = "cyan" }: any) => (
+  <div className="flex items-start gap-4 mb-6">
+    <div className={`p-3 rounded-2xl bg-${color}-500/10 border border-${color}-500/20`}>
+      <Icon className={`h-6 w-6 text-${color}-400`} />
+    </div>
+    <div>
+      <h3 className="text-2xl font-bold tracking-tight text-white">{title}</h3>
+      <p className="text-muted-foreground text-sm">{subtitle}</p>
+    </div>
+  </div>
+);
+
+const InputField = (props: any) => (
+  <input
+    {...props}
+    className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white placeholder:text-white/20 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:outline-none transition-all duration-300"
+  />
+);
+
+const SelectField = (props: any) => (
+  <div className="relative">
+    <select
+      {...props}
+      className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:outline-none appearance-none transition-all duration-300"
+    />
+    <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground rotate-90 pointer-events-none" />
+  </div>
+);
+
+// --- DASHBOARD PRINCIPAL ---
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<
@@ -70,109 +127,122 @@ export default function AdminDashboard() {
       return;
     }
 
-    if (isLoadingAdmin || isLoadingTeam) {
-      return;
-    }
+    if (isLoadingAdmin || isLoadingTeam) return;
 
     const canAccess = isAdmin || (isTeamMember ?? false);
     setHasAccess(canAccess);
     setAccessChecked(true);
 
-    if (!canAccess) {
-      router.replace("/portfolio");
-    }
+    if (!canAccess) router.replace("/portfolio");
   }, [isConnected, isAdmin, isTeamMember, isLoadingAdmin, isLoadingTeam, router]);
 
   if (!accessChecked || isLoadingAdmin || isLoadingTeam) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
-        <p className="text-sm text-muted-foreground">Vérification des accès...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6">
+        <div className="relative">
+          <div className="absolute inset-0 bg-cyan-500 blur-xl opacity-20 animate-pulse" />
+          <Loader2 className="relative h-12 w-12 animate-spin text-cyan-400" />
+        </div>
+        <p className="text-sm font-mono text-cyan-400/80 animate-pulse">VERIFICATION_ACCESS_LEVEL...</p>
       </div>
     );
   }
 
-  if (!hasAccess) {
-    return null;
-  }
+  if (!hasAccess) return null;
+
+  const tabs = [
+    { id: "overview", label: "Dashboard", icon: Activity },
+    { id: "properties", label: "Properties", icon: Building2 },
+    { id: "create", label: "Create", icon: Plus },
+    { id: "team", label: "Team", icon: Users },
+    { id: "dividends", label: "Rewards", icon: DollarSign },
+    { id: "governance", label: "DAO", icon: Gavel },
+    { id: "operations", label: "Ops", icon: Wrench },
+    { id: "waitlist", label: "Waitlist", icon: Mail },
+  ];
 
   return (
-    <div className="min-h-screen">
-      <main className="pb-20">
-        <div className="container mx-auto px-4">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-                <Shield className="h-8 w-8 text-purple-400" />
-              </div>
-              <div>
-                <h1 className="text-5xl font-bold">
-                  <GradientText from="from-purple-400" to="to-pink-600">
-                    Admin Dashboard
-                  </GradientText>
-                </h1>
-                <p className="text-muted-foreground text-lg">
-                  Manage the entire platform
-                </p>
+    <div className="min-h-screen w-full pb-20">
+      <div className="w-full max-w-[1400px] mx-auto space-y-8">
+        
+        {/* Header Dashboard */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pb-6 border-b border-white/5"
+        >
+          <div className="flex items-center gap-5">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-blue-600 blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
+              <div className="relative p-4 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl">
+                <Shield className="h-8 w-8 text-white" />
               </div>
             </div>
-          </motion.div>
-
-          {/* Tabs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-8"
-          >
-            <GlassCard className="p-2">
-              <div className="flex gap-2 overflow-x-auto">
-                {[
-                  { id: "overview", label: "Overview", icon: BarChart3 },
-                  { id: "properties", label: "Properties", icon: Building2 },
-                  { id: "create", label: "Create New", icon: Plus },
-                  { id: "team", label: "Team", icon: Users },
-                  { id: "dividends", label: "Rewards", icon: DollarSign },
-                  { id: "governance", label: "Governance", icon: Gavel },
-                  { id: "operations", label: "Operations", icon: Wrench },
-                  { id: "waitlist", label: "Waitlist", icon: Mail },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
-                      activeTab === tab.id
-                        ? "bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg"
-                        : "hover:bg-white/5 text-muted-foreground"
-                    }`}
-                  >
-                    <tab.icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                ))}
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+                Admin <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">Console</span>
+              </h1>
+              <div className="flex items-center gap-2 mt-2">
+                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                 <p className="text-sm font-mono text-muted-foreground">Protocol Status: ONLINE</p>
               </div>
-            </GlassCard>
-          </motion.div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+            <span className="text-xs font-mono text-muted-foreground">{address?.slice(0,6)}...{address?.slice(-4)}</span>
+            <span className="text-xs font-bold text-cyan-400 px-2 py-0.5 rounded bg-cyan-500/10 ml-2">ADMIN</span>
+          </div>
+        </motion.div>
 
-          {/* Content */}
-          {activeTab === "overview" && <OverviewTab />}
-          {activeTab === "properties" && <PropertiesTab />}
-          {activeTab === "create" && <CreatePropertyTab />}
-          {activeTab === "team" && <TeamTab />}
-          {activeTab === "dividends" && <DividendsTab />}
-          {activeTab === "governance" && <GovernanceTab />}
-          {activeTab === "operations" && <OperationsTab />}
-          {activeTab === "waitlist" && <WaitlistTab />}
+        {/* Navigation Tabs (Scrollable) */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="sticky top-0 z-40 -mx-4 px-4 md:mx-0 md:px-0"
+        >
+          <div className="flex items-center p-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-md overflow-x-auto scrollbar-hide w-full md:w-fit mx-auto">
+            {tabs.map((tab) => (
+              <TabButton
+                key={tab.id}
+                {...tab}
+                active={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+              />
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Content Area */}
+        <div className="min-h-[500px]">
+           <AnimatePresence mode="wait">
+             <motion.div
+               key={activeTab}
+               initial={{ opacity: 0, scale: 0.98 }}
+               animate={{ opacity: 1, scale: 1 }}
+               exit={{ opacity: 0, scale: 0.98 }}
+               transition={{ duration: 0.2 }}
+             >
+                {activeTab === "overview" && <OverviewTab />}
+                {activeTab === "properties" && <PropertiesTab />}
+                {activeTab === "create" && <CreatePropertyTab />}
+                {activeTab === "team" && <TeamTab />}
+                {activeTab === "dividends" && <DividendsTab />}
+                {activeTab === "governance" && <GovernanceTab />}
+                {activeTab === "operations" && <OperationsTab />}
+                {activeTab === "waitlist" && <WaitlistTab />}
+             </motion.div>
+           </AnimatePresence>
         </div>
-      </main>
+
+      </div>
     </div>
   );
 }
+
+// --- SOUS-COMPOSANTS ---
 
 function OverviewTab() {
   const { places, isLoading } = useAllPlaces();
@@ -190,1540 +260,470 @@ function OverviewTab() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {isLoading ? (
-        <div className="text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-          <p className="text-muted-foreground">Loading metrics...</p>
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <GlassCard hover glow>
-              <MetricDisplay
-                icon={Building2}
-                label="Total Properties"
-                value={totalProperties}
-                iconColor="text-cyan-400"
-              />
-            </GlassCard>
-            <GlassCard hover glow>
-              <MetricDisplay
-                icon={Users}
-                label="Total Investors"
-                value="Coming Soon"
-                iconColor="text-blue-400"
-                delay={0.1}
-              />
-            </GlassCard>
-            <GlassCard hover glow>
-              <MetricDisplay
-                icon={DollarSign}
-                label="Total Value"
-                value={`$${(totalValue / 1000000).toFixed(2)}M`}
-                iconColor="text-green-400"
-                delay={0.2}
-              />
-            </GlassCard>
-            <GlassCard hover glow>
-              <MetricDisplay
-                icon={TrendingUp}
-                label="Avg Return"
-                value={`${avgReturn.toFixed(2)}%`}
-                iconColor="text-purple-400"
-                delay={0.3}
-              />
-            </GlassCard>
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard 
+               label="Total Assets" 
+               value={totalProperties} 
+               icon={Building2} 
+               color="cyan" 
+               trend="+12% this month"
+            />
+            <MetricCard 
+               label="TVL (USD)" 
+               value={`$${(totalValue / 1000).toFixed(1)}k`} 
+               icon={DollarSign} 
+               color="green" 
+               trend="Live update"
+            />
+            <MetricCard 
+               label="Avg APY" 
+               value={`${avgReturn.toFixed(2)}%`} 
+               icon={TrendingUp} 
+               color="purple" 
+            />
+            <MetricCard 
+               label="Investors" 
+               value="--" 
+               icon={Users} 
+               color="blue" 
+               trend="Coming soon"
+            />
           </div>
 
-          <GlassCard>
-            <h3 className="text-xl font-bold mb-4 text-purple-400">Recent Properties</h3>
-            {places.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No properties created yet</p>
-            ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Recent Activity / Properties */}
+            <GlassCard className="lg:col-span-2 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-32 bg-purple-500/5 rounded-full blur-3xl group-hover:bg-purple-500/10 transition-colors" />
+               <div className="flex items-center justify-between mb-6 relative z-10">
+                 <h3 className="text-xl font-bold text-white">Live Markets</h3>
+                 <AnimatedButton variant="outline" size="sm">View All</AnimatedButton>
+               </div>
+               
+               {places.length === 0 ? (
+                 <div className="text-center py-12 text-muted-foreground">No properties yet</div>
+               ) : (
+                 <div className="space-y-3 relative z-10">
+                   {places.slice(0, 5).map((place, i) => (
+                     <div key={place.address} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all cursor-pointer group">
+                       <div className="flex items-center gap-4">
+                         <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center border border-white/10">
+                            <Building2 className="h-5 w-5 text-gray-400 group-hover:text-white transition-colors" />
+                         </div>
+                         <div>
+                            <p className="font-semibold text-white group-hover:text-cyan-300 transition-colors">{place.info.name}</p>
+                            <div className="flex items-center gap-2">
+                               <p className="text-xs text-muted-foreground">{place.info.city}</p>
+                               <span className="w-1 h-1 rounded-full bg-gray-600" />
+                               <p className="text-xs font-mono text-muted-foreground">{place.address.slice(0,6)}...</p>
+                            </div>
+                         </div>
+                       </div>
+                       <div className="text-right">
+                         <p className="text-sm font-bold text-white">
+                           {Number(place.info.puzzlesSold)} / {Number(place.info.totalPuzzles)}
+                         </p>
+                         <div className="w-24 h-1.5 bg-gray-800 rounded-full mt-1 overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-cyan-500 to-blue-500" 
+                              style={{ width: `${(Number(place.info.puzzlesSold) / Number(place.info.totalPuzzles)) * 100}%` }} 
+                            />
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               )}
+            </GlassCard>
+
+            {/* Quick Actions Panel */}
+            <GlassCard>
+              <h3 className="text-xl font-bold text-white mb-6">Quick Actions</h3>
               <div className="space-y-3">
-                {places.slice(0, 5).map((place, i) => (
-                  <motion.div
-                    key={place.address}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + i * 0.1 }}
-                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
-                  >
-                    <div>
-                      <p className="font-medium">{place.info.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {place.info.city}, {place.info.province}
-                      </p>
-                    </div>
-                    <span className="text-sm text-cyan-400 font-semibold">
-                      {Number(place.info.puzzlesSold)}/{Number(place.info.totalPuzzles)} sold
-                    </span>
-                  </motion.div>
-                ))}
+                 <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 text-cyan-400 transition-all text-left group">
+                    <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">New Property</span>
+                 </button>
+                 <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 text-purple-400 transition-all text-left group">
+                    <DollarSign className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">Distribute Yield</span>
+                 </button>
+                 <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-muted-foreground hover:text-white transition-all text-left">
+                    <Users className="h-5 w-5" />
+                    <span className="font-medium">Manage Team</span>
+                 </button>
               </div>
-            )}
-          </GlassCard>
+            </GlassCard>
+          </div>
         </>
       )}
     </div>
   );
 }
 
+// Helper pour les cartes Metrics
+const MetricCard = ({ label, value, icon: Icon, color, trend }: any) => (
+  <GlassCard className="relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+     <div className={`absolute top-0 right-0 p-20 bg-${color}-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-${color}-500/20 transition-colors`} />
+     <div className="relative z-10">
+        <div className="flex justify-between items-start mb-4">
+           <div className={`p-2.5 rounded-xl bg-${color}-500/10 border border-${color}-500/20 text-${color}-400`}>
+              <Icon className="h-5 w-5" />
+           </div>
+           {trend && <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">{trend}</span>}
+        </div>
+        <div className="space-y-1">
+           <p className="text-sm font-medium text-muted-foreground">{label}</p>
+           <h4 className="text-3xl font-bold text-white tracking-tight">{value}</h4>
+        </div>
+     </div>
+  </GlassCard>
+);
+
 function PropertiesTab() {
   const { places, isLoading } = useAllPlaces();
   const { price: ethPrice } = useEthPrice();
 
-  if (isLoading) {
-    return (
-      <div className="text-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-        <p className="text-muted-foreground">Loading properties from blockchain...</p>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-cyan-400" /></div>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Manage Properties ({places.length})</h3>
-      </div>
+      <SectionHeader title="Property Management" subtitle="Overview and status of all real estate assets" icon={Building2} />
 
-      {places.length === 0 ? (
-        <GlassCard>
-          <div className="text-center py-12">
-            <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No properties created yet</p>
-            <p className="text-sm text-muted-foreground mt-2">Create your first property from the "Create New" tab</p>
-          </div>
-        </GlassCard>
-      ) : (
-        <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {places.map((place, index) => {
-            const totalPuzzles = Number(place.info.totalPuzzles);
-            const puzzlesSold = Number(place.info.puzzlesSold);
-            const fundingProgress = (puzzlesSold / totalPuzzles) * 100;
-            const puzzlePriceETH = parseFloat(formatEther(place.info.puzzlePrice));
-            const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
+            const total = Number(place.info.totalPuzzles);
+            const sold = Number(place.info.puzzlesSold);
+            const progress = (sold / total) * 100;
+            const priceUSD = parseFloat(formatEther(place.info.puzzlePrice)) * ethPrice.usd;
 
             return (
               <motion.div
                 key={place.address}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.05 }}
               >
-                <GlassCard hover>
-                  <div className="flex items-start justify-between flex-wrap gap-4">
-                    <div className="flex-1">
-                      <h4 className="text-xl font-bold text-cyan-400 mb-2">{place.info.name}</h4>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {place.info.city}, {place.info.province}
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono mb-4">
-                        {place.address.slice(0, 10)}...{place.address.slice(-8)}
-                      </p>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Price per Puzzle</p>
-                          <p className="font-semibold">${puzzlePriceUSD.toFixed(2)}</p>
-                          <p className="text-xs text-muted-foreground">{puzzlePriceETH.toFixed(4)} ETH</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Puzzles Sold</p>
-                          <p className="font-semibold text-green-400">{puzzlesSold} / {totalPuzzles}</p>
-                          <p className="text-xs text-muted-foreground">{fundingProgress.toFixed(1)}%</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Expected Return</p>
-                          <p className="font-semibold text-cyan-400">{(place.info.expectedReturn / 100).toFixed(2)}%</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Status</p>
-                          <p className="font-semibold">
-                            {place.info.isActive ? (
-                              fundingProgress === 100 ? (
-                                <span className="text-green-400 flex items-center gap-1">
-                                  <CheckCircle2 className="h-4 w-4" /> Funded
-                                </span>
-                              ) : (
-                                <span className="text-yellow-400 flex items-center gap-1">
-                                  <Clock className="h-4 w-4" /> Active
-                                </span>
-                              )
-                            ) : (
-                              <span className="text-gray-400">Closed</span>
-                            )}
-                          </p>
-                        </div>
+                <GlassCard className="h-full flex flex-col group hover:border-cyan-500/30 transition-colors">
+                   <div className="flex justify-between items-start mb-4">
+                      <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                         <Building2 className="h-6 w-6 text-muted-foreground group-hover:text-cyan-400 transition-colors" />
                       </div>
-                    </div>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${place.info.isActive ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                        {place.info.isActive ? "ACTIVE" : "CLOSED"}
+                      </span>
+                   </div>
+                   
+                   <h4 className="text-lg font-bold text-white mb-1 truncate">{place.info.name}</h4>
+                   <p className="text-sm text-muted-foreground mb-4">{place.info.city}, {place.info.province}</p>
+                   
+                   <div className="space-y-3 mb-6 flex-1">
+                      <div className="flex justify-between text-sm">
+                         <span className="text-muted-foreground">Price</span>
+                         <span className="font-mono text-white">${priceUSD.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                         <span className="text-muted-foreground">Yield</span>
+                         <span className="font-mono text-cyan-400">{(place.info.expectedReturn/100).toFixed(2)}%</span>
+                      </div>
+                      <div className="space-y-1.5 pt-2">
+                         <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Progress</span>
+                            <span className="text-white">{progress.toFixed(1)}%</span>
+                         </div>
+                         <div className="h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                            <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${progress}%` }} />
+                         </div>
+                      </div>
+                   </div>
 
-                    <div className="flex gap-2">
-                      <AnimatedButton
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`${BLOCK_EXPLORER_URL}/address/${place.address}`, '_blank')}
-                      >
-                        View on Explorer
+                   <div className="pt-4 border-t border-white/5 flex gap-2">
+                      <AnimatedButton variant="outline" size="sm" className="w-full text-xs" onClick={() => window.open(`${BLOCK_EXPLORER_URL}/address/${place.address}`, '_blank')}>
+                         Contract
                       </AnimatedButton>
-                    </div>
-                  </div>
+                   </div>
                 </GlassCard>
               </motion.div>
             );
           })}
-        </div>
-      )}
+          
+          {/* Add New Card Placeholder */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full min-h-[300px] rounded-3xl border border-dashed border-white/10 bg-white/5 hover:bg-white/10 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all group" onClick={() => document.getElementById('create')?.click()}>
+             <div className="p-4 rounded-full bg-white/5 group-hover:scale-110 transition-transform">
+                <Plus className="h-8 w-8 text-muted-foreground group-hover:text-white" />
+             </div>
+             <p className="font-medium text-muted-foreground group-hover:text-white">Create New Property</p>
+          </motion.div>
+      </div>
     </div>
   );
 }
 
 function CreatePropertyTab() {
-  return <CreatePropertyForm />;
+  return (
+    <div className="max-w-4xl mx-auto">
+      <SectionHeader title="New Asset Listing" subtitle="Deploy a new real estate vault on the blockchain" icon={Plus} color="purple" />
+      <CreatePropertyForm />
+    </div>
+  );
 }
 
 function TeamTab() {
   const [newMemberAddress, setNewMemberAddress] = useState("");
-  const [localError, setLocalError] = useState("");
   const { address: currentUserAddress } = useWalletAddress();
   const { isAdmin } = useIsAdmin(currentUserAddress);
   const { addTeamMember, isPending: isAdding, isSuccess, error } = useAddTeamMember();
-  const { removeTeamMember, isPending: isRemoving, isSuccess: removeSuccess, error: removeError } = useRemoveTeamMember();
-  const { teamMembers, isLoading: isLoadingMembers } = useTeamMembers();
+  const { removeTeamMember, isPending: isRemoving, isSuccess: removeSuccess } = useRemoveTeamMember();
+  const { teamMembers, isLoading } = useTeamMembers();
 
-  // Gérer le succès de la transaction - recharger après ajout/suppression
   useEffect(() => {
     if (isSuccess || removeSuccess) {
       setNewMemberAddress("");
-      setLocalError("");
-      // Forcer un rechargement après ajout/suppression
       window.location.reload();
     }
   }, [isSuccess, removeSuccess]);
 
-  const handleAddMember = () => {
-    if (!newMemberAddress.trim()) {
-      setLocalError("Veuillez entrer une adresse wallet valide");
-      return;
-    }
-
-    setLocalError("");
-    addTeamMember(newMemberAddress as `0x${string}`);
-  };
-
-  const handleRemoveMember = (memberAddress: string) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir retirer ce membre de l'équipe ?\n\n${memberAddress}`)) {
-      removeTeamMember(memberAddress as `0x${string}`);
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold">Gestion de l'équipe</h3>
-          <p className="text-muted-foreground mt-1">Gérer les membres de l'équipe qui peuvent créer des propriétés et des propositions</p>
-        </div>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <SectionHeader title="Team Access Control" subtitle="Manage authorized personnel for protocol operations" icon={Users} color="blue" />
 
-      {/* Add Team Member - Seulement pour le wallet admin */}
       {isAdmin && (
-        <GlassCard>
-          <h4 className="text-lg font-semibold mb-4">Ajouter un membre</h4>
-        <div className="space-y-4">
-          <div className="flex gap-4">
-            <input
-              type="text"
-              value={newMemberAddress}
-              onChange={(e) => setNewMemberAddress(e.target.value)}
-              placeholder="Entrer l'adresse EVM (0x...)"
-              className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-500 focus:outline-none"
-              disabled={isAdding}
-            />
-            <AnimatedButton
-              variant="primary"
-              onClick={handleAddMember}
-              disabled={isAdding || !newMemberAddress.trim()}
-            >
-              {isAdding ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4 mr-2" />
-              )}
-              Ajouter
-            </AnimatedButton>
-          </div>
-
-          {/* État de chargement */}
-          {isAdding && (
-            <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
-              <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-              <div>
-                <p className="font-medium">Transaction en cours...</p>
-                <p className="text-sm text-muted-foreground">Veuillez signer dans votre wallet et attendre la confirmation.</p>
+        <GlassCard className="border-blue-500/20">
+           <div className="flex flex-col md:flex-row gap-4 items-end">
+              <div className="flex-1 w-full space-y-2">
+                 <label className="text-sm font-medium text-blue-200 ml-1">Add New Administrator</label>
+                 <div className="relative">
+                    <InputField 
+                       placeholder="0x..." 
+                       value={newMemberAddress}
+                       onChange={(e: any) => setNewMemberAddress(e.target.value)}
+                    />
+                    <Users className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Message de succès */}
-          {isSuccess && !isAdding && (
-            <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-              ✅ Membre de l'équipe ajouté avec succès ! La transaction a été confirmée.
-            </div>
-          )}
-
-          {/* Message d'erreur du hook */}
-          {error && !isAdding && (
-            <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-              ❌ Erreur : {error.message || "Échec de l'ajout du membre"}
-            </div>
-          )}
-
-          {/* Message d'erreur local (validation) */}
-          {localError && (
-            <div className="p-4 rounded-xl bg-yellow-500/15 border border-yellow-500/40 text-yellow-300">
-              ⚠️ {localError}
-            </div>
-          )}
-
-          {/* Message de succès remove */}
-          {removeSuccess && !isRemoving && (
-            <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-              ✅ Membre révoqué avec succès ! La transaction a été confirmée.
-            </div>
-          )}
-
-          {/* Message d'erreur remove */}
-          {removeError && !isRemoving && (
-            <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-              ❌ Erreur : {removeError.message || "Échec de la révocation"}
-            </div>
-          )}
-        </div>
-      </GlassCard>
+              <AnimatedButton variant="primary" onClick={() => addTeamMember(newMemberAddress as `0x${string}`)} disabled={isAdding || !newMemberAddress} className="w-full md:w-auto h-[50px]">
+                 {isAdding ? <Loader2 className="animate-spin" /> : <><Plus className="h-4 w-4 mr-2" /> Grant Access</>}
+              </AnimatedButton>
+           </div>
+           {error && <p className="text-red-400 text-sm mt-3 bg-red-500/10 p-2 rounded-lg">Error: {error.message}</p>}
+        </GlassCard>
       )}
 
-      {/* Liste des membres de l'équipe */}
-      <GlassCard>
-        <h4 className="text-lg font-semibold mb-4">Membres de l'équipe actifs</h4>
-        {isLoadingMembers ? (
-          <div className="text-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-cyan-400" />
-            <p className="text-sm text-muted-foreground">Chargement des membres...</p>
-          </div>
-        ) : teamMembers.length === 0 ? (
-          <div className="text-center py-8">
-            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">Aucun membre d'équipe pour le moment</p>
-            <p className="text-sm text-muted-foreground mt-2">Ajoutez des membres ci-dessus</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {teamMembers.map((member, index) => (
-              <motion.div
-                key={member.address}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
-              >
-                <div className="flex-1">
-                  <p className="font-mono text-sm text-cyan-400">{member.address}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Ajouté le {member.addedAt.toLocaleDateString()} à {member.addedAt.toLocaleTimeString()}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <AnimatedButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`${BLOCK_EXPLORER_URL}/address/${member.address}`, '_blank')}
-                  >
-                    Explorer
-                  </AnimatedButton>
-                  {isAdmin && (
-                    <AnimatedButton
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRemoveMember(member.address)}
-                      disabled={isRemoving}
-                      className="text-red-400 border-red-500/40 hover:bg-red-500/10"
-                    >
-                      {isRemoving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Révoquer"
-                      )}
-                    </AnimatedButton>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </GlassCard>
-
-      {/* Info Card */}
-      <GlassCard className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/20">
-        <div className="flex gap-4">
-          <div className="flex-shrink-0">
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-              <CheckCircle2 className="h-6 w-6 text-cyan-400" />
+      <div className="space-y-4">
+         <h4 className="text-lg font-bold text-white px-1">Active Personnel</h4>
+         {isLoading ? <Loader2 className="animate-spin text-cyan-400" /> : (
+            <div className="grid gap-3">
+               {teamMembers.map((member) => (
+                  <div key={member.address} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all">
+                     <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center font-bold text-white shadow-lg">
+                           {member.address.slice(2,4).toUpperCase()}
+                        </div>
+                        <div>
+                           <p className="font-mono text-white tracking-wide">{member.address}</p>
+                           <p className="text-xs text-muted-foreground">Added: {member.addedAt.toLocaleDateString()}</p>
+                        </div>
+                     </div>
+                     <div className="flex gap-2">
+                        <button onClick={() => window.open(`${BLOCK_EXPLORER_URL}/address/${member.address}`, '_blank')} className="p-2 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-white transition-colors">
+                           <Search className="h-4 w-4" />
+                        </button>
+                        {isAdmin && (
+                           <button onClick={() => removeTeamMember(member.address as `0x${string}`)} className="p-2 hover:bg-red-500/20 rounded-lg text-muted-foreground hover:text-red-400 transition-colors">
+                              {isRemoving ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                           </button>
+                        )}
+                     </div>
+                  </div>
+               ))}
             </div>
-          </div>
-          <div>
-            <h5 className="font-semibold text-cyan-400 mb-2">Permissions des membres</h5>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Créer de nouvelles propriétés et campagnes</li>
-              <li>• Créer des propositions de vote</li>
-              <li>• Gérer les détails des propriétés</li>
-              <li>• Accéder au tableau de bord admin</li>
-              <li className="text-yellow-400">⚠️ Ne peut pas retirer de fonds du trésor</li>
-            </ul>
-          </div>
-        </div>
-      </GlassCard>
+         )}
+      </div>
     </div>
   );
 }
 
 function DividendsTab() {
-  const [isDistributeOpen, setIsDistributeOpen] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [amount, setAmount] = useState<string>("");
-  const [localError, setLocalError] = useState("");
-
-  const { places, isLoading: loadingProperties } = useAllPlaces();
-  const {
-    depositRewards,
-    isPending: isDistributing,
-    isSuccess,
-    error
-  } = useDepositRewards();
+  const [selectedProperty, setSelectedProperty] = useState("");
+  const [amount, setAmount] = useState("");
+  const { places } = useAllPlaces();
+  const { depositRewards, isPending, isSuccess } = useDepositRewards();
   const { price: ethPrice } = useEthPrice();
 
-  // Gérer le succès de la transaction
-  useEffect(() => {
-    if (isSuccess) {
-      // Fermer la modal et réinitialiser après succès
-      setTimeout(() => {
-        setIsDistributeOpen(false);
-        setSelectedProperty("");
-        setAmount("");
-        setLocalError("");
-      }, 2000);
-    }
-  }, [isSuccess]);
-
-  const handleDistribute = () => {
-    if (!selectedProperty || !amount) {
-      setLocalError("Veuillez sélectionner une propriété et entrer un montant");
-      return;
-    }
-
-    const amountUSD = parseFloat(amount);
-    if (!Number.isFinite(amountUSD) || amountUSD <= 0) {
-      setLocalError("Veuillez entrer un montant valide");
-      return;
-    }
-
-    setLocalError("");
-    const amountETH = usdToEth(amountUSD, ethPrice.usd);
-    depositRewards(selectedProperty as `0x${string}`, amountETH);
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Distribute Modal */}
-      {isDistributeOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md"
-          >
-            <GlassCard>
-              <h3 className="text-2xl font-bold mb-6">Distribute Rewards</h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Select Property</label>
-                  <select
-                    value={selectedProperty}
-                    onChange={(e) => setSelectedProperty(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
-                    disabled={isDistributing || loadingProperties}
-                  >
-                    <option value="">Select a property...</option>
-                    {places.map((place) => (
-                      <option key={place.address} value={place.address}>
-                        {place.info.name} - {place.info.city}
-                      </option>
-                    ))}
-                  </select>
+    <div className="max-w-4xl mx-auto space-y-8">
+       <SectionHeader title="Yield Distribution" subtitle="Deposit ETH rewards to property vaults" icon={DollarSign} color="green" />
+       
+       <div className="grid md:grid-cols-2 gap-8">
+          <GlassCard className="h-fit space-y-6 border-green-500/20">
+             <div className="space-y-4">
+                <div className="space-y-2">
+                   <label className="text-sm text-green-200 font-medium ml-1">Select Vault</label>
+                   <SelectField value={selectedProperty} onChange={(e:any) => setSelectedProperty(e.target.value)}>
+                      <option value="">Select Property...</option>
+                      {places.map(p => <option key={p.address} value={p.address}>{p.info.name}</option>)}
+                   </SelectField>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Amount (USD)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
-                    disabled={isDistributing}
-                  />
+                <div className="space-y-2">
+                   <label className="text-sm text-green-200 font-medium ml-1">Amount (USD)</label>
+                   <div className="relative">
+                      <InputField type="number" value={amount} onChange={(e:any) => setAmount(e.target.value)} placeholder="0.00" />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                   </div>
                 </div>
+             </div>
+             
+             <AnimatedButton 
+                variant="primary" 
+                className="w-full bg-green-500 hover:bg-green-600 border-green-400" 
+                onClick={() => depositRewards(selectedProperty as `0x${string}`, usdToEth(parseFloat(amount), ethPrice.usd))}
+                disabled={isPending || !selectedProperty || !amount}
+             >
+                {isPending ? <Loader2 className="animate-spin mr-2" /> : <TrendingUp className="h-4 w-4 mr-2" />}
+                Distribute Rewards
+             </AnimatedButton>
+             
+             {isSuccess && <div className="p-3 bg-green-500/20 text-green-400 rounded-lg text-center text-sm">Rewards distributed successfully!</div>}
+          </GlassCard>
 
-                {/* État de chargement */}
-                {isDistributing && (
-                  <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
-                    <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm">Transaction en cours...</p>
-                      <p className="text-xs text-muted-foreground">
-                        Veuillez signer dans votre wallet et attendre la confirmation.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Message de succès */}
-                {isSuccess && !isDistributing && (
-                  <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/50 text-green-400 text-sm">
-                    ✅ Rewards distribués avec succès ! La transaction a été confirmée.
-                  </div>
-                )}
-
-                {/* Erreur de transaction */}
-                {error && !isDistributing && (
-                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
-                    ❌ Erreur : {error.message || "Échec de la transaction"}
-                  </div>
-                )}
-
-                {/* Erreur de validation locale */}
-                {localError && (
-                  <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/50 text-yellow-400 text-sm">
-                    ⚠️ {localError}
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-4">
-                  <AnimatedButton
-                    variant="outline"
-                    onClick={() => setIsDistributeOpen(false)}
-                    disabled={isDistributing}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </AnimatedButton>
-                  <AnimatedButton
-                    variant="primary"
-                    onClick={handleDistribute}
-                    disabled={isDistributing || !selectedProperty || !amount}
-                    className="flex-1"
-                  >
-                    {isDistributing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Distributing...
-                      </>
-                    ) : (
-                      "Distribute"
-                    )}
-                  </AnimatedButton>
-                </div>
-              </div>
-            </GlassCard>
-          </motion.div>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Reward Management</h3>
-        <AnimatedButton variant="primary" onClick={() => setIsDistributeOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Distribute Rewards
-        </AnimatedButton>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <GlassCard>
-          <MetricDisplay
-            icon={DollarSign}
-            label="Pending Distribution"
-            value="$0"
-            iconColor="text-yellow-400"
-          />
-        </GlassCard>
-        <GlassCard>
-          <MetricDisplay
-            icon={CheckCircle2}
-            label="Distributed This Month"
-            value="$0"
-            iconColor="text-green-400"
-            delay={0.1}
-          />
-        </GlassCard>
-        <GlassCard>
-          <MetricDisplay
-            icon={TrendingUp}
-            label="Total Distributed"
-            value="$0"
-            iconColor="text-cyan-400"
-            delay={0.2}
-          />
-        </GlassCard>
-      </div>
+          <div className="space-y-4">
+             <h4 className="text-lg font-bold text-white">Yield History</h4>
+             <div className="p-8 rounded-2xl bg-white/5 border border-white/5 border-dashed text-center text-muted-foreground">
+                <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                No distribution history available yet.
+             </div>
+          </div>
+       </div>
     </div>
   );
 }
 
 function GovernanceTab() {
-  const { places, isLoading: loadingPlaces } = useAllPlaces();
-  const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [proposalTitle, setProposalTitle] = useState("");
-  const [proposalDescription, setProposalDescription] = useState("");
-  const [votingDurationDays, setVotingDurationDays] = useState("7");
-  const [localError, setLocalError] = useState("");
-  const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const {
-    createProposal,
-    isPending: isCreating,
-    isSuccess: createSuccess,
-    error: createError
-  } = useCreateProposal();
-
-  const selected = places.find((p) => p.address === selectedProperty);
-
-  // Reset form on success
-  useEffect(() => {
-    if (createSuccess) {
-      setTimeout(() => {
-        setShowCreateModal(false);
-        setProposalTitle("");
-        setProposalDescription("");
-        setVotingDurationDays("7");
-        setSelectedProperty("");
-        setLocalError("");
-      }, 2000);
-    }
-  }, [createSuccess]);
-
-  const handleCreateProposal = () => {
-    if (!selected) {
-      setLocalError("Veuillez sélectionner une propriété");
-      return;
-    }
-
-    if (!proposalTitle.trim()) {
-      setLocalError("Veuillez entrer un titre");
-      return;
-    }
-
-    if (!proposalDescription.trim()) {
-      setLocalError("Veuillez entrer une description");
-      return;
-    }
-
-    const days = parseInt(votingDurationDays, 10);
-    if (!Number.isInteger(days) || days < 1 || days > 30) {
-      setLocalError("La durée de vote doit être entre 1 et 30 jours");
-      return;
-    }
-
-    setLocalError("");
-    const durationSeconds = BigInt(days * 86400);
-    createProposal(selected.address, proposalTitle.trim(), proposalDescription.trim(), durationSeconds);
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Create Proposal Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <GlassCard>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-bold">Create New Proposal</h3>
-                  <button
-                    onClick={() => setShowCreateModal(false)}
-                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Select Property</label>
-                  <select
-                    value={selectedProperty}
-                    onChange={(e) => setSelectedProperty(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
-                    disabled={isCreating || loadingPlaces}
-                  >
-                    <option value="">Select a property...</option>
-                    {places.filter(p => p.info.votingEnabled).map((place) => (
-                      <option key={place.address} value={place.address}>
-                        {place.info.name} - {place.info.city}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Only properties with voting enabled are shown
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Proposal Title</label>
-                  <input
-                    type="text"
-                    value={proposalTitle}
-                    onChange={(e) => setProposalTitle(e.target.value)}
-                    placeholder="Ex: Authorize renovation works"
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
-                    disabled={isCreating}
-                    maxLength={100}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Description</label>
-                  <textarea
-                    value={proposalDescription}
-                    onChange={(e) => setProposalDescription(e.target.value)}
-                    placeholder="Describe the proposal in detail..."
-                    rows={6}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none resize-none"
-                    disabled={isCreating}
-                    maxLength={500}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {proposalDescription.length}/500 characters
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Voting Duration (days)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={votingDurationDays}
-                    onChange={(e) => setVotingDurationDays(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-cyan-400 focus:outline-none"
-                    disabled={isCreating}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Between 1 and 30 days
-                  </p>
-                </div>
-
-                {/* Transaction en cours */}
-                {isCreating && (
-                  <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
-                    <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm">Creating proposal...</p>
-                      <p className="text-xs text-muted-foreground">
-                        Please sign the transaction and wait for confirmation.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Success */}
-                {createSuccess && !isCreating && (
-                  <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/50 text-green-400 text-sm">
-                    ✅ Proposal created successfully!
-                  </div>
-                )}
-
-                {/* Error */}
-                {createError && !isCreating && (
-                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
-                    ❌ Error: {createError.message || "Transaction failed"}
-                  </div>
-                )}
-
-                {/* Local error */}
-                {localError && (
-                  <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/50 text-yellow-400 text-sm">
-                    ⚠️ {localError}
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-4">
-                  <AnimatedButton
-                    variant="outline"
-                    onClick={() => setShowCreateModal(false)}
-                    disabled={isCreating}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </AnimatedButton>
-                  <AnimatedButton
-                    variant="primary"
-                    onClick={handleCreateProposal}
-                    disabled={isCreating || !selectedProperty || !proposalTitle || !proposalDescription}
-                    className="flex-1"
-                  >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      "Create Proposal"
-                    )}
-                  </AnimatedButton>
-                </div>
-              </div>
-            </GlassCard>
-          </motion.div>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-2xl font-bold">Community Governance</h3>
-          <p className="text-muted-foreground">
-            Create proposals for properties with voting enabled
-          </p>
-        </div>
-        <AnimatedButton variant="primary" onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Proposal
-        </AnimatedButton>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <GlassCard>
-          <MetricDisplay
-            icon={Gavel}
-            label="Active Proposals"
-            value="0"
-            iconColor="text-cyan-400"
-          />
-        </GlassCard>
-        <GlassCard>
-          <MetricDisplay
-            icon={CheckCircle2}
-            label="Passed Proposals"
-            value="0"
-            iconColor="text-green-400"
-            delay={0.1}
-          />
-        </GlassCard>
-        <GlassCard>
-          <MetricDisplay
-            icon={Users}
-            label="Total Votes Cast"
-            value="0"
-            iconColor="text-purple-400"
-            delay={0.2}
-          />
-        </GlassCard>
-      </div>
-
-      <GlassCard>
-        <div className="text-center py-12">
-          <Gavel className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground mb-2">No proposals yet</p>
-          <p className="text-sm text-muted-foreground">
-            Create your first proposal to enable community voting
-          </p>
-        </div>
-      </GlassCard>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+       <div className="p-6 rounded-full bg-purple-500/10 border border-purple-500/20 mb-6 relative">
+          <Gavel className="h-12 w-12 text-purple-400" />
+          <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-full" />
+       </div>
+       <h3 className="text-2xl font-bold text-white mb-2">Governance Console</h3>
+       <p className="text-muted-foreground max-w-md">Voting proposals and community governance features are currently under maintenance.</p>
     </div>
   );
 }
 
 function OperationsTab() {
-  const { places, isLoading } = useAllPlaces();
-  const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [liquidationAmount, setLiquidationAmount] = useState<string>("");
-  const [localError, setLocalError] = useState("");
-
-  const {
-    closeSale,
-    isPending: isClosing,
-    isSuccess: closeSuccess,
-    error: closeError
-  } = useCloseSale();
-
-  const {
-    completePlace,
-    isPending: isCompleting,
-    isSuccess: completeSuccess,
-    error: completeError
-  } = useCompletPlace();
-
-  const {
-    pausePlace,
-    isPending: isPausingPlace,
-    isSuccess: pausePlaceSuccess,
-    error: pausePlaceError
-  } = usePausePlace();
-
-  const {
-    unpausePlace,
-    isPending: isUnpausingPlace,
-    isSuccess: unpausePlaceSuccess,
-    error: unpausePlaceError
-  } = useUnpausePlace();
-
-  const {
-    pauseFactory,
-    isPending: isPausingFactory,
-    isSuccess: pauseFactorySuccess,
-    error: pauseFactoryError
-  } = usePauseFactory();
-
-  const {
-    unpauseFactory,
-    isPending: isUnpausingFactory,
-    isSuccess: unpauseFactorySuccess,
-    error: unpauseFactoryError
-  } = useUnpauseFactory();
-
-  const selected = places.find((p) => p.address === selectedProperty);
-
-  // Gérer le succès du close sale
-  useEffect(() => {
-    if (closeSuccess) {
-      setLocalError("");
-    }
-  }, [closeSuccess]);
-
-  // Gérer le succès de la complétion
-  useEffect(() => {
-    if (completeSuccess) {
-      setLiquidationAmount("");
-      setLocalError("");
-    }
-  }, [completeSuccess]);
-
-  const handleCloseSale = () => {
-    if (!selected) {
-      setLocalError("Veuillez sélectionner une propriété");
-      return;
-    }
-
-    setLocalError("");
-    closeSale(selected.address);
-  };
-
-  const handleComplete = () => {
-    if (!selected) {
-      setLocalError("Veuillez sélectionner une propriété");
-      return;
-    }
-
-    const amountEthString = liquidationAmount.trim();
-    if (!amountEthString || parseFloat(amountEthString) <= 0) {
-      setLocalError("Veuillez entrer un montant valide en ETH");
-      return;
-    }
-
-    setLocalError("");
-    const amountWei = parseEther(amountEthString);
-    completePlace(selected.address, amountWei);
-  };
-
-  const handlePausePlace = () => {
-    if (!selected) {
-      setLocalError("Veuillez sélectionner une propriété");
-      return;
-    }
-    setLocalError("");
-    pausePlace(selected.address);
-  };
-
-  const handleUnpausePlace = () => {
-    if (!selected) {
-      setLocalError("Veuillez sélectionner une propriété");
-      return;
-    }
-    setLocalError("");
-    unpausePlace(selected.address);
-  };
-
-  const handlePauseFactory = () => {
-    setLocalError("");
-    pauseFactory();
-  };
-
-  const handleUnpauseFactory = () => {
-    setLocalError("");
-    unpauseFactory();
-  };
-
-  const saleEndDate = selected
-    ? new Date(Number(selected.info.saleEnd) * 1000)
-    : null;
+  const { places } = useAllPlaces();
+  const [selected, setSelected] = useState("");
+  const { closeSale, isPending: closing } = useCloseSale();
+  const { pausePlace, isPending: pausing } = usePausePlace();
+  const { unpausePlace, isPending: unpausing } = useUnpausePlace();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-2xl font-bold">Manual Operations</h3>
-          <p className="text-muted-foreground">
-            Close sales and trigger completion flows directly from the admin panel.
-          </p>
-        </div>
-      </div>
+     <div className="max-w-4xl mx-auto space-y-8">
+        <SectionHeader title="Emergency Operations" subtitle="Critical controls for contract management" icon={AlertTriangle} color="red" />
 
-      {isLoading && (
-        <GlassCard>
-          <div className="text-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-            <p className="text-muted-foreground">Loading properties...</p>
-          </div>
-        </GlassCard>
-      )}
+        <div className="p-1 rounded-2xl bg-gradient-to-r from-red-500/20 to-orange-500/20">
+           <GlassCard className="bg-black/80 backdrop-blur-xl">
+              <h4 className="text-lg font-bold text-red-400 mb-6 flex items-center gap-2">
+                 <AlertTriangle className="h-5 w-5" /> Danger Zone
+              </h4>
+              
+              <div className="space-y-6">
+                 <div>
+                    <label className="text-sm font-medium text-white mb-2 block">Target Contract</label>
+                    <SelectField value={selected} onChange={(e:any) => setSelected(e.target.value)}>
+                       <option value="">Select Target...</option>
+                       {places.map(p => <option key={p.address} value={p.address}>{p.info.name} ({p.info.isActive ? 'Active' : 'Closed'})</option>)}
+                    </SelectField>
+                 </div>
 
-      <GlassCard>
-        <div className="grid gap-4">
-          <div>
-            <label className="text-sm text-muted-foreground block mb-2">Select Property</label>
-            <select
-              value={selectedProperty}
-              onChange={(e) => setSelectedProperty(e.target.value)}
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
-            >
-              <option value="">-- Select a property --</option>
-              {places.map((place) => (
-                <option key={place.address} value={place.address}>
-                  {place.info.name} ({place.info.city})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selected && (
-            <div className="grid md:grid-cols-3 gap-4 bg-white/5 border border-white/10 rounded-xl p-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Status</p>
-                <p className="font-semibold">
-                  {selected.info.isActive ? "Active" : "Closed"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Puzzles Sold</p>
-                <p className="font-semibold">
-                  {Number(selected.info.puzzlesSold)} / {Number(selected.info.totalPuzzles)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Sale End</p>
-                <p className="font-semibold">
-                  {saleEndDate ? saleEndDate.toLocaleString() : "—"}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-cyan-400">Close Sale</h4>
-              <p className="text-sm text-muted-foreground">
-                Force the sale to close if the automatic closure fails.
-              </p>
-
-              {selected && saleEndDate && (() => {
-                const isSaleEnded = Date.now() > saleEndDate.getTime();
-                const timeLeft = saleEndDate.getTime() - Date.now();
-                const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
-
-                return (
-                  <div className={`p-3 rounded-lg border ${
-                    isSaleEnded || !selected.info.isActive
-                      ? "border-red-500/40 bg-red-500/10"
-                      : "border-cyan-500/40 bg-cyan-500/10"
-                  }`}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Sale Deadline:</span>
-                      <span className="font-semibold">
-                        {saleEndDate.toLocaleDateString()} {saleEndDate.toLocaleTimeString()}
-                      </span>
+                 <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                    <div className="space-y-2">
+                       <h5 className="font-medium text-white">Sale Controls</h5>
+                       <p className="text-xs text-muted-foreground">Force close a sale if automation fails.</p>
+                       <AnimatedButton 
+                          onClick={() => closeSale(selected as `0x${string}`)}
+                          disabled={!selected || closing}
+                          className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+                       >
+                          {closing ? <Loader2 className="animate-spin" /> : "Force Close Sale"}
+                       </AnimatedButton>
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Clock className="h-4 w-4" />
-                      {isSaleEnded || !selected.info.isActive ? (
-                        <span className="text-red-400 font-medium">⚠️ Sale Ended - Ready to Close</span>
-                      ) : daysLeft > 0 ? (
-                        <span className="text-cyan-400">{daysLeft} day{daysLeft !== 1 ? 's' : ''} left</span>
-                      ) : (
-                        <span className="text-red-400">Ending soon</span>
-                      )}
+
+                    <div className="space-y-2">
+                       <h5 className="font-medium text-white">Pause State</h5>
+                       <p className="text-xs text-muted-foreground">Freeze or unfreeze contract interactions.</p>
+                       <div className="flex gap-2">
+                          <AnimatedButton 
+                             onClick={() => pausePlace(selected as `0x${string}`)} 
+                             disabled={!selected || pausing}
+                             className="flex-1 border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
+                          >
+                             Pause
+                          </AnimatedButton>
+                          <AnimatedButton 
+                             onClick={() => unpausePlace(selected as `0x${string}`)}
+                             disabled={!selected || unpausing}
+                             className="flex-1 border-green-500/30 text-green-400 hover:bg-green-500/10"
+                          >
+                             Resume
+                          </AnimatedButton>
+                       </div>
                     </div>
-                  </div>
-                );
-              })()}
-
-              <AnimatedButton
-                variant="primary"
-                onClick={handleCloseSale}
-                disabled={!selected || isClosing}
-              >
-                {isClosing ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  "Close Sale Manually"
-                )}
-              </AnimatedButton>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-purple-400">Trigger Completion</h4>
-              <p className="text-sm text-muted-foreground">
-                Deposit the property sale proceeds so investors can claim their final payout. Amount in ETH.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  placeholder="Total amount (ETH)"
-                  value={liquidationAmount}
-                  onChange={(e) => setLiquidationAmount(e.target.value)}
-                  className="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm"
-                />
-                <AnimatedButton
-                  variant="outline"
-                  onClick={handleComplete}
-                  disabled={!selected || isCompleting}
-                >
-                  {isCompleting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Trigger"
-                  )}
-                </AnimatedButton>
+                 </div>
               </div>
-            </div>
-          </div>
+           </GlassCard>
         </div>
-      </GlassCard>
-
-      {/* PAUSE/UNPAUSE CONTROLS */}
-      <GlassCard>
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-xl font-bold text-red-400 mb-2">🚨 Emergency Controls</h3>
-            <p className="text-sm text-muted-foreground">
-              Pause/Unpause individual campaigns or the entire factory. Use only in emergency situations.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Campaign Pause Controls */}
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-orange-400">Campaign Controls</h4>
-              <p className="text-sm text-muted-foreground">
-                Pause or resume the selected campaign to prevent/allow puzzle purchases.
-              </p>
-
-              <div className="flex gap-2">
-                <AnimatedButton
-                  variant="outline"
-                  onClick={handlePausePlace}
-                  disabled={!selected || isPausingPlace}
-                  className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10"
-                >
-                  {isPausingPlace ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Pausing...
-                    </>
-                  ) : (
-                    "⏸️ Pause Campaign"
-                  )}
-                </AnimatedButton>
-
-                <AnimatedButton
-                  variant="outline"
-                  onClick={handleUnpausePlace}
-                  disabled={!selected || isUnpausingPlace}
-                  className="flex-1 border-green-500/50 text-green-400 hover:bg-green-500/10"
-                >
-                  {isUnpausingPlace ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Unpausing...
-                    </>
-                  ) : (
-                    "▶️ Resume Campaign"
-                  )}
-                </AnimatedButton>
-              </div>
-            </div>
-
-            {/* Factory Pause Controls */}
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-red-400">Factory Controls</h4>
-              <p className="text-sm text-muted-foreground">
-                Pause or resume the entire factory to prevent/allow new campaign creation.
-              </p>
-
-              <div className="flex gap-2">
-                <AnimatedButton
-                  variant="outline"
-                  onClick={handlePauseFactory}
-                  disabled={isPausingFactory}
-                  className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10"
-                >
-                  {isPausingFactory ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Pausing...
-                    </>
-                  ) : (
-                    "🛑 Pause Factory"
-                  )}
-                </AnimatedButton>
-
-                <AnimatedButton
-                  variant="outline"
-                  onClick={handleUnpauseFactory}
-                  disabled={isUnpausingFactory}
-                  className="flex-1 border-green-500/50 text-green-400 hover:bg-green-500/10"
-                >
-                  {isUnpausingFactory ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Unpausing...
-                    </>
-                  ) : (
-                    "✅ Resume Factory"
-                  )}
-                </AnimatedButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      </GlassCard>
-
-      {/* Messages de statut */}
-      {(isClosing || isCompleting || isPausingPlace || isUnpausingPlace || isPausingFactory || isUnpausingFactory) && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 flex items-center gap-3">
-            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-            <div>
-              <p className="font-medium">Transaction en cours...</p>
-              <p className="text-sm text-muted-foreground">
-                Veuillez signer dans votre wallet et attendre la confirmation.
-              </p>
-            </div>
-          </div>
-        </GlassCard>
-      )}
-
-      {/* Success Messages */}
-      {pausePlaceSuccess && !isPausingPlace && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-            ✅ Campaign pausée avec succès !
-          </div>
-        </GlassCard>
-      )}
-
-      {unpausePlaceSuccess && !isUnpausingPlace && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-            ✅ Campaign reprise avec succès !
-          </div>
-        </GlassCard>
-      )}
-
-      {pauseFactorySuccess && !isPausingFactory && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-            ✅ Factory pausée avec succès ! Aucune nouvelle campaign ne peut être créée.
-          </div>
-        </GlassCard>
-      )}
-
-      {unpauseFactorySuccess && !isUnpausingFactory && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-            ✅ Factory reprise avec succès ! Les campaigns peuvent à nouveau être créées.
-          </div>
-        </GlassCard>
-      )}
-
-      {closeSuccess && !isClosing && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-            ✅ Vente fermée avec succès ! La transaction a été confirmée.
-          </div>
-        </GlassCard>
-      )}
-
-      {completeSuccess && !isCompleting && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-green-500/15 border border-green-500/40 text-green-300">
-            ✅ Complétion déclenchée avec succès ! Les investisseurs peuvent maintenant réclamer leurs gains.
-          </div>
-        </GlassCard>
-      )}
-
-      {closeError && !isClosing && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-            ❌ Erreur lors de la fermeture : {closeError.message || "Échec de la transaction"}
-          </div>
-        </GlassCard>
-      )}
-
-      {completeError && !isCompleting && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-            ❌ Erreur lors de la complétion : {completeError.message || "Échec de la transaction"}
-          </div>
-        </GlassCard>
-      )}
-
-      {pausePlaceError && !isPausingPlace && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-            ❌ Erreur lors de la pause de la campaign : {pausePlaceError.message || "Échec de la transaction"}
-          </div>
-        </GlassCard>
-      )}
-
-      {unpausePlaceError && !isUnpausingPlace && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-            ❌ Erreur lors de la reprise de la campaign : {unpausePlaceError.message || "Échec de la transaction"}
-          </div>
-        </GlassCard>
-      )}
-
-      {pauseFactoryError && !isPausingFactory && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-            ❌ Erreur lors de la pause de la factory : {pauseFactoryError.message || "Échec de la transaction"}
-          </div>
-        </GlassCard>
-      )}
-
-      {unpauseFactoryError && !isUnpausingFactory && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300">
-            ❌ Erreur lors de la reprise de la factory : {unpauseFactoryError.message || "Échec de la transaction"}
-          </div>
-        </GlassCard>
-      )}
-
-      {localError && (
-        <GlassCard>
-          <div className="p-4 rounded-xl bg-yellow-500/15 border border-yellow-500/40 text-yellow-300">
-            ⚠️ {localError}
-          </div>
-        </GlassCard>
-      )}
-    </div>
+     </div>
   );
 }
 
 function WaitlistTab() {
   const [entries, setEntries] = useState<any[]>([]);
-  const [count, setCount] = useState(0);
-  const [maxMembers] = useState(2500);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchWaitlist = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/waitlist");
-        const data = await res.json();
-        if (data.success) {
-          setEntries(data.entries);
-          setCount(data.count);
-        }
-      } catch (err) {
-        console.error("Error fetching waitlist:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchWaitlist();
+    fetch("/api/waitlist").then(res => res.json()).then(data => {
+       if(data.success) setEntries(data.entries);
+       setIsLoading(false);
+    });
   }, []);
-
-  const handleExportCSV = () => {
-    const csv = [
-      ["Email", "EVM Address", "Joined At"],
-      ...entries.map((e) => [
-        e.email,
-        e.evmAddress,
-        new Date(e.createdAt).toLocaleString(),
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `waitlist-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-2xl font-bold">Waitlist Management</h3>
-          <p className="text-muted-foreground">
-            Manage early access registrations for the platform
-          </p>
-        </div>
-        {entries.length > 0 && (
-          <AnimatedButton variant="outline" onClick={handleExportCSV}>
-            Export CSV
-          </AnimatedButton>
-        )}
-      </div>
-
-      {/* Counter */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <GlassCard hover glow>
-          <MetricDisplay
-            icon={Users}
-            label="Total Registered"
-            value={count}
-            iconColor="text-cyan-400"
-          />
-        </GlassCard>
-        <GlassCard hover glow>
-          <MetricDisplay
-            icon={CheckCircle2}
-            label="Spots Remaining"
-            value={maxMembers - count}
-            iconColor="text-green-400"
-            delay={0.1}
-          />
-        </GlassCard>
-        <GlassCard hover glow>
-          <MetricDisplay
-            icon={TrendingUp}
-            label="Fill Rate"
-            value={`${((count / maxMembers) * 100).toFixed(1)}%`}
-            iconColor="text-purple-400"
-            delay={0.2}
-          />
-        </GlassCard>
-      </div>
-
-      {/* Progress Bar */}
-      <GlassCard>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">
-              Waitlist Progress
-            </span>
-            <span className="text-lg font-bold text-cyan-400">
-              {count} / {maxMembers}
-            </span>
-          </div>
-          <div className="h-3 overflow-hidden rounded-full bg-white/10">
-            <motion.div
-              className="h-full bg-gradient-to-r from-cyan-500 to-blue-600"
-              initial={{ width: 0 }}
-              animate={{ width: `${(count / maxMembers) * 100}%` }}
-              transition={{ duration: 1, delay: 0.3 }}
-            />
-          </div>
-          {count >= maxMembers * 0.9 && (
-            <p className="text-sm text-orange-400">
-              ⚠️ Waitlist is {count >= maxMembers ? "full" : "almost full"}!
-            </p>
-          )}
-        </div>
-      </GlassCard>
-
-      {/* Table */}
-      <GlassCard>
-        <h4 className="text-lg font-semibold mb-4">Registered Members</h4>
-        {isLoading ? (
-          <div className="text-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-            <p className="text-muted-foreground">Loading waitlist...</p>
-          </div>
-        ) : entries.length === 0 ? (
-          <div className="text-center py-12">
-            <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">No registrations yet</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Share the waitlist page to start collecting signups
-            </p>
-          </div>
-        ) : (
+       <SectionHeader title="Waitlist" subtitle="Early access registrations" icon={Mail} color="pink" />
+       
+       <GlassCard className="overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                    #
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                    EVM Address
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                    Joined At
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry, index) => (
-                  <motion.tr
-                    key={entry.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                  >
-                    <td className="py-3 px-4 text-sm text-muted-foreground">
-                      {index + 1}
-                    </td>
-                    <td className="py-3 px-4 text-sm font-medium">
-                      {entry.email}
-                    </td>
-                    <td className="py-3 px-4">
-                      <code className="text-xs text-cyan-400 font-mono">
-                        {entry.evmAddress.slice(0, 6)}...
-                        {entry.evmAddress.slice(-4)}
-                      </code>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground">
-                      {new Date(entry.createdAt).toLocaleDateString()}{" "}
-                      {new Date(entry.createdAt).toLocaleTimeString()}
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+             <table className="w-full text-left">
+                <thead className="bg-white/5 text-xs uppercase text-muted-foreground font-medium">
+                   <tr>
+                      <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">Wallet</th>
+                      <th className="px-6 py-4">Date</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-sm">
+                   {isLoading ? (
+                      <tr><td colSpan={3} className="px-6 py-8 text-center"><Loader2 className="animate-spin mx-auto text-pink-400" /></td></tr>
+                   ) : entries.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-white/5 transition-colors">
+                         <td className="px-6 py-4 font-medium text-white">{entry.email}</td>
+                         <td className="px-6 py-4 font-mono text-cyan-400">{entry.evmAddress}</td>
+                         <td className="px-6 py-4 text-muted-foreground">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
           </div>
-        )}
-      </GlassCard>
+       </GlassCard>
     </div>
   );
 }
