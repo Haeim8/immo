@@ -1,415 +1,706 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useMemo } from "react";
+import { motion } from "framer-motion";
+import { Wallet, TrendingUp, Activity, ArrowUpRight, ArrowDownRight, Loader2, ExternalLink, Coins, Landmark } from "lucide-react";
+import { useAccount } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Link from "next/link";
+import Image from "next/image";
+import { useUserPositions, useAllVaults, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
+import { useTranslations } from "@/components/providers/IntlProvider";
 
 export const dynamic = 'force-dynamic';
-import { motion } from "framer-motion";
-import { Wallet, TrendingUp, Gift, Loader2 } from "lucide-react";
-import GlassCard from "@/components/atoms/GlassCard";
-import GradientText from "@/components/atoms/GradientText";
-import AnimatedButton from "@/components/atoms/AnimatedButton";
-import MetricDisplay from "@/components/atoms/MetricDisplay";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { useWalletAddress, useAllPlaces, useAllUserPuzzles, useEthPrice } from "@/lib/evm/hooks";
-import { useClaimRewards } from "@/lib/evm/write-hooks";
-import { useTranslations, useCurrencyFormatter } from "@/components/providers/IntlProvider";
-import { formatEther } from "viem";
-import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
-import { CANTORFIABI } from '@/lib/evm/abis';
 
-// Client public pour lecture
-const publicClient = createPublicClient({
-  chain: baseSepolia,
-  transport: http(),
-});
+const tokenLogos: Record<string, string> = {
+  USDC: "/usc.png",
+  USDT: "/usdt.jpg",
+  ETH: "/eth white.png",
+  WETH: "/eth white.png",
+  WBTC: "/btc.png",
+  BTC: "/btc.png",
+};
 
-export default function PortfolioPage() {
-  const { address, isConnected } = useWalletAddress();
-  const { openConnectModal } = useConnectModal();
-  const { places, isLoading: loadingPlaces } = useAllPlaces();
-  const { puzzles: userNFTs, isLoading: loadingNFTs } = useAllUserPuzzles(address);
-  const { price: ethPrice } = useEthPrice();
-  const { claimRewards } = useClaimRewards();
-  const [claimingNFT, setClaimingNFT] = useState<string | null>(null);
-  const [rewardsData, setRewardsData] = useState<Record<string, { pending: bigint; earned: bigint }>>({});
-  const [, setLoadingRewards] = useState(false);
+function formatCurrency(value: string | number): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (num >= 1000000) return `$${(num / 1000000).toFixed(2)}M`;
+  if (num >= 1000) return `$${(num / 1000).toFixed(1)}K`;
+  return `$${num.toFixed(2)}`;
+}
 
-  const portfolioT = useTranslations("portfolio");
-  const metricsT = useTranslations("portfolio.metrics");
-  const { formatCurrency } = useCurrencyFormatter();
 
-  const loading = loadingPlaces || loadingNFTs;
+// Generate mock historical data for charts
+function generateHistoricalData(currentValue: number, days: number = 30, trend: 'up' | 'down' | 'stable' = 'up') {
+  const data: { date: string; value: number }[] = [];
+  const now = new Date();
 
-  // Fetch pending rewards for all NFTs
-  useEffect(() => {
-    if (!isConnected || userNFTs.length === 0 || places.length === 0) {
-      setRewardsData({});
-      return;
+  for (let i = days; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+
+    // Create realistic progression
+    const progress = (days - i) / days;
+    const noise = (Math.random() - 0.5) * 0.1;
+    let multiplier = 1;
+
+    if (trend === 'up') {
+      multiplier = 0.3 + progress * 0.7 + noise;
+    } else if (trend === 'down') {
+      multiplier = 1 - progress * 0.3 + noise;
+    } else {
+      multiplier = 0.85 + Math.random() * 0.3;
     }
 
-    async function fetchRewards() {
-      setLoadingRewards(true);
-      const newRewardsData: Record<string, { pending: bigint; earned: bigint }> = {};
-
-      try {
-        await Promise.all(
-          userNFTs.map(async (nft) => {
-            try {
-              const pending = await publicClient.readContract({
-                address: nft.placeAddress,
-                abi: CANTORFIABI,
-                functionName: 'pendingRewards',
-                args: [nft.tokenId],
-              }) as bigint;
-
-              // TODO: Add totalRewardsClaimed tracking in contract for earned
-              const earned = 0n;
-
-              const key = `${nft.placeAddress}-${nft.tokenId.toString()}`;
-              newRewardsData[key] = { pending, earned };
-            } catch (err) {
-              console.error(`Error fetching rewards for token ${nft.tokenId}:`, err);
-            }
-          })
-        );
-
-        setRewardsData(newRewardsData);
-      } catch (error) {
-        console.error('Error fetching rewards:', error);
-      } finally {
-        setLoadingRewards(false);
-      }
-    }
-
-    fetchRewards();
-  }, [userNFTs, places, isConnected]);
-
-  // Calculate totals from NFTs
-  const { totalInvested, totalPendingDividends, totalDividendsEarned } = useMemo(() => {
-    let invested = 0;
-    let pending = 0;
-    let earned = 0;
-
-    userNFTs.forEach((nft) => {
-      const place = places.find((p) => p.address.toLowerCase() === nft.placeAddress.toLowerCase());
-      if (place) {
-        const puzzlePriceETH = parseFloat(formatEther(place.info.puzzlePrice));
-        const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
-        invested += puzzlePriceUSD;
-
-        // Get real pending and earned from contract
-        const key = `${nft.placeAddress}-${nft.tokenId.toString()}`;
-        const rewards = rewardsData[key];
-        if (rewards) {
-          const pendingETH = parseFloat(formatEther(rewards.pending));
-          const earnedETH = parseFloat(formatEther(rewards.earned));
-          pending += pendingETH * ethPrice.usd;
-          earned += earnedETH * ethPrice.usd;
-        }
-      }
+    data.push({
+      date: date.toISOString().split('T')[0],
+      value: Math.max(0, currentValue * multiplier)
     });
+  }
 
-    return {
-      totalInvested: invested,
-      totalPendingDividends: pending,
-      totalDividendsEarned: earned,
-    };
-  }, [userNFTs, places, ethPrice.usd, rewardsData]);
+  return data;
+}
 
-  const totalInvestedFormatted = formatCurrency(totalInvested);
-  const totalDividendsEarnedFormatted = formatCurrency(totalDividendsEarned);
-  const totalPendingDividendsFormatted = formatCurrency(totalPendingDividends, {
-    maximumFractionDigits: 2,
-  });
+// Mini Line Chart Component
+function MiniChart({
+  data,
+  color,
+  height = 60,
+  showArea = true
+}: {
+  data: { date: string; value: number }[];
+  color: string;
+  height?: number;
+  showArea?: boolean;
+}) {
+  if (data.length === 0) return null;
 
-  // Claim rewards for a single NFT
-  const handleClaimSingle = async (placeAddress: `0x${string}`, tokenId: bigint) => {
-    setClaimingNFT(`${placeAddress}-${tokenId.toString()}`);
-    try {
-      await claimRewards(placeAddress, tokenId);
-      alert("✅ Rewards claimed successfully!");
-    } catch (err: any) {
-      console.error("Error claiming rewards:", err);
-      alert(`❌ Failed to claim rewards: ${err.message}`);
-    } finally {
-      setClaimingNFT(null);
-    }
-  };
+  const maxValue = Math.max(...data.map(d => d.value));
+  const minValue = Math.min(...data.map(d => d.value));
+  const range = maxValue - minValue || 1;
+
+  const points = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 100;
+    const y = 100 - ((d.value - minValue) / range) * 100;
+    return `${x},${y}`;
+  }).join(' ');
+
+  const areaPoints = `0,100 ${points} 100,100`;
 
   return (
-    <div className="min-h-screen px-2 md:px-0">
-      <main className="pb-6">
-        <div className="container mx-auto px-4 md:px-6">
-          {/* Header */}
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ height, width: '100%' }}>
+      {showArea && (
+        <polygon
+          points={areaPoints}
+          fill={`url(#gradient-${color})`}
+          opacity="0.3"
+        />
+      )}
+      <defs>
+        <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+// Combined Chart with multiple lines
+function CombinedChart({
+  supplyData,
+  borrowData,
+  stakingData,
+  height = 200
+}: {
+  supplyData: { date: string; value: number }[];
+  borrowData: { date: string; value: number }[];
+  stakingData: { date: string; value: number }[];
+  height?: number;
+}) {
+  const allValues = [
+    ...supplyData.map(d => d.value),
+    ...borrowData.map(d => d.value),
+    ...stakingData.map(d => d.value)
+  ];
+
+  const maxValue = Math.max(...allValues, 1);
+  const minValue = 0;
+  const range = maxValue - minValue || 1;
+
+  const getPoints = (data: { date: string; value: number }[]) => {
+    if (data.length === 0) return '';
+    return data.map((d, i) => {
+      const x = (i / (data.length - 1)) * 100;
+      const y = 100 - ((d.value - minValue) / range) * 100;
+      return `${x},${y}`;
+    }).join(' ');
+  };
+
+  const supplyPoints = getPoints(supplyData);
+  const borrowPoints = getPoints(borrowData);
+  const stakingPoints = getPoints(stakingData);
+
+  // Generate Y-axis labels
+  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(pct => ({
+    value: minValue + range * (1 - pct),
+    y: pct * 100
+  }));
+
+  // Generate X-axis labels (dates)
+  const xLabels = supplyData.length > 0 ? [
+    supplyData[0],
+    supplyData[Math.floor(supplyData.length / 2)],
+    supplyData[supplyData.length - 1]
+  ] : [];
+
+  return (
+    <div className="relative" style={{ height }}>
+      {/* Y-axis labels */}
+      <div className="absolute left-0 top-0 bottom-6 w-12 flex flex-col justify-between text-[10px] text-muted-foreground">
+        {yLabels.map((label, i) => (
+          <span key={i}>{formatCurrency(label.value)}</span>
+        ))}
+      </div>
+
+      {/* Chart area */}
+      <div className="absolute left-14 right-0 top-0 bottom-6">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+          {/* Grid lines */}
+          {[0, 25, 50, 75, 100].map(y => (
+            <line
+              key={y}
+              x1="0" y1={y} x2="100" y2={y}
+              stroke="currentColor"
+              strokeWidth="0.5"
+              className="text-border/30"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+
+          {/* Areas */}
+          {supplyPoints && (
+            <polygon
+              points={`0,100 ${supplyPoints} 100,100`}
+              fill="url(#supply-gradient)"
+              opacity="0.2"
+            />
+          )}
+          {stakingPoints && (
+            <polygon
+              points={`0,100 ${stakingPoints} 100,100`}
+              fill="url(#staking-gradient)"
+              opacity="0.2"
+            />
+          )}
+
+          {/* Lines */}
+          {supplyPoints && (
+            <polyline
+              points={supplyPoints}
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+          {borrowPoints && (
+            <polyline
+              points={borrowPoints}
+              fill="none"
+              stroke="#f97316"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+          {stakingPoints && (
+            <polyline
+              points={stakingPoints}
+              fill="none"
+              stroke="#00d4aa"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+
+          <defs>
+            <linearGradient id="supply-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="staking-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#00d4aa" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#00d4aa" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* X-axis labels */}
+      <div className="absolute left-14 right-0 bottom-0 h-6 flex justify-between text-[10px] text-muted-foreground">
+        {xLabels.map((label, i) => (
+          <span key={i}>{new Date(label.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Chart Card Component
+function ChartCard({
+  title,
+  value,
+  change,
+  data,
+  color,
+  icon
+}: {
+  title: string;
+  value: string;
+  change?: string;
+  data: { date: string; value: number }[];
+  color: string;
+  icon: React.ReactNode;
+}) {
+  const isPositive = change && !change.startsWith('-');
+
+  return (
+    <div className="card-vault p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center`} style={{ backgroundColor: `${color}20` }}>
+            <span style={{ color }}>{icon}</span>
+          </div>
+          <span className="text-sm font-medium text-muted-foreground">{title}</span>
+        </div>
+        {change && (
+          <span className={`text-xs font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
+            {change}
+          </span>
+        )}
+      </div>
+      <div className="text-2xl font-bold mb-3" style={{ color }}>{value}</div>
+      <MiniChart data={data} color={color} height={50} />
+    </div>
+  );
+}
+
+export default function PortfolioPage() {
+  const { address, isConnected } = useAccount();
+  const { positions, totals, isLoading: loadingPositions } = useUserPositions(address);
+  const { vaults, isLoading: loadingVaults } = useAllVaults();
+  const portfolioT = useTranslations("portfolio");
+  const stakingT = useTranslations("staking");
+  const commonT = useTranslations("common");
+
+  // Generate historical data based on current positions
+  const chartData = useMemo(() => {
+    const supplyData = generateHistoricalData(totals.totalSupplied, 30, 'up');
+    const borrowData = generateHistoricalData(totals.totalBorrowed, 30, totals.totalBorrowed > 0 ? 'stable' : 'up');
+
+    // Calculate staking total
+    const positionsWithVault = positions.map(pos => {
+      const vault = vaults.find(v => v.vaultId === pos.vaultId);
+      return { ...pos, vault };
+    });
+    const stakingTotal = positionsWithVault
+      .filter(pos => parseFloat(pos.borrowed) === 0 && parseFloat(pos.supplied) > 0)
+      .reduce((sum, pos) => sum + parseFloat(pos.supplied), 0);
+
+    const stakingData = generateHistoricalData(stakingTotal, 30, 'up');
+
+    return { supplyData, borrowData, stakingData };
+  }, [totals, positions, vaults]);
+
+  // Not connected
+  if (!isConnected) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md text-center"
+        >
+          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Wallet className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold mb-3">{portfolioT("connectTitle") || "Connect Your Wallet"}</h1>
+          <p className="text-muted-foreground mb-6">
+            {portfolioT("connectDescription") || "Connect your wallet to view your portfolio, positions, and earnings across all vaults."}
+          </p>
+          <div className="flex justify-center">
+            <ConnectButton.Custom>
+              {({ openConnectModal, mounted }) => {
+                const ready = mounted;
+                return (
+                  <div {...(!ready && { 'aria-hidden': true, style: { opacity: 0, pointerEvents: 'none' } })}>
+                    <button onClick={openConnectModal} className="btn-primary">
+                      <Wallet className="w-4 h-4" />
+                      {commonT("connectWallet")}
+                    </button>
+                  </div>
+                );
+              }}
+            </ConnectButton.Custom>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Loading
+  if (loadingPositions || loadingVaults) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">{portfolioT("loading") || "Loading your portfolio..."}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get vault info for each position
+  const positionsWithVault = positions.map(pos => {
+    const vault = vaults.find(v => v.vaultId === pos.vaultId);
+    return { ...pos, vault };
+  });
+
+  // Separate lending positions (those with borrowed > 0) from staking positions (supply only)
+  const lendingPositions = positionsWithVault.filter(pos => parseFloat(pos.borrowed) > 0);
+  const stakingPositions = positionsWithVault.filter(pos => parseFloat(pos.borrowed) === 0 && parseFloat(pos.supplied) > 0);
+
+  // Calculate totals for staking
+  const stakingTotal = stakingPositions.reduce((sum, pos) => sum + parseFloat(pos.supplied), 0);
+
+  const netWorth = totals.totalSupplied - totals.totalBorrowed;
+  const hasAnyPosition = positions.length > 0;
+
+  return (
+    <div className="flex-1 py-6 md:py-8">
+      <div className="container-app space-y-6">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="mb-2">{portfolioT("title") || "Portfolio"}</h1>
+          <p className="text-muted-foreground">
+            {portfolioT("subtitle") || "Manage your positions across all CantorFi vaults"}
+          </p>
+        </motion.div>
+
+        {/* Summary Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
+        >
+          <div className="card-position has-position p-4 md:p-5">
+            <div className="flex items-center gap-2 text-primary mb-2">
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase tracking-wide">{portfolioT("netWorth") || "Net Worth"}</span>
+            </div>
+            <div className="stat-value">{formatCurrency(netWorth)}</div>
+          </div>
+
+          <div className="card-vault p-4 md:p-5">
+            <div className="flex items-center gap-2 text-success mb-2">
+              <ArrowUpRight className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase tracking-wide">{portfolioT("supplied") || "Supplied"}</span>
+            </div>
+            <div className="stat-value">{formatCurrency(totals.totalSupplied)}</div>
+          </div>
+
+          <div className="card-vault p-4 md:p-5">
+            <div className="flex items-center gap-2 text-accent mb-2">
+              <ArrowDownRight className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase tracking-wide">{portfolioT("borrowed") || "Borrowed"}</span>
+            </div>
+            <div className="stat-value">{formatCurrency(totals.totalBorrowed)}</div>
+          </div>
+
+          <div className="card-vault p-4 md:p-5">
+            <div className="flex items-center gap-2 text-warning mb-2">
+              <Activity className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase tracking-wide">{portfolioT("pending") || "Pending"}</span>
+            </div>
+            <div className="stat-value text-success">+{formatCurrency(totals.totalInterestPending)}</div>
+          </div>
+        </motion.div>
+
+        {/* No positions at all */}
+        {!hasAnyPosition && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 md:mb-8 pt-4 md:pt-6"
+            transition={{ delay: 0.2 }}
+            className="card-vault"
           >
-            <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3">
-              <GradientText>{portfolioT("title")}</GradientText>
-            </h1>
-            <p className="text-muted-foreground text-sm md:text-base">
-              {portfolioT("subtitle")}
-            </p>
+            <div className="p-12 text-center relative z-10">
+              <Wallet className="w-10 h-10 mx-auto mb-4 text-muted-foreground/30" />
+              <p className="font-medium mb-2">{portfolioT("noPositions") || "No active positions"}</p>
+              <p className="text-sm text-muted-foreground mb-6">
+                {portfolioT("noPositionsDesc") || "Start earning by supplying assets to a vault"}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/home" className="btn-primary relative z-20">
+                  <Landmark className="w-4 h-4" />
+                  {portfolioT("browseVaults") || "Browse Vaults"}
+                </Link>
+                <Link href="/staking" className="btn-secondary relative z-20">
+                  <Coins className="w-4 h-4" />
+                  {stakingT("stake") || "Stake"}
+                </Link>
+              </div>
+            </div>
           </motion.div>
+        )}
 
-          {/* Overview Cards */}
-          {!isConnected ? (
+        {/* Main Content: Positions + Charts */}
+        {hasAnyPosition && (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Left Column - Positions (2/5) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
+              className="lg:col-span-2 space-y-4"
             >
-              <GlassCard className="text-center py-16 md:py-24 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-purple-500/10" />
-
-                <div className="relative z-10 max-w-2xl mx-auto px-4">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-                    className="mb-6"
-                  >
-                    <div className="inline-flex p-6 rounded-full bg-gradient-to-br from-cyan-400/20 to-blue-600/20 border border-cyan-400/30">
-                      <Wallet className="h-16 w-16 text-cyan-400" />
+              {/* Staking Positions */}
+              {stakingPositions.length > 0 && (
+                <div className="card-vault border-primary/20">
+                  <div className="p-4 border-b border-border flex items-center justify-between bg-primary/5">
+                    <div className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-primary" />
+                      <span className="font-semibold text-sm">{stakingT("stakingPositions") || "Staking"}</span>
                     </div>
-                  </motion.div>
-
-                  <motion.h2
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="text-2xl md:text-4xl font-bold mb-4"
-                  >
-                    <GradientText>{portfolioT("connectTitle")}</GradientText>
-                  </motion.h2>
-
-                  <motion.p
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="text-muted-foreground text-base md:text-lg mb-8 max-w-md mx-auto"
-                  >
-                    {portfolioT("connectMessage")}
-                  </motion.p>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                  >
-                    <AnimatedButton
-                      variant="primary"
-                      size="sm"
-                      onClick={() => openConnectModal?.()}
-                      className="text-base px-6 py-3"
-                    >
-                      <Wallet className="mr-2 h-4 w-4" />
-                      {portfolioT("connectButton")}
-                    </AnimatedButton>
-                  </motion.div>
-
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    className="text-xs text-muted-foreground mt-4"
-                  >
-                    {portfolioT("connectHint")}
-                  </motion.p>
-                </div>
-              </GlassCard>
-            </motion.div>
-          ) : loading ? (
-            <div className="text-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-cyan-400" />
-              <p className="text-muted-foreground">{portfolioT("loading")}</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-3 gap-3 md:gap-6 mb-12">
-                <GlassCard hover glow>
-                  <MetricDisplay
-                    icon={Wallet}
-                    label={metricsT("invested")}
-                    value={totalInvestedFormatted}
-                    iconColor="text-cyan-400"
-                  />
-                </GlassCard>
-                <GlassCard hover glow>
-                  <MetricDisplay
-                    icon={TrendingUp}
-                    label={metricsT("dividendsEarned")}
-                    value={totalDividendsEarnedFormatted}
-                    iconColor="text-green-400"
-                    delay={0.1}
-                  />
-                </GlassCard>
-                <GlassCard hover glow>
-                  <MetricDisplay
-                    icon={Gift}
-                    label={metricsT("pendingDividends")}
-                    value={totalPendingDividendsFormatted}
-                    iconColor="text-blue-400"
-                    delay={0.2}
-                  />
-                </GlassCard>
-              </div>
-
-              {/* Claim Dividends Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="mb-12"
-              >
-                <GlassCard className="relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10" />
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between flex-wrap gap-6">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <Gift className="h-8 w-8 text-cyan-400" />
-                          <h2 className="text-2xl font-bold">{metricsT("claimTitle")}</h2>
-                        </div>
-                        <p className="text-muted-foreground">
-                          {metricsT("claimSubtitle", { amount: totalPendingDividendsFormatted })}
-                        </p>
-                      </div>
-                      <AnimatedButton
-                        variant="primary"
-                        size="lg"
-                        disabled={totalPendingDividends === 0}
-                      >
-                        {metricsT("claimButton", { amount: totalPendingDividendsFormatted })}
-                      </AnimatedButton>
-                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {stakingPositions.length} {portfolioT("active") || "active"}
+                    </span>
                   </div>
-                </GlassCard>
-              </motion.div>
 
-              {/* Investments */}
-              <div>
-                <h2 className="text-3xl font-bold mb-6">
-                  <GradientText>{portfolioT("investmentsTitle")}</GradientText>
-                </h2>
-
-                {userNFTs.length === 0 ? (
-                  <GlassCard className="text-center py-12">
-                    <p className="text-muted-foreground mb-4">{portfolioT("noInvestments")}</p>
-                    <p className="text-sm text-muted-foreground">{portfolioT("browseHint")}</p>
-                  </GlassCard>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {userNFTs.map((nft, index) => {
-                      const place = places.find((p) => p.address.toLowerCase() === nft.placeAddress.toLowerCase());
-
-                      if (!place) return null;
-
-                      const puzzlePriceETH = parseFloat(formatEther(place.info.puzzlePrice));
-                      const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
-                      const priceFormatted = formatCurrency(puzzlePriceUSD, { maximumFractionDigits: 2 });
-
-                      // Get actual earned and pending from contract
-                      const tokenId = nft.tokenId.toString();
-                      const key = `${nft.placeAddress}-${tokenId}`;
-                      const rewards = rewardsData[key];
-                      const pendingETH = rewards ? parseFloat(formatEther(rewards.pending)) : 0;
-                      const earnedETH = rewards ? parseFloat(formatEther(rewards.earned)) : 0;
-                      const pendingUSD = pendingETH * ethPrice.usd;
-                      const earnedUSD = earnedETH * ethPrice.usd;
-                      const earnedFormatted = formatCurrency(earnedUSD, { maximumFractionDigits: 2 });
-                      const pendingFormatted = formatCurrency(pendingUSD, { maximumFractionDigits: 2 });
-
-                      const isClaimingThis = claimingNFT === `${nft.placeAddress}-${tokenId}`;
-                      const roiPercent = puzzlePriceUSD > 0 ? ((earnedUSD / puzzlePriceUSD) * 100).toFixed(2) : '0.00';
-
-                      return (
-                        <motion.div
-                          key={`${nft.placeAddress}-${tokenId}`}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.4 + index * 0.1 }}
-                        >
-                          <GlassCard hover glow>
-                            <div className="space-y-4">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h3 className="text-xl font-bold mb-1 text-cyan-400">
-                                    {place.info.name}
-                                  </h3>
-                                  <p className="text-sm text-muted-foreground mb-1">
-                                    {portfolioT("tokenLabel", { tokenId })}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {place.info.city}, {place.info.province}
-                                  </p>
+                  <div className="divide-y divide-border max-h-[280px] overflow-y-auto custom-scrollbar">
+                    {stakingPositions.map((position) => (
+                      <Link key={position.vaultAddress} href={`/staking/${position.vaultId}`} className="block">
+                        <div className="p-3 hover:bg-secondary/30 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {position.vault?.tokenSymbol && tokenLogos[position.vault.tokenSymbol.toUpperCase()] ? (
+                                <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary/50">
+                                  <Image
+                                    src={tokenLogos[position.vault.tokenSymbol.toUpperCase()]}
+                                    alt={position.vault.tokenSymbol}
+                                    width={32}
+                                    height={32}
+                                    className="w-full h-full object-contain"
+                                  />
                                 </div>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                                  <p className="text-xs text-muted-foreground mb-1">
-                                    {portfolioT("amountInvestedLabel")}
-                                  </p>
-                                  <p className="text-2xl font-bold">{priceFormatted}</p>
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                                  {position.vault?.tokenSymbol?.slice(0, 2) || '??'}
                                 </div>
-                                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                                  <p className="text-xs text-muted-foreground mb-1">
-                                    {portfolioT("totalEarnedLabel")}
-                                  </p>
-                                  <p className="text-2xl font-bold text-green-400">{earnedFormatted}</p>
-                                </div>
-                              </div>
-
-                              <div className="p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="text-xs text-muted-foreground mb-1">
-                                      {portfolioT("pendingLabel")}
-                                    </p>
-                                    <p className="text-xl font-bold text-cyan-400">{pendingFormatted}</p>
-                                  </div>
-                                  <AnimatedButton
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={isClaimingThis}
-                                    onClick={() => handleClaimSingle(nft.placeAddress, nft.tokenId)}
-                                  >
-                                    {isClaimingThis ? (
-                                      <>
-                                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                        Claiming...
-                                      </>
-                                    ) : (
-                                      portfolioT("claimCta")
-                                    )}
-                                  </AnimatedButton>
-                                </div>
-                              </div>
-
-                              <div className="pt-4 border-t border-white/10">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">{portfolioT("roiLabel")}</span>
-                                  <span className={`font-semibold ${parseFloat(roiPercent) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                    {parseFloat(roiPercent) >= 0 ? '+' : ''}{roiPercent}%
-                                  </span>
-                                </div>
+                              )}
+                              <div>
+                                <p className="font-medium text-sm">{position.vault?.tokenSymbol || 'Unknown'}</p>
+                                <p className="text-[10px] text-muted-foreground">Pool #{position.vaultId}</p>
                               </div>
                             </div>
-                          </GlassCard>
-                        </motion.div>
-                      );
-                    })}
+                            <div className="text-right">
+                              <p className="font-bold text-sm text-primary">{formatCurrency(position.supplied)}</p>
+                              <p className="text-[10px] text-success">+{formatCurrency(position.interestPending)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Lending Positions */}
+              {lendingPositions.length > 0 && (
+                <div className="card-vault border-accent/20">
+                  <div className="p-4 border-b border-border flex items-center justify-between bg-accent/5">
+                    <div className="flex items-center gap-2">
+                      <Landmark className="w-4 h-4 text-accent" />
+                      <span className="font-semibold text-sm">{portfolioT("lendingPositions") || "Lending"}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {lendingPositions.length} {portfolioT("active") || "active"}
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-border max-h-[280px] overflow-y-auto custom-scrollbar">
+                    {lendingPositions.map((position) => (
+                      <Link key={position.vaultAddress} href={`/vault/${position.vaultId}`} className="block">
+                        <div className="p-3 hover:bg-secondary/30 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {position.vault?.tokenSymbol && tokenLogos[position.vault.tokenSymbol.toUpperCase()] ? (
+                                <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary/50">
+                                  <Image
+                                    src={tokenLogos[position.vault.tokenSymbol.toUpperCase()]}
+                                    alt={position.vault.tokenSymbol}
+                                    width={32}
+                                    height={32}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-xs font-bold text-accent">
+                                  {position.vault?.tokenSymbol?.slice(0, 2) || '??'}
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-medium text-sm">{position.vault?.tokenSymbol || 'Unknown'}</p>
+                                <p className="text-[10px] text-muted-foreground">Vault #{position.vaultId}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-sm text-success">{formatCurrency(position.supplied)}</p>
+                              <p className="text-[10px] text-accent">-{formatCurrency(position.borrowed)}</p>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex items-center justify-between text-[10px]">
+                            <span className="text-muted-foreground">{portfolioT("health") || "Health"}</span>
+                            <span className={`font-medium ${
+                              position.healthFactor >= 100 ? 'text-success' :
+                              position.healthFactor >= 50 ? 'text-warning' : 'text-destructive'
+                            }`}>
+                              {position.healthFactor >= 1000 ? '∞' : `${position.healthFactor.toFixed(0)}%`}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              {totals.totalInterestPending > 0 && (
+                <div className="card-vault p-4 border-success/20 bg-success/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-sm">{portfolioT("claimRewards") || "Claim Rewards"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatCurrency(totals.totalInterestPending)} {portfolioT("available") || "available"}
+                      </p>
+                    </div>
+                    <button className="btn-primary bg-success hover:bg-success/90 text-sm px-3 py-1.5">
+                      {commonT("claim") || "Claim"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Right Column - Charts (3/5) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="lg:col-span-3 space-y-4"
+            >
+              {/* Supply & Borrow Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ChartCard
+                  title={portfolioT("supplied") || "Supply"}
+                  value={formatCurrency(totals.totalSupplied)}
+                  change={totals.totalSupplied > 0 ? "+12.5%" : undefined}
+                  data={chartData.supplyData}
+                  color="#10b981"
+                  icon={<ArrowUpRight className="w-4 h-4" />}
+                />
+                <ChartCard
+                  title={portfolioT("borrowed") || "Borrow"}
+                  value={formatCurrency(totals.totalBorrowed)}
+                  change={totals.totalBorrowed > 0 ? "-3.2%" : undefined}
+                  data={chartData.borrowData}
+                  color="#f97316"
+                  icon={<ArrowDownRight className="w-4 h-4" />}
+                />
               </div>
-            </>
-          )}
-        </div>
-      </main>
+
+              {/* Combined Portfolio Chart */}
+              <div className="card-vault p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">{portfolioT("portfolioOverview") || "Portfolio Overview"}</h3>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-success" />
+                      <span className="text-muted-foreground">Supply</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-accent" />
+                      <span className="text-muted-foreground">Borrow</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                      <span className="text-muted-foreground">Staking</span>
+                    </div>
+                  </div>
+                </div>
+
+                <CombinedChart
+                  supplyData={chartData.supplyData}
+                  borrowData={chartData.borrowData}
+                  stakingData={chartData.stakingData}
+                  height={220}
+                />
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border/50">
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Total Supply</p>
+                    <p className="font-bold text-success">{formatCurrency(totals.totalSupplied)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Total Borrow</p>
+                    <p className="font-bold text-accent">{formatCurrency(totals.totalBorrowed)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Staking</p>
+                    <p className="font-bold text-primary">{formatCurrency(stakingTotal)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Explorer Link */}
+              <div className="card-vault p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-sm">{portfolioT("viewExplorer") || "View on Explorer"}</p>
+                    <p className="text-xs text-muted-foreground">{portfolioT("seeTransactions") || "See all transactions"}</p>
+                  </div>
+                  <a
+                    href={`${BLOCK_EXPLORER_URL}/address/${address}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary text-sm px-3 py-1.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Explorer
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

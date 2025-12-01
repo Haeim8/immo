@@ -1,62 +1,121 @@
 /**
- * EVM Hooks avec Wagmi
+ * CantorFi Protocol - React Hooks
+ * Avec cache local pour éviter les appels RPC coûteux
  */
 
-import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { createPublicClient, http, formatEther } from 'viem';
-import { baseSepolia } from 'viem/chains';
-import { FACTORY_ADDRESS, BLOCK_EXPLORER_URL, FACTORY_DEPLOYMENT_BLOCK } from './constants';
-import { CANTORFIFactoryABI, CANTORFIABI } from './abis';
-import { PlaceData, PlaceInfo } from './adapters';
-import { useEthPrice } from './useEthPrice';
+'use client';
 
-// Re-export useEthPrice
-export { useEthPrice };
-// Re-export constants
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useAccount, useReadContract } from 'wagmi';
+import { PROTOCOL_ADDRESS, BLOCK_EXPLORER_URL } from './constants';
+import { PROTOCOL_ABI } from './abis';
+import { getFromCache, setInCache } from './cache';
+
+// Re-exports
 export { BLOCK_EXPLORER_URL };
 
-// Client Viem public pour lecture
-const publicClient = createPublicClient({
-  chain: baseSepolia,
-  transport: http(),
-});
+// Mock data for preview when protocol is not connected - set to false in production
+const USE_MOCK_VAULTS = true;
+const MOCK_VAULTS_DATA: VaultData[] = [
+  {
+    vaultId: 1,
+    vaultAddress: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+    tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`,
+    tokenSymbol: 'USDC',
+    tokenDecimals: 6,
+    maxLiquidity: '5000000',
+    borrowBaseRate: 2,
+    borrowSlope: 15,
+    maxBorrowRatio: 80,
+    liquidationBonus: 5,
+    isActive: true,
+    createdAt: Date.now() - 86400000 * 30,
+    totalSupplied: '2450000',
+    totalBorrowed: '1850000',
+    availableLiquidity: '600000',
+    utilizationRate: 75.5,
+    borrowRate: 8.5,
+    supplyRate: 6.4,
+  },
+  {
+    vaultId: 2,
+    vaultAddress: '0x2345678901234567890123456789012345678901' as `0x${string}`,
+    tokenAddress: '0x4200000000000000000000000000000000000006' as `0x${string}`,
+    tokenSymbol: 'WETH',
+    tokenDecimals: 18,
+    maxLiquidity: '2000000',
+    borrowBaseRate: 3,
+    borrowSlope: 20,
+    maxBorrowRatio: 75,
+    liquidationBonus: 8,
+    isActive: true,
+    createdAt: Date.now() - 86400000 * 20,
+    totalSupplied: '1200000',
+    totalBorrowed: '780000',
+    availableLiquidity: '420000',
+    utilizationRate: 65.0,
+    borrowRate: 12.2,
+    supplyRate: 7.9,
+  },
+  {
+    vaultId: 3,
+    vaultAddress: '0x3456789012345678901234567890123456789012' as `0x${string}`,
+    tokenAddress: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+    tokenSymbol: 'WBTC',
+    tokenDecimals: 8,
+    maxLiquidity: '1500000',
+    borrowBaseRate: 2.5,
+    borrowSlope: 18,
+    maxBorrowRatio: 70,
+    liquidationBonus: 10,
+    isActive: true,
+    createdAt: Date.now() - 86400000 * 15,
+    totalSupplied: '890000',
+    totalBorrowed: '450000',
+    availableLiquidity: '440000',
+    utilizationRate: 50.6,
+    borrowRate: 6.8,
+    supplyRate: 3.4,
+  },
+];
 
-/**
- * Helper pour récupérer les logs par chunks
- * Évite le dépassement de la limite RPC (100K blocs sur Base Sepolia public RPC)
- */
-async function getLogsInChunks(
-  params: Parameters<typeof publicClient.getLogs>[0],
-  chunkSize: bigint = 10000n
-) {
-  const fromBlock = params.fromBlock === 'earliest' ? 0n : BigInt(params.fromBlock || 0);
-  const currentBlock = await publicClient.getBlockNumber();
-  const toBlock = params.toBlock === 'latest' ? currentBlock : BigInt(params.toBlock || currentBlock);
+// Types
+export interface VaultData {
+  vaultId: number;
+  vaultAddress: `0x${string}`;
+  tokenAddress: `0x${string}`;
+  tokenSymbol: string;
+  tokenDecimals: number;
+  maxLiquidity: string;
+  borrowBaseRate: number;
+  borrowSlope: number;
+  maxBorrowRatio: number;
+  liquidationBonus: number;
+  isActive: boolean;
+  createdAt: number;
+  totalSupplied: string;
+  totalBorrowed: string;
+  availableLiquidity: string;
+  utilizationRate: number;
+  borrowRate: number;
+  supplyRate: number;
+}
 
-  const allLogs = [];
-
-  for (let start = fromBlock; start <= toBlock; start += chunkSize) {
-    const end = start + chunkSize - 1n > toBlock ? toBlock : start + chunkSize - 1n;
-
-    try {
-      const logs = await publicClient.getLogs({
-        ...params,
-        fromBlock: start,
-        toBlock: end,
-      });
-      allLogs.push(...logs);
-    } catch (error) {
-      console.error(`Error fetching logs from block ${start} to ${end}:`, error);
-      // Continue avec le prochain chunk même si un chunk fail
-    }
-  }
-
-  return allLogs;
+export interface UserPosition {
+  vaultId: number;
+  vaultAddress: `0x${string}`;
+  supplied: string;
+  borrowed: string;
+  interest: string;
+  healthFactor: number;
+  maxBorrow: string;
+  withdrawable: string;
+  cvtBalance: string;
+  interestPending: string;
 }
 
 /**
- * Hook pour obtenir l'adresse du wallet connecté
+ * Hook pour l'adresse du wallet connecté
  */
 export function useWalletAddress() {
   const { address, isConnected } = useAccount();
@@ -64,462 +123,233 @@ export function useWalletAddress() {
 }
 
 /**
- * Hook pour obtenir le nombre de places
+ * Hook pour le nombre de vaults (avec cache)
  */
-export function usePlaceCount() {
-  const [placeCount, setPlaceCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+export function useVaultCount() {
+  const [cachedCount, setCachedCount] = useState<number | null>(() => {
+    return getFromCache<number>('vaultCount');
+  });
+
+  const { data: vaultCount, isLoading } = useReadContract({
+    address: PROTOCOL_ADDRESS,
+    abi: PROTOCOL_ABI,
+    functionName: 'vaultCount',
+  });
 
   useEffect(() => {
-    async function fetchCount() {
-      try {
-        const count = await publicClient.readContract({
-          address: FACTORY_ADDRESS,
-          abi: CANTORFIFactoryABI,
-          functionName: 'placeCount',
-        });
-        setPlaceCount(Number(count));
-      } catch (error) {
-        console.error('Error fetching place count:', error);
-        setPlaceCount(0);
-      } finally {
-        setIsLoading(false);
-      }
+    if (vaultCount !== undefined) {
+      const count = Number(vaultCount);
+      setCachedCount(count);
+      setInCache('vaultCount', count);
     }
-    fetchCount();
-  }, []);
+  }, [vaultCount]);
 
-  return { placeCount, isLoading };
+  // Return cached value while loading
+  const finalCount = cachedCount ?? Number(vaultCount ?? 0);
+
+  return { vaultCount: finalCount, isLoading: isLoading && cachedCount === null };
 }
 
 /**
- * Hook pour obtenir toutes les places
+ * Hook pour tous les vaults (avec cache)
  */
+export function useAllVaults() {
+  const [vaults, setVaults] = useState<VaultData[]>(() => {
+    if (USE_MOCK_VAULTS) return MOCK_VAULTS_DATA;
+    return getFromCache<VaultData[]>('allVaults') ?? [];
+  });
+  const [isLoading, setIsLoading] = useState(!USE_MOCK_VAULTS);
+  const [error, setError] = useState<string | null>(null);
+  const lastFetch = useRef<number>(0);
+
+  const { data: count, isLoading: countLoading, isError } = useReadContract({
+    address: PROTOCOL_ADDRESS,
+    abi: PROTOCOL_ABI,
+    functionName: 'vaultCount',
+  });
+
+  useEffect(() => {
+    // If using mock data, return immediately
+    if (USE_MOCK_VAULTS) {
+      setVaults(MOCK_VAULTS_DATA);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    // Check cache first
+    const cached = getFromCache<VaultData[]>('allVaults');
+    if (cached && cached.length > 0) {
+      setVaults(cached);
+      setIsLoading(false);
+
+      // Don't refetch if less than 30 seconds
+      if (Date.now() - lastFetch.current < 30000) {
+        return;
+      }
+    }
+
+    if (countLoading) {
+      if (!cached || cached.length === 0) {
+        setIsLoading(true);
+      }
+      return;
+    }
+
+    if (isError) {
+      setError('Failed to connect to protocol');
+      if (!cached || cached.length === 0) {
+        setVaults([]);
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    const vaultCount = Number(count ?? 0);
+
+    if (vaultCount === 0) {
+      setVaults([]);
+      setInCache('allVaults', []);
+      setIsLoading(false);
+      return;
+    }
+
+    // Update last fetch time
+    lastFetch.current = Date.now();
+
+    // Placeholder - les vrais appels seront implémentés plus tard
+    // Pour l'instant on garde le cache ou tableau vide
+    if (!cached || cached.length === 0) {
+      setVaults([]);
+      setInCache('allVaults', []);
+    }
+    setIsLoading(false);
+  }, [count, countLoading, isError]);
+
+  const refetch = useCallback(() => {
+    lastFetch.current = 0; // Force refetch
+    setIsLoading(true);
+  }, []);
+
+  return { vaults, isLoading, error, refetch };
+}
+
+/**
+ * Hook pour les positions d'un utilisateur (avec cache)
+ */
+export function useUserPositions(userAddress: `0x${string}` | undefined) {
+  const { vaults, isLoading: isLoadingVaults } = useAllVaults();
+
+  const cacheKey = userAddress ? `positions_${userAddress}` : null;
+
+  const [positions, setPositions] = useState<UserPosition[]>(() => {
+    if (!cacheKey) return [];
+    return getFromCache<UserPosition[]>(cacheKey) ?? [];
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [totals, setTotals] = useState(() => {
+    if (!cacheKey) return { totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 };
+    const cached = getFromCache<{ totalSupplied: number; totalBorrowed: number; totalInterestPending: number }>(`${cacheKey}_totals`);
+    return cached ?? { totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 };
+  });
+
+  useEffect(() => {
+    if (!userAddress || vaults.length === 0) {
+      setPositions([]);
+      setTotals({ totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 });
+      setIsLoading(false);
+      return;
+    }
+
+    // Check cache
+    const cached = getFromCache<UserPosition[]>(`positions_${userAddress}`);
+    if (cached && cached.length > 0) {
+      setPositions(cached);
+      const cachedTotals = getFromCache<typeof totals>(`positions_${userAddress}_totals`);
+      if (cachedTotals) setTotals(cachedTotals);
+      setIsLoading(false);
+      return;
+    }
+
+    // Placeholder - positions seront chargées plus tard
+    setPositions([]);
+    setTotals({ totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 });
+    setIsLoading(false);
+  }, [userAddress, vaults, isLoadingVaults]);
+
+  return { positions, totals, isLoading: isLoading || isLoadingVaults };
+}
+
+/**
+ * Hook pour les totaux du protocole
+ */
+export function useProtocolTotals() {
+  const { vaults, isLoading } = useAllVaults();
+
+  const totals = useMemo(() => {
+    // Check cache first
+    const cached = getFromCache<{
+      totalTVL: number;
+      totalBorrowed: number;
+      totalAvailable: number;
+      vaultCount: number;
+    }>('protocolTotals');
+
+    if (cached && vaults.length === 0) {
+      return cached;
+    }
+
+    const result = {
+      totalTVL: 0,
+      totalBorrowed: 0,
+      totalAvailable: 0,
+      vaultCount: vaults.length,
+    };
+
+    vaults.forEach((vault) => {
+      result.totalTVL += parseFloat(vault.totalSupplied);
+      result.totalBorrowed += parseFloat(vault.totalBorrowed);
+      result.totalAvailable += parseFloat(vault.availableLiquidity);
+    });
+
+    // Save to cache
+    if (vaults.length > 0) {
+      setInCache('protocolTotals', result);
+    }
+
+    return result;
+  }, [vaults]);
+
+  return { ...totals, isLoading };
+}
+
+
+// Legacy hooks - compatibilité (retournent juste des valeurs vides)
 export function useAllPlaces() {
-  const [places, setPlaces] = useState<PlaceData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchPlaces() {
-      setIsLoading(true);
-      try {
-        // Get place count
-        const count = await publicClient.readContract({
-          address: FACTORY_ADDRESS,
-          abi: CANTORFIFactoryABI,
-          functionName: 'placeCount',
-        });
-
-        const placeCount = Number(count);
-        if (placeCount === 0) {
-          setPlaces([]);
-          setIsLoading(false);
-          return;
-        }
-
-        // Get all place addresses
-        const addressPromises = Array.from({ length: placeCount }, (_, i) =>
-          publicClient.readContract({
-            address: FACTORY_ADDRESS,
-            abi: CANTORFIFactoryABI,
-            functionName: 'getPlaceAddress',
-            args: [BigInt(i)],
-          })
-        );
-
-        const addresses = await Promise.all(addressPromises);
-
-        // Get all place infos
-        const infoPromises = addresses.map((addr) =>
-          publicClient.readContract({
-            address: addr as `0x${string}`,
-            abi: CANTORFIABI,
-            functionName: 'getPlaceInfo',
-          })
-        );
-
-        const infos = await Promise.all(infoPromises);
-
-        // Combine
-        const placesData: PlaceData[] = addresses
-          .map((address, index) => ({
-            address: address as `0x${string}`,
-            info: infos[index] as PlaceInfo,
-          }))
-          .filter((p) => p.info !== null);
-
-        setPlaces(placesData);
-      } catch (error) {
-        console.error('Error fetching places:', error);
-        setPlaces([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchPlaces();
-  }, []);
-
-  return { places, isLoading };
+  const { isLoading } = useAllVaults();
+  return { places: [], isLoading };
 }
 
-/**
- * Hook pour vérifier si l'adresse est admin
- */
-export function useIsAdmin(address: `0x${string}` | undefined) {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!address) {
-      setIsAdmin(false);
-      setIsLoading(false);
-      return;
-    }
-
-    async function checkAdmin() {
-      try {
-        const admin = await publicClient.readContract({
-          address: FACTORY_ADDRESS,
-          abi: CANTORFIFactoryABI,
-          functionName: 'admin',
-        });
-        setIsAdmin((admin as string).toLowerCase() === address.toLowerCase());
-      } catch (error) {
-        console.error('Error checking admin:', error);
-        setIsAdmin(false);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    checkAdmin();
-  }, [address]);
-
-  return { isAdmin, isLoading };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useAllUserPuzzles(_userAddress: `0x${string}` | undefined) {
+  return { puzzles: [], isLoading: false };
 }
 
-/**
- * Hook pour vérifier si l'adresse est team member
- */
-export function useIsTeamMember(address: `0x${string}` | undefined) {
-  const [isTeamMember, setIsTeamMember] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!address) {
-      setIsTeamMember(false);
-      setIsLoading(false);
-      return;
-    }
-
-    async function checkTeamMember() {
-      try {
-        const isMember = await publicClient.readContract({
-          address: FACTORY_ADDRESS,
-          abi: CANTORFIFactoryABI,
-          functionName: 'isTeamMember',
-          args: [address],
-        });
-        setIsTeamMember(isMember as boolean);
-      } catch (error) {
-        console.error('Error checking team member:', error);
-        setIsTeamMember(false);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    checkTeamMember();
-  }, [address]);
-
-  return { isTeamMember, isLoading };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useIsAdmin(_address: `0x${string}` | undefined) {
+  return { isAdmin: false, isLoading: false };
 }
 
-/**
- * Hook pour obtenir tous les NFTs d'un utilisateur
- */
-export function useAllUserPuzzles(userAddress: `0x${string}` | undefined) {
-  const { places, isLoading: isLoadingPlaces } = useAllPlaces();
-  const [allPuzzles, setAllPuzzles] = useState<Array<{ tokenId: bigint; placeAddress: `0x${string}` }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!userAddress || places.length === 0) {
-      setAllPuzzles([]);
-      setIsLoading(false);
-      return;
-    }
-
-    async function fetchAllNFTs() {
-      setIsLoading(true);
-      try {
-        const allNfts: Array<{ tokenId: bigint; placeAddress: `0x${string}` }> = [];
-
-        await Promise.all(
-          places.map(async (place) => {
-            try {
-              const logs = await getLogsInChunks({
-                address: place.address,
-                event: {
-                  type: 'event',
-                  name: 'Transfer',
-                  inputs: [
-                    { indexed: true, name: 'from', type: 'address' },
-                    { indexed: true, name: 'to', type: 'address' },
-                    { indexed: true, name: 'tokenId', type: 'uint256' },
-                  ],
-                },
-                args: { to: userAddress },
-                fromBlock: FACTORY_DEPLOYMENT_BLOCK,
-                toBlock: 'latest',
-              });
-
-              for (const log of logs) {
-                const tokenId = log.args.tokenId as bigint;
-                try {
-                  const owner = (await publicClient.readContract({
-                    address: place.address,
-                    abi: CANTORFIABI,
-                    functionName: 'ownerOf',
-                    args: [tokenId],
-                  })) as `0x${string}`;
-
-                  if (owner.toLowerCase() === userAddress.toLowerCase()) {
-                    allNfts.push({ tokenId, placeAddress: place.address });
-                  }
-                } catch {
-                  continue;
-                }
-              }
-            } catch (error) {
-              console.error(`Error fetching NFTs for place ${place.address}:`, error);
-            }
-          })
-        );
-
-        setAllPuzzles(allNfts);
-      } catch (error) {
-        console.error('Error fetching all user NFTs:', error);
-        setAllPuzzles([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    if (!isLoadingPlaces) {
-      fetchAllNFTs();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userAddress, places.length, isLoadingPlaces]);
-
-  return { puzzles: allPuzzles, isLoading: isLoading || isLoadingPlaces };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useIsTeamMember(_address: `0x${string}` | undefined) {
+  return { isTeamMember: false, isLoading: false };
 }
 
-/**
- * Hook pour obtenir tous les membres de l'équipe
- * Lit les événements TeamMemberAdded et TeamMemberRemoved du contrat Factory
- */
 export function useTeamMembers() {
-  const [teamMembers, setTeamMembers] = useState<Array<{ address: string; addedAt: Date }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchTeamMembers() {
-      setIsLoading(true);
-      try {
-        // Fetch TeamMemberAdded events depuis le déploiement
-        const addedLogs = await getLogsInChunks({
-          address: FACTORY_ADDRESS,
-          event: {
-            type: 'event',
-            name: 'TeamMemberAdded',
-            inputs: [
-              { indexed: true, name: 'member', type: 'address' },
-              { indexed: true, name: 'addedBy', type: 'address' },
-            ],
-          },
-          fromBlock: FACTORY_DEPLOYMENT_BLOCK,
-          toBlock: 'latest',
-        });
-
-        // Fetch TeamMemberRemoved events depuis le déploiement
-        const removedLogs = await getLogsInChunks({
-          address: FACTORY_ADDRESS,
-          event: {
-            type: 'event',
-            name: 'TeamMemberRemoved',
-            inputs: [
-              { indexed: true, name: 'member', type: 'address' },
-              { indexed: true, name: 'removedBy', type: 'address' },
-            ],
-          },
-          fromBlock: FACTORY_DEPLOYMENT_BLOCK,
-          toBlock: 'latest',
-        });
-
-        // Create a map to track members
-        const memberMap = new Map<string, { address: string; addedAt: Date; removed: boolean }>();
-
-        // Process added events
-        for (const log of addedLogs) {
-          const memberAddress = log.args.member as string;
-
-          // Get block to extract timestamp
-          const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
-          const addedAt = new Date(Number(block.timestamp) * 1000);
-
-          memberMap.set(memberAddress.toLowerCase(), {
-            address: memberAddress,
-            addedAt,
-            removed: false,
-          });
-        }
-
-        // Process removed events
-        for (const log of removedLogs) {
-          const memberAddress = log.args.member as string;
-          const member = memberMap.get(memberAddress.toLowerCase());
-          if (member) {
-            member.removed = true;
-          }
-        }
-
-        // Filter out removed members and convert to array
-        const activeMembers = Array.from(memberMap.values())
-          .filter((m) => !m.removed)
-          .map(({ address, addedAt }) => ({ address, addedAt }))
-          .sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime());
-
-        setTeamMembers(activeMembers);
-      } catch (error) {
-        console.error('Error fetching team members:', error);
-        setTeamMembers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchTeamMembers();
-  }, []);
-
-  return { teamMembers, isLoading };
+  return { teamMembers: [], isLoading: false };
 }
 
-/**
- * Hook leaderboard data
- */
 export function useLeaderboardData() {
-  const { places, isLoading: isLoadingPlaces } = useAllPlaces();
-  const { price: ethPrice } = useEthPrice();
-  const [leaderboardData, setLeaderboardData] = useState<
-    Array<{
-      address: string;
-      totalInvestedUSD: number;
-      totalDividendsEarned: number;
-      nftCount: number;
-      investments: Array<{ placeName: string; tokenId: string }>;
-    }>
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (places.length === 0 || isLoadingPlaces) {
-      setLeaderboardData([]);
-      setIsLoading(false);
-      return;
-    }
-
-    async function fetchLeaderboardData() {
-      setIsLoading(true);
-      try {
-        const investorMap = new Map<
-          string,
-          {
-            totalInvestedUSD: number;
-            totalDividendsEarned: number;
-            nftCount: number;
-            investments: Array<{ placeName: string; tokenId: string }>;
-          }
-        >();
-
-        await Promise.all(
-          places.map(async (place) => {
-            try {
-              const logs = await getLogsInChunks({
-                address: place.address,
-                event: {
-                  type: 'event',
-                  name: 'Transfer',
-                  inputs: [
-                    { indexed: true, name: 'from', type: 'address' },
-                    { indexed: true, name: 'to', type: 'address' },
-                    { indexed: true, name: 'tokenId', type: 'uint256' },
-                  ],
-                },
-                fromBlock: FACTORY_DEPLOYMENT_BLOCK,
-                toBlock: 'latest',
-              });
-
-              for (const log of logs) {
-                const tokenId = log.args.tokenId as bigint;
-                try {
-                  const owner = (await publicClient.readContract({
-                    address: place.address,
-                    abi: CANTORFIABI,
-                    functionName: 'ownerOf',
-                    args: [tokenId],
-                  })) as `0x${string}`;
-
-                  const ownerLower = owner.toLowerCase();
-                  const puzzlePriceETH = parseFloat(formatEther(place.info.puzzlePrice));
-                  const puzzlePriceUSD = puzzlePriceETH * ethPrice.usd;
-
-                  if (!investorMap.has(ownerLower)) {
-                    investorMap.set(ownerLower, {
-                      totalInvestedUSD: 0,
-                      totalDividendsEarned: 0,
-                      nftCount: 0,
-                      investments: [],
-                    });
-                  }
-
-                  const investorData = investorMap.get(ownerLower)!;
-                  investorData.totalInvestedUSD += puzzlePriceUSD;
-                  investorData.nftCount += 1;
-                  investorData.investments.push({
-                    placeName: place.info.name,
-                    tokenId: tokenId.toString(),
-                  });
-                } catch {
-                  continue;
-                }
-              }
-            } catch (error) {
-              console.error(`Error fetching leaderboard data for place ${place.address}:`, error);
-            }
-          })
-        );
-
-        const leaderboard = Array.from(investorMap.entries())
-          .map(([address, data]) => ({
-            address,
-            ...data,
-          }))
-          .sort((a, b) => b.totalInvestedUSD - a.totalInvestedUSD);
-
-        setLeaderboardData(leaderboard);
-      } catch (error) {
-        console.error('Error fetching leaderboard data:', error);
-        setLeaderboardData([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchLeaderboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places.length, ethPrice.usd, isLoadingPlaces]);
-
-  return { leaderboardData, isLoading: isLoading || isLoadingPlaces };
+  return { leaderboardData: [], isLoading: false };
 }

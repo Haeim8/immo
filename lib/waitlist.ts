@@ -1,7 +1,5 @@
 "use server";
 
-import { Redis } from "@upstash/redis";
-
 interface WaitlistEntry {
   id: string;
   email: string;
@@ -12,17 +10,40 @@ interface WaitlistEntry {
 const WAITLIST_KEY = "email-list";
 const MAX_MEMBERS = 2500;
 
-// Create Redis client using environment variables
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL || "",
-  token: process.env.KV_REST_API_TOKEN || "",
-});
+// Check if Redis is configured
+const isRedisConfigured = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
+// Lazy load Redis only when needed (avoids warnings at import time)
+async function getRedisClient() {
+  if (!isRedisConfigured) return null;
+
+  try {
+    const { Redis } = await import("@upstash/redis");
+    return new Redis({
+      url: process.env.KV_REST_API_URL!,
+      token: process.env.KV_REST_API_TOKEN!,
+    });
+  } catch {
+    return null;
+  }
+}
 
 export const getWaitlist = async (): Promise<{
   entries: WaitlistEntry[];
   count: number;
   maxMembers: number;
 }> => {
+  const redis = await getRedisClient();
+
+  // Return empty if Redis not configured
+  if (!redis) {
+    return {
+      entries: [],
+      count: 0,
+      maxMembers: MAX_MEMBERS,
+    };
+  }
+
   try {
     const entries = await redis.get<WaitlistEntry[]>(WAITLIST_KEY);
     const waitlist = entries || [];
@@ -63,6 +84,16 @@ export const addToWaitlist = async (
   email: string,
   evmAddress: string
 ): Promise<{ success: boolean; error?: string; message?: string; count?: number }> => {
+  const redis = await getRedisClient();
+
+  // Return error if Redis not configured
+  if (!redis) {
+    return {
+      success: false,
+      error: "Waitlist is temporarily unavailable"
+    };
+  }
+
   try {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

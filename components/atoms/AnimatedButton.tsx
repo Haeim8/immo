@@ -2,12 +2,15 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { ButtonHTMLAttributes } from "react";
 
-interface AnimatedButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface AnimatedButtonProps {
   variant?: "primary" | "outline" | "ghost";
   size?: "sm" | "md" | "lg";
   children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
 }
 
 export default function AnimatedButton({
@@ -15,7 +18,9 @@ export default function AnimatedButton({
   size = "md",
   className,
   children,
-  ...props
+  onClick,
+  disabled,
+  type = "button",
 }: AnimatedButtonProps) {
   const variants = {
     primary: "bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 shadow-lg shadow-cyan-500/50",
@@ -40,7 +45,9 @@ export default function AnimatedButton({
       )}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      {...props}
+      onClick={onClick}
+      disabled={disabled}
+      type={type}
     >
       <span className="relative z-10 inline-flex items-center gap-2">{children}</span>
     </motion.button>

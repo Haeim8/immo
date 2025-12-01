@@ -2,14 +2,11 @@
 
 import { useRef, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { 
-  Environment, 
-  Float, 
+import {
+  Environment,
+  Float,
   ContactShadows,
   Text,
-  Cylinder,
-  Box,
-  Capsule,
   Lightformer
 } from "@react-three/drei";
 import * as THREE from "three";

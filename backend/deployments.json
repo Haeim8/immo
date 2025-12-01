@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-11-29T20:17:17.701Z",
+  "network": "external",
+  "deployer": "0x222fD66bbfc6808e123aB51f5FB21644731dFDE2",
+  "contracts": {
+    "CantorFiProtocol": "0x13AF08E9C8246dB51681A2f37086CE8A4a247493",
+    "FeeCollector": "0xD7bbF421De7128c85671D35C3187c9FCe65f71f3",
+    "PriceOracle": "0x8d2e5019F48d3F6AE662525aCed5e934f71d1ACf",
+    "CollateralManager": "0xe729b6262d10798a6a0533C7C8424e804Eb3f2bF",
+    "CantorVaultImplementation": "0x0c80bFbaA80bD77533dCEaFb31481A02fd4c1690",
+    "CantorAssetFactory": "0x06A48c88dfd4Ce95CE412d4e9d816484c94B758F"
+  }
+}

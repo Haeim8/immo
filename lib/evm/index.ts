@@ -1,10 +1,10 @@
 /**
- * EVM Module - Main exports
+ * CantorFi Protocol - EVM Module
  */
 
 export * from './constants';
 export * from './abis';
-export * from './adapters';
 export * from './hooks';
-export * from './write-hooks';
 export * from './useEthPrice';
+export * from './cache';
+export * from './write-hooks.js';

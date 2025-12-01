@@ -30,15 +30,15 @@ export default function SettingsDropdown() {
         <SettingsIcon className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-64 bg-background/95 backdrop-blur-xl border-white/10">
-        <DropdownMenuLabel className="text-cyan-400">
+        <DropdownMenuLabel className="text-primary">
           {navT("settings")}
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-white/10" />
+        <DropdownMenuSeparator className="bg-border" />
 
         {/* Language */}
         <div className="px-2 py-3">
           <div className="flex items-center gap-2 mb-2">
-            <Globe className="h-4 w-4 text-cyan-400" />
+            <Globe className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">{settingsT("languageTitle")}</span>
           </div>
           <Select value={language} onValueChange={(value: Locale) => setLanguage(value)}>
@@ -53,12 +53,12 @@ export default function SettingsDropdown() {
           </Select>
         </div>
 
-        <DropdownMenuSeparator className="bg-white/10" />
+        <DropdownMenuSeparator className="bg-border" />
 
         {/* Currency */}
         <div className="px-2 py-3">
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-4 w-4 text-cyan-400" />
+            <DollarSign className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">{settingsT("currencyTitle")}</span>
           </div>
           <Select value={currency} onValueChange={setCurrency}>
@@ -75,13 +75,13 @@ export default function SettingsDropdown() {
           </Select>
         </div>
 
-        <DropdownMenuSeparator className="bg-white/10" />
+        <DropdownMenuSeparator className="bg-border" />
 
         {/* Theme */}
         <div className="px-2 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Palette className="h-4 w-4 text-cyan-400" />
+              <Palette className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Theme</span>
             </div>
             <ThemeToggle />

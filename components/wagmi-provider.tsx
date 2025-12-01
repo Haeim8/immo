@@ -57,7 +57,6 @@ const RainbowWrapper: FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <RainbowKitProvider
-      chains={chains}
       initialChain={baseSepolia}
       modalSize="compact"
       appInfo={{

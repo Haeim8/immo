@@ -3,6 +3,7 @@ import { IntlProvider } from "@/components/providers/IntlProvider";
 import HeaderContent from "@/components/HeaderContent";
 import FooterContent from "@/components/FooterContent";
 import ErrorFilter from "@/components/ErrorFilter";
+import GlobalBackground from "@/components/GlobalBackground";
 
 export default function AppLayout({
   children,
@@ -13,38 +14,31 @@ export default function AppLayout({
     <IntlProvider>
       <EVMWalletProvider>
         <ErrorFilter />
-        
-        {/* FOND DE PAGE SIMPLE : Gris très clair (Light) / Noir (Dark) */}
-        <div className="fixed inset-0 -z-20 bg-gray-50 dark:bg-black transition-colors duration-300" />
 
-        {/* CADRE PRINCIPAL */}
-        <div className="fixed inset-0 flex flex-col p-0 md:p-3 lg:p-4 transition-all duration-300">
-          <div className="relative flex-1 flex flex-col w-full h-full
-            /* COULEUR DE FOND DU CADRE : Blanc pur (Light) / Noir légèrement plus clair (Dark) */
-            bg-white dark:bg-[#0a0a0a]
-            
-            /* BORDURES */
-            border-0 md:border border-gray-200 dark:border-white/10
-            
-            /* ARRONDIS ET OMBRES SIMPLES */
-            rounded-none md:rounded-[30px] 
-            shadow-xl dark:shadow-none
-            overflow-hidden">
-            
-            {/* Header */}
-            <header className="flex-shrink-0 z-50 w-full h-16 md:h-20 border-b border-gray-100 dark:border-white/5 bg-white dark:bg-[#0a0a0a]">
+        {/* Background */}
+        <div className="fixed inset-0 -z-20 bg-background" />
+
+        {/* Main Frame - Morpho style */}
+        <div className="fixed inset-0 flex flex-col p-0 md:p-3 lg:p-4">
+          <div className="relative flex-1 flex flex-col w-full h-full bg-card border-0 md:border border-border rounded-none md:rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl shadow-black/20">
+
+            {/* Global Background - inside container */}
+            <GlobalBackground />
+
+            {/* Header - Fixed */}
+            <header className="flex-shrink-0 z-50 w-full h-14 md:h-16 border-b border-border bg-card/80 backdrop-blur-xl">
               <HeaderContent />
             </header>
 
-            {/* Contenu Principal */}
-            <main className="flex-1 relative overflow-y-auto overflow-x-hidden custom-scrollbar bg-white dark:bg-[#0a0a0a]">
-              <div className="min-h-full flex flex-col relative z-10 text-black dark:text-white">
-                 {children}
+            {/* Main Content */}
+            <main className="flex-1 relative overflow-y-auto overflow-x-hidden custom-scrollbar">
+              <div className="min-h-full flex flex-col">
+                {children}
               </div>
             </main>
 
-            {/* Footer */}
-            <footer className="flex-shrink-0 w-full border-t border-gray-100 dark:border-white/5 bg-white dark:bg-[#0a0a0a] py-2">
+            {/* Footer - Hidden on mobile (shown in mobile nav drawer), visible on desktop */}
+            <footer className="hidden md:block flex-shrink-0 w-full border-t border-border bg-card/50 py-2">
               <FooterContent />
             </footer>
           </div>

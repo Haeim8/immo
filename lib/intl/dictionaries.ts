@@ -33,6 +33,14 @@ export interface Dictionary {
     subtitle: string;
     exploreCTA: string;
     explorerCTA: string;
+    startInvesting: string;
+    connectToEarn: string;
+    yourPosition: string;
+    totalSupplied: string;
+    totalBorrowed: string;
+    netPosition: string;
+    pendingRewards: string;
+    activePositions: string;
     metrics: {
       projects: string;
       dividends: string;
@@ -136,6 +144,23 @@ export interface Dictionary {
     connectHint: string;
     loading: string;
     error: string;
+    networth: string;
+    netWorth: string;
+    supplied: string;
+    borrowed: string;
+    pending: string;
+    yourPositions: string;
+    active: string;
+    noPositions: string;
+    noPositionsDesc: string;
+    browseVaults: string;
+    rewards: string;
+    health: string;
+    claimRewards: string;
+    available: string;
+    viewExplorer: string;
+    seeTransactions: string;
+    connectDescription: string;
     metrics: {
       invested: string;
       dividendsEarned: string;
@@ -298,6 +323,50 @@ export interface Dictionary {
     cguTitle: string;
     cguIntro: string;
   };
+  vaults: {
+    title: string;
+    subtitle: string;
+    loading: string;
+    noVaults: string;
+    noVaultsDesc: string;
+    available: string;
+  };
+  staking: {
+    liveEarning: string;
+    title: string;
+    earn: string;
+    subtitle: string;
+    totalStaked: string;
+    avgAPY: string;
+    variableRate: string;
+    yourStake: string;
+    positions: string;
+    pendingRewards: string;
+    claimable: string;
+    noLock: string;
+    flexible: string;
+    withdrawAnytime: string;
+    secured: string;
+    audited: string;
+    verified: string;
+    connectTitle: string;
+    connectDescription: string;
+    availablePools: string;
+    active: string;
+    noPools: string;
+    noPoolsDesc: string;
+    supplyAPY: string;
+    tvl: string;
+    utilization: string;
+    stake: string;
+    manage: string;
+    earnYield: string;
+    earnYieldDesc: string;
+    collateralized: string;
+    collateralizedDesc: string;
+    flexibleDesc: string;
+    loading: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -333,6 +402,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
         "Accédez à des actifs premium grâce à la blockchain. Participez, gagnez des récompenses et suivez vos actifs en temps réel.",
       exploreCTA: "Explorer les projets",
       explorerCTA: "Voir sur la blockchain",
+      startInvesting: "Commencez à investir",
+      connectToEarn: "Connectez votre wallet pour fournir des actifs et gagner des rendements.",
+      yourPosition: "Votre position",
+      totalSupplied: "Total fourni",
+      totalBorrowed: "Total emprunté",
+      netPosition: "Position nette",
+      pendingRewards: "Récompenses en attente",
+      activePositions: "Positions actives",
       metrics: {
         projects: "Projets financés",
         dividends: "Récompenses distribuées",
@@ -447,6 +524,23 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectHint: "Sécurisé par la blockchain Base • Participation accessible dès quelques fractions d'ETH",
       loading: "Chargement de votre portfolio depuis la blockchain...",
       error: "Erreur : {{error}}",
+      networth: "Valeur nette",
+      netWorth: "Valeur nette",
+      supplied: "Fourni",
+      borrowed: "Emprunté",
+      pending: "En attente",
+      yourPositions: "Vos positions",
+      active: "actif",
+      noPositions: "Aucune position",
+      noPositionsDesc: "Vous n'avez pas encore de position dans les vaults.",
+      browseVaults: "Explorer les vaults",
+      rewards: "Récompenses",
+      health: "Santé",
+      claimRewards: "Réclamer toutes les récompenses",
+      available: "disponible",
+      viewExplorer: "Voir sur l'explorateur",
+      seeTransactions: "Voir toutes les transactions",
+      connectDescription: "Connectez votre wallet pour voir votre portfolio, vos positions et vos gains sur tous les vaults.",
       metrics: {
         invested: "Total en puzzles",
         dividendsEarned: "Récompenses gagnées",
@@ -612,6 +706,50 @@ export const dictionaries: Record<Locale, Dictionary> = {
       cguTitle: "Conditions Générales d'Utilisation",
       cguIntro: "Nos conditions générales d'utilisation seront bientôt disponibles. Nous travaillons à vous fournir des informations claires et complètes.",
     },
+    vaults: {
+      title: "Marchés de prêt",
+      subtitle: "Fournir ou emprunter des actifs",
+      loading: "Chargement des vaults...",
+      noVaults: "Aucun vault disponible",
+      noVaultsDesc: "De nouveaux vaults seront ajoutés bientôt.",
+      available: "marchés",
+    },
+    staking: {
+      liveEarning: "GAINS EN COURS",
+      title: "Staker",
+      earn: "Gagner",
+      subtitle: "Fournissez vos actifs aux vaults de prêt et gagnez des rendements passifs. Retirez à tout moment.",
+      totalStaked: "Total staké",
+      avgAPY: "APY moy.",
+      variableRate: "Taux variable",
+      yourStake: "Votre stake",
+      positions: "positions",
+      pendingRewards: "En attente",
+      claimable: "Réclamable",
+      noLock: "Sans blocage",
+      flexible: "Flexible",
+      withdrawAnytime: "Retrait à tout moment",
+      secured: "Sécurisé",
+      audited: "Audité",
+      verified: "Contrats vérifiés",
+      connectTitle: "Connectez-vous pour commencer",
+      connectDescription: "Connectez votre wallet pour staker des actifs et gagner des rendements.",
+      availablePools: "Pools disponibles",
+      active: "actifs",
+      noPools: "Aucun pool disponible",
+      noPoolsDesc: "De nouveaux pools de staking seront ajoutés bientôt.",
+      supplyAPY: "APY Supply",
+      tvl: "TVL",
+      utilization: "Util.",
+      stake: "Staker",
+      manage: "Gérer",
+      earnYield: "Gagnez des rendements",
+      earnYieldDesc: "Fournissez des actifs pour gagner des intérêts auprès des emprunteurs.",
+      collateralized: "Collatéralisé",
+      collateralizedDesc: "Tous les prêts sont sur-collatéralisés et liquidables.",
+      flexibleDesc: "Pas de période de blocage. Retirez à tout moment selon la liquidité.",
+      loading: "Chargement des pools de staking...",
+    },
   },
   en: {
     common: {
@@ -645,6 +783,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
         "Access premium assets through blockchain technology. Participate, earn rewards, and monitor your assets in real time.",
       exploreCTA: "Explore projects",
       explorerCTA: "View on blockchain",
+      startInvesting: "Start Investing",
+      connectToEarn: "Connect your wallet to supply assets and earn yields.",
+      yourPosition: "Your Position",
+      totalSupplied: "Total Supplied",
+      totalBorrowed: "Total Borrowed",
+      netPosition: "Net Position",
+      pendingRewards: "Pending Rewards",
+      activePositions: "Active Positions",
       metrics: {
         projects: "Projects funded",
         dividends: "Rewards distributed",
@@ -759,6 +905,23 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectHint: "Secured by the Base blockchain • Participate with just a fraction of ETH",
       loading: "Loading your portfolio from the blockchain...",
       error: "Error: {{error}}",
+      networth: "Net Worth",
+      netWorth: "Net Worth",
+      supplied: "Supplied",
+      borrowed: "Borrowed",
+      pending: "Pending",
+      yourPositions: "Your Positions",
+      active: "active",
+      noPositions: "No Positions",
+      noPositionsDesc: "You don't have any positions in vaults yet.",
+      browseVaults: "Browse Vaults",
+      rewards: "Rewards",
+      health: "Health",
+      claimRewards: "Claim All Rewards",
+      available: "available",
+      viewExplorer: "View on Explorer",
+      seeTransactions: "See all transactions",
+      connectDescription: "Connect your wallet to view your portfolio, positions, and earnings across all vaults.",
       metrics: {
         invested: "Total in puzzles",
         dividendsEarned: "Rewards earned",
@@ -924,6 +1087,50 @@ export const dictionaries: Record<Locale, Dictionary> = {
       cguTitle: "Terms of Use (CGU)",
       cguIntro: "Our terms of use will be available soon. We're working to provide clear and comprehensive information.",
     },
+    vaults: {
+      title: "Lending Markets",
+      subtitle: "Supply or borrow assets",
+      loading: "Loading vaults...",
+      noVaults: "No vaults available",
+      noVaultsDesc: "New lending vaults coming soon.",
+      available: "markets",
+    },
+    staking: {
+      liveEarning: "EARNING REWARDS",
+      title: "Stake",
+      earn: "Earn",
+      subtitle: "Supply your assets to lending vaults and earn passive yield. Withdraw anytime.",
+      totalStaked: "Total Staked",
+      avgAPY: "Avg. APY",
+      variableRate: "Variable rate",
+      yourStake: "Your Stake",
+      positions: "positions",
+      pendingRewards: "Pending",
+      claimable: "Claimable",
+      noLock: "No Lock",
+      flexible: "Flexible",
+      withdrawAnytime: "Withdraw anytime",
+      secured: "Secured",
+      audited: "Audited",
+      verified: "Contracts verified",
+      connectTitle: "Connect to Start Earning",
+      connectDescription: "Connect your wallet to stake assets and earn yield.",
+      availablePools: "Available Pools",
+      active: "active",
+      noPools: "No pools available yet",
+      noPoolsDesc: "New staking pools will be added soon.",
+      supplyAPY: "Supply APY",
+      tvl: "TVL",
+      utilization: "Util.",
+      stake: "Stake",
+      manage: "Manage",
+      earnYield: "Earn Yield",
+      earnYieldDesc: "Supply assets to earn interest from borrowers.",
+      collateralized: "Collateralized",
+      collateralizedDesc: "All loans are over-collateralized and liquidatable.",
+      flexibleDesc: "No lock-up periods. Withdraw anytime subject to liquidity.",
+      loading: "Loading staking pools...",
+    },
   },
   es: {
     common: {
@@ -957,6 +1164,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
         "Accede a activos premium a través de la tecnología blockchain. Participa, gana recompensas y controla tus activos en tiempo real.",
       exploreCTA: "Explorar proyectos",
       explorerCTA: "Ver en la blockchain",
+      startInvesting: "Comenzar a invertir",
+      connectToEarn: "Conecta tu wallet para suministrar activos y ganar rendimientos.",
+      yourPosition: "Tu Posición",
+      totalSupplied: "Total Suministrado",
+      totalBorrowed: "Total Prestado",
+      netPosition: "Posición Neta",
+      pendingRewards: "Recompensas Pendientes",
+      activePositions: "Posiciones Activas",
       metrics: {
         projects: "Proyectos financiados",
         dividends: "Recompensas distribuidas",
@@ -1071,6 +1286,23 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectHint: "Protegido por la blockchain Base • Participa desde fracciones de ETH",
       loading: "Cargando tu portafolio desde la blockchain...",
       error: "Error: {{error}}",
+      networth: "Valor neto",
+      netWorth: "Valor neto",
+      supplied: "Suministrado",
+      borrowed: "Prestado",
+      pending: "Pendiente",
+      yourPositions: "Tus posiciones",
+      active: "activo",
+      noPositions: "Sin posiciones",
+      noPositionsDesc: "Aún no tienes posiciones en los vaults.",
+      browseVaults: "Explorar vaults",
+      rewards: "Recompensas",
+      health: "Salud",
+      claimRewards: "Reclamar todas las recompensas",
+      available: "disponible",
+      viewExplorer: "Ver en el explorador",
+      seeTransactions: "Ver todas las transacciones",
+      connectDescription: "Conecta tu wallet para ver tu portafolio, posiciones y ganancias en todos los vaults.",
       metrics: {
         invested: "Total en puzzles",
         dividendsEarned: "Recompensas cobradas",
@@ -1235,6 +1467,50 @@ export const dictionaries: Record<Locale, Dictionary> = {
       cgvIntro: "Nuestras condiciones generales de venta estarán disponibles en breve. Gracias por tu paciencia mientras finalizamos este contenido.",
       cguTitle: "Condiciones Generales de Uso",
       cguIntro: "Nuestras condiciones generales de uso estarán disponibles en breve. Estamos trabajando para ofrecerte información clara y completa.",
+    },
+    vaults: {
+      title: "Mercados de préstamo",
+      subtitle: "Suministrar o pedir prestado activos",
+      loading: "Cargando vaults...",
+      noVaults: "No hay vaults disponibles",
+      noVaultsDesc: "Nuevos vaults de préstamo próximamente.",
+      available: "mercados",
+    },
+    staking: {
+      liveEarning: "GANANDO RECOMPENSAS",
+      title: "Stake",
+      earn: "Ganar",
+      subtitle: "Suministra tus activos a los vaults de préstamo y gana rendimientos pasivos. Retira en cualquier momento.",
+      totalStaked: "Total en Stake",
+      avgAPY: "APY prom.",
+      variableRate: "Tasa variable",
+      yourStake: "Tu Stake",
+      positions: "posiciones",
+      pendingRewards: "Pendiente",
+      claimable: "Reclamable",
+      noLock: "Sin bloqueo",
+      flexible: "Flexible",
+      withdrawAnytime: "Retiro en cualquier momento",
+      secured: "Seguro",
+      audited: "Auditado",
+      verified: "Contratos verificados",
+      connectTitle: "Conecta para empezar a ganar",
+      connectDescription: "Conecta tu wallet para hacer stake y ganar rendimientos.",
+      availablePools: "Pools disponibles",
+      active: "activos",
+      noPools: "No hay pools disponibles",
+      noPoolsDesc: "Nuevos pools de staking serán añadidos pronto.",
+      supplyAPY: "APY Supply",
+      tvl: "TVL",
+      utilization: "Util.",
+      stake: "Stake",
+      manage: "Gestionar",
+      earnYield: "Gana rendimientos",
+      earnYieldDesc: "Suministra activos para ganar intereses de los prestatarios.",
+      collateralized: "Colateralizado",
+      collateralizedDesc: "Todos los préstamos están sobre-colateralizados y son liquidables.",
+      flexibleDesc: "Sin períodos de bloqueo. Retira en cualquier momento según la liquidez.",
+      loading: "Cargando pools de staking...",
     },
   },
 };

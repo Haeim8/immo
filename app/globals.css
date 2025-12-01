@@ -18,16 +18,15 @@
     display: none;
   }
 
-  /* --- AJOUT POUR LE LOOK WEB3 --- */
-  /* Barre de défilement personnalisée fine et esthétique */
+  /* Barre de défilement personnalisée fine */
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
@@ -35,59 +34,107 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
+    background: hsl(var(--muted-foreground) / 0.2);
     border-radius: 10px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+
+  /* Grain texture overlay */
+  .grain-texture {
+    position: relative;
+  }
+
+  .grain-texture::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Glass card effect */
+  .glass-card {
+    background: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  /* Geometric line decorations */
+  .geo-line {
+    position: relative;
+  }
+
+  .geo-line::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--accent) / 0.3), transparent);
   }
 }
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* CantorFi Design System - Light Mode */
+    --background: 0 0% 99%;
+    --foreground: 240 10% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 10% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 199 89% 48%;
+    --popover-foreground: 240 10% 10%;
+    --primary: 174 72% 41%; /* Cyan menthe #00d4aa */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 199 89% 48%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 10%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 5% 45%;
+    --accent: 24 95% 53%; /* Orange #f97316 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 84% 39%; /* Vert #10b981 */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%; /* Ambre #f59e0b */
+    --warning-foreground: 0 0% 0%;
+    --border: 240 5% 90%;
+    --input: 240 5% 90%;
+    --ring: 174 72% 41%;
     --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222.2 47.4% 3.2%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 47.4% 5.5%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 47.4% 5.5%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217.2 32.6% 12%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 15%;
-    --muted-foreground: 215 20.2% 55%;
-    --accent: 217.2 32.6% 15%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 20%;
-    --input: 217.2 32.6% 15%;
-    --ring: 199 89% 48%;
+    /* CantorFi Design System - Dark Mode (Primary) */
+    --background: 240 10% 4%; /* #0a0a0f */
+    --foreground: 220 14% 90%; /* #e5e7eb */
+    --card: 240 10% 6%; /* #0f0f14 */
+    --card-foreground: 220 14% 90%;
+    --popover: 240 10% 8%;
+    --popover-foreground: 220 14% 90%;
+    --primary: 166 76% 42%; /* Cyan menthe #00d4aa */
+    --primary-foreground: 240 10% 4%;
+    --secondary: 240 6% 10%; /* #18181b */
+    --secondary-foreground: 220 14% 90%;
+    --muted: 240 6% 14%;
+    --muted-foreground: 220 9% 46%; /* #6b7280 */
+    --accent: 24 95% 53%; /* Orange #f97316 */
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 27 96% 61%; /* Orange clair #fb923c */
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 84% 39%; /* Vert #10b981 */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%; /* Ambre #f59e0b */
+    --warning-foreground: 0 0% 0%;
+    --border: 240 6% 16%;
+    --input: 240 6% 12%;
+    --ring: 166 76% 42%;
   }
 }
 
@@ -95,14 +142,205 @@
   * {
     border-color: hsl(var(--border));
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     overflow-x: hidden;
     max-width: 100vw;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   html {
     overflow-x: hidden;
     max-width: 100vw;
+    scroll-behavior: smooth;
+  }
+
+  /* Typography scale - consistent across breakpoints */
+  h1 {
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight;
+  }
+
+  h3 {
+    @apply text-lg sm:text-xl md:text-2xl font-semibold;
+  }
+
+  h4 {
+    @apply text-base sm:text-lg font-medium;
+  }
+
+  /* Monospace for numbers/addresses */
+  .font-mono {
+    font-feature-settings: "tnum";
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  /* Button base styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           bg-primary text-primary-foreground font-medium rounded-lg
+           transition-all duration-200 ease-out
+           hover:opacity-90 hover:scale-[1.02]
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           bg-secondary text-secondary-foreground font-medium rounded-lg
+           border border-border
+           transition-all duration-200 ease-out
+           hover:bg-muted hover:border-muted-foreground/20
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           text-foreground font-medium rounded-lg
+           transition-all duration-200 ease-out
+           hover:bg-muted
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Card styles - Kamino inspired */
+  .card-vault {
+    @apply relative overflow-hidden rounded-xl
+           bg-card border border-border
+           transition-all duration-300 ease-out
+           hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5;
+  }
+
+  .card-vault::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300 pointer-events-none;
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), hsl(var(--primary) / 0.06), transparent 40%);
+  }
+
+  .card-vault:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Position card - for active positions */
+  .card-position {
+    @apply relative overflow-hidden rounded-xl p-4 sm:p-5
+           bg-card border border-border
+           transition-all duration-200;
+  }
+
+  .card-position.has-position {
+    @apply border-primary/20 bg-primary/5;
+  }
+
+  /* Input styles */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg
+           bg-input border border-border
+           text-foreground placeholder:text-muted-foreground
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary;
+  }
+
+  /* Stat display */
+  .stat-value {
+    @apply text-xl sm:text-2xl md:text-3xl font-bold tracking-tight;
+  }
+
+  .stat-label {
+    @apply text-xs sm:text-sm text-muted-foreground uppercase tracking-wide;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-success/10 text-success;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning/10 text-warning;
+  }
+
+  .badge-accent {
+    @apply badge bg-accent/10 text-accent;
+  }
+
+  /* Token icon placeholder */
+  .token-icon {
+    @apply w-8 h-8 rounded-full bg-muted flex items-center justify-center
+           text-xs font-bold text-muted-foreground
+           border border-border;
+  }
+
+  .token-icon-sm {
+    @apply w-6 h-6 rounded-full bg-muted flex items-center justify-center
+           text-[10px] font-bold text-muted-foreground
+           border border-border;
+  }
+
+  .token-icon-lg {
+    @apply w-10 h-10 rounded-full bg-muted flex items-center justify-center
+           text-sm font-bold text-muted-foreground
+           border border-border;
+  }
+}
+
+/* Geometric animation for hero */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 6s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
+
+.animate-draw-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: draw-line 3s ease-out forwards;
+}
+
+/* Responsive container */
+.container-app {
+  @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Fixed header height compensation */
+.header-offset {
+  padding-top: 4rem; /* 64px */
+}
+
+@media (min-width: 768px) {
+  .header-offset {
+    padding-top: 4.5rem; /* 72px */
   }
 }

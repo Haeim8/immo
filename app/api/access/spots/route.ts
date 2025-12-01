@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
 
 const MAX_SPOTS = 2500;
 const WAITLIST_KEY = "email-list";
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL || "",
-  token: process.env.KV_REST_API_TOKEN || "",
-});
+// Check if Redis is configured
+const isRedisConfigured = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
 interface WaitlistEntry {
   id: string;
@@ -16,7 +13,33 @@ interface WaitlistEntry {
   createdAt: string;
 }
 
+// Lazy load Redis
+async function getRedisClient() {
+  if (!isRedisConfigured) return null;
+
+  try {
+    const { Redis } = await import("@upstash/redis");
+    return new Redis({
+      url: process.env.KV_REST_API_URL!,
+      token: process.env.KV_REST_API_TOKEN!,
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
+  const redis = await getRedisClient();
+
+  // Return default values if Redis not configured
+  if (!redis) {
+    return NextResponse.json({
+      spotsLeft: MAX_SPOTS,
+      totalSpots: MAX_SPOTS,
+      registered: 0,
+    });
+  }
+
   try {
     const entries = await redis.get<WaitlistEntry[]>(WAITLIST_KEY);
     const registered = entries?.length || 0;
@@ -29,9 +52,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching available spots:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch spots", spotsLeft: 0 },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      spotsLeft: MAX_SPOTS,
+      totalSpots: MAX_SPOTS,
+      registered: 0,
+    });
   }
 }
