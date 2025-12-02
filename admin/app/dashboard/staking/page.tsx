@@ -11,7 +11,10 @@ import {
   IconSettings,
   IconRefresh,
   IconCheck,
-  IconInfoCircle
+  IconInfoCircle,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconAlertTriangle
 } from "@tabler/icons-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -92,8 +95,35 @@ export default function StakingPage() {
     },
   })
 
+  const { data: isPaused, isLoading: isLoadingPaused, refetch: refetchPaused } = useReadContract({
+    address: STAKING_ADDRESS as `0x${string}`,
+    abi: STAKING_ABI,
+    functionName: "paused",
+    query: {
+      enabled: isConnected && !!STAKING_ADDRESS,
+    },
+  })
+
+  const { data: vaultAddress } = useReadContract({
+    address: STAKING_ADDRESS as `0x${string}`,
+    abi: STAKING_ABI,
+    functionName: "vault",
+    query: {
+      enabled: isConnected && !!STAKING_ADDRESS,
+    },
+  })
+
+  const { data: cvtTokenAddress } = useReadContract({
+    address: STAKING_ADDRESS as `0x${string}`,
+    abi: STAKING_ABI,
+    functionName: "cvtToken",
+    query: {
+      enabled: isConnected && !!STAKING_ADDRESS,
+    },
+  })
+
   // Write function for updating borrow ratio
-  const { writeContract, data: txHash, isPending, error } = useWriteContract()
+  const { writeContract, data: txHash, isPending, error, reset } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
 
   const handleRefresh = () => {
@@ -101,6 +131,27 @@ export default function StakingPage() {
     refetchRatio()
     refetchMaxBorrow()
     refetchStakers()
+    refetchPaused()
+  }
+
+  const handlePause = () => {
+    if (!STAKING_ADDRESS) return
+    reset()
+    writeContract({
+      address: STAKING_ADDRESS as `0x${string}`,
+      abi: STAKING_ABI,
+      functionName: "pause",
+    })
+  }
+
+  const handleUnpause = () => {
+    if (!STAKING_ADDRESS) return
+    reset()
+    writeContract({
+      address: STAKING_ADDRESS as `0x${string}`,
+      abi: STAKING_ABI,
+      functionName: "unpause",
+    })
   }
 
   const handleUpdateBorrowRatio = () => {
@@ -220,8 +271,87 @@ export default function StakingPage() {
         </div>
       )}
 
+      {/* Pause Status Alert */}
+      {isPaused && (
+        <Card className="border-amber-500 bg-amber-500/10">
+          <CardContent className="flex items-center gap-4 py-4">
+            <IconAlertTriangle className="h-6 w-6 text-amber-500" />
+            <div className="flex-1">
+              <p className="font-medium text-amber-700 dark:text-amber-400">Staking is Paused</p>
+              <p className="text-sm text-amber-600 dark:text-amber-500">Users cannot stake, unstake, or claim rewards while paused.</p>
+            </div>
+            <Button variant="outline" onClick={handleUnpause} disabled={isPending || isConfirming}>
+              <IconPlayerPlay className="h-4 w-4 mr-2" />
+              Resume
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Configuration Cards */}
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Emergency Controls */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IconAlertTriangle className="h-5 w-5" />
+              Emergency Controls
+            </CardTitle>
+            <CardDescription>
+              Pause or resume staking operations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium">Contract Status</p>
+                <p className="text-sm text-muted-foreground">
+                  {isPaused ? "Staking is currently paused" : "Staking is active"}
+                </p>
+              </div>
+              <Badge variant={isPaused ? "destructive" : "default"}>
+                {isPaused ? "Paused" : "Active"}
+              </Badge>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handlePause}
+                disabled={isPaused === true || isPending || isConfirming}
+              >
+                <IconPlayerPause className="h-4 w-4 mr-2" />
+                Pause Staking
+              </Button>
+              <Button
+                variant="default"
+                className="flex-1"
+                onClick={handleUnpause}
+                disabled={isPaused === false || isPending || isConfirming}
+              >
+                <IconPlayerPlay className="h-4 w-4 mr-2" />
+                Resume Staking
+              </Button>
+            </div>
+
+            {isSuccess && (
+              <div className="flex items-center gap-2 text-emerald-600 text-sm">
+                <IconCheck className="h-4 w-4" />
+                Operation completed successfully
+              </div>
+            )}
+
+            {error && (
+              <p className="text-sm text-destructive">
+                {error.message.includes("User rejected")
+                  ? "Transaction cancelled"
+                  : error.message.slice(0, 200)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Update Borrow Ratio */}
         <Card>
           <CardHeader>
@@ -287,7 +417,7 @@ export default function StakingPage() {
           <CardContent className="space-y-4">
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Contract Address</span>
+                <span className="text-muted-foreground">Staking Contract</span>
                 <a
                   href={`https://sepolia.basescan.org/address/${STAKING_ADDRESS}`}
                   target="_blank"
@@ -296,6 +426,38 @@ export default function StakingPage() {
                 >
                   {STAKING_ADDRESS.slice(0, 6)}...{STAKING_ADDRESS.slice(-4)}
                 </a>
+              </div>
+              {vaultAddress && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Linked Vault</span>
+                  <a
+                    href={`https://sepolia.basescan.org/address/${vaultAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-xs text-primary hover:underline"
+                  >
+                    {(vaultAddress as string).slice(0, 6)}...{(vaultAddress as string).slice(-4)}
+                  </a>
+                </div>
+              )}
+              {cvtTokenAddress && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">CVT Token</span>
+                  <a
+                    href={`https://sepolia.basescan.org/address/${cvtTokenAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-xs text-primary hover:underline"
+                  >
+                    {(cvtTokenAddress as string).slice(0, 6)}...{(cvtTokenAddress as string).slice(-4)}
+                  </a>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <Badge variant={isPaused ? "destructive" : "default"} className="text-xs">
+                  {isPaused ? "Paused" : "Active"}
+                </Badge>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Staked</span>
