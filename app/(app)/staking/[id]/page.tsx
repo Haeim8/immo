@@ -7,10 +7,12 @@ import {
   Loader2, ArrowLeft, TrendingUp, Wallet,
   ExternalLink, Coins, Lock, Shield, Clock, Percent
 } from "lucide-react";
-import { useAccount } from "wagmi";
+import { useAccount, useBalance } from "wagmi";
 import Image from "next/image";
 import Link from "next/link";
+import { formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
+import { USDC_ADDRESS, USDC_DECIMALS } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTranslations } from "@/components/providers/IntlProvider";
 
@@ -145,9 +147,23 @@ export default function StakingDetailPage() {
   const stakingT = useTranslations("staking");
   const commonT = useTranslations("common");
 
+  // Fetch USDC balance from wallet
+  const { data: usdcBalance } = useBalance({
+    address: address,
+    token: USDC_ADDRESS as `0x${string}`,
+    query: {
+      enabled: isConnected && !!address,
+    },
+  });
+
+  const walletBalance = usdcBalance
+    ? parseFloat(formatUnits(usdcBalance.value, USDC_DECIMALS))
+    : 0;
+
   const [vault, setVault] = useState<VaultData | null>(null);
   const [amount, setAmount] = useState('');
   const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
+  const [txError, setTxError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!vaultId || loadingVaults) return;
@@ -196,14 +212,42 @@ export default function StakingDetailPage() {
   const fillPercent = maxCapacity > 0 ? (totalStaked / maxCapacity) * 100 : 0;
   const availableToStake = maxCapacity - totalStaked;
 
+  // Check if user has sufficient balance for stake operations
+  const numericAmount = parseFloat(amount) || 0;
+  const hasInsufficientBalance = mode === 'stake' && numericAmount > walletBalance;
+  const hasInsufficientStake = mode === 'unstake' && numericAmount > userStaked;
+  const isActionDisabled = !amount || numericAmount <= 0 || hasInsufficientBalance || hasInsufficientStake;
+
   const handleMaxClick = () => {
     if (mode === 'stake') {
-      // Set max from wallet balance (placeholder for now)
-      setAmount('0');
+      // Set max from wallet balance
+      setAmount(walletBalance > 0 ? walletBalance.toFixed(2) : '0');
     } else {
       // Set max unstake (user's staked amount)
-      setAmount(userStaked.toString());
+      setAmount(userStaked > 0 ? userStaked.toFixed(4) : '0');
     }
+  };
+
+  const handleStakeAction = () => {
+    setTxError(null);
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      setTxError("Montant invalide");
+      return;
+    }
+
+    if (mode === 'stake' && numericAmount > walletBalance) {
+      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} USDC`);
+      return;
+    }
+
+    if (mode === 'unstake' && numericAmount > userStaked) {
+      setTxError(`Vous n'avez que ${formatNumber(userStaked)} USDC en stake`);
+      return;
+    }
+
+    console.log(`${mode} ${amount} ${vault.tokenSymbol}`);
+    // TODO: Call actual stake/unstake contract function
   };
 
   const estimatedYearlyRewards = amount ? (parseFloat(amount) || 0) * vault.supplyRate / 100 : 0;
@@ -487,8 +531,8 @@ export default function StakingDetailPage() {
                             {amount ? formatCurrency(parseFloat(amount) || 0) : '$0.00'}
                           </span>
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">
-                              {mode === 'stake' ? 'Balance:' : 'Staked:'} {mode === 'stake' ? '0.00' : formatNumber(userStaked)}
+                            <span className={`text-muted-foreground ${(hasInsufficientBalance || hasInsufficientStake) ? 'text-destructive' : ''}`}>
+                              {mode === 'stake' ? 'Balance:' : 'Staked:'} {mode === 'stake' ? formatNumber(walletBalance) : formatNumber(userStaked)}
                             </span>
                             <button
                               type="button"
@@ -499,6 +543,17 @@ export default function StakingDetailPage() {
                             </button>
                           </div>
                         </div>
+                        {/* Insufficient balance warning */}
+                        {hasInsufficientBalance && (
+                          <p className="text-xs text-destructive mt-2">
+                            Solde insuffisant ({formatNumber(walletBalance)} USDC disponible)
+                          </p>
+                        )}
+                        {hasInsufficientStake && (
+                          <p className="text-xs text-destructive mt-2">
+                            Stake insuffisant ({formatNumber(userStaked)} USDC en stake)
+                          </p>
+                        )}
                       </div>
 
                       {/* Transaction Preview */}
@@ -528,23 +583,29 @@ export default function StakingDetailPage() {
                       {/* Action Button */}
                       <button
                         type="button"
-                        onClick={() => {
-                          console.log(`${mode} ${amount} ${vault.tokenSymbol}`);
-                        }}
-                        disabled={!amount || parseFloat(amount) <= 0}
+                        onClick={handleStakeAction}
+                        disabled={isActionDisabled}
                         className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer ${
-                          amount && parseFloat(amount) > 0
+                          !isActionDisabled
                             ? mode === 'stake'
                               ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                               : 'bg-accent text-white hover:bg-accent/90'
                             : 'bg-secondary text-muted-foreground cursor-not-allowed'
                         }`}
                       >
-                        {mode === 'stake'
-                          ? (stakingT("stakeTokens") || `Stake ${vault.tokenSymbol}`)
-                          : (stakingT("unstakeTokens") || `Unstake ${vault.tokenSymbol}`)
+                        {hasInsufficientBalance
+                          ? 'Solde insuffisant'
+                          : hasInsufficientStake
+                            ? 'Stake insuffisant'
+                            : mode === 'stake'
+                              ? (stakingT("stakeTokens") || `Stake ${vault.tokenSymbol}`)
+                              : (stakingT("unstakeTokens") || `Unstake ${vault.tokenSymbol}`)
                         }
                       </button>
+
+                      {txError && (
+                        <p className="text-sm text-destructive mt-2">{txError}</p>
+                      )}
 
                       {/* Pool Info */}
                       <div className="mt-5 pt-5 border-t border-border/50 space-y-1">

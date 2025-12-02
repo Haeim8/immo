@@ -7,10 +7,10 @@ import {
   Loader2, ArrowLeft, Wallet, Info,
   ExternalLink, Settings, ChevronDown, X, Check
 } from "lucide-react";
-import { useAccount } from "wagmi";
+import { useAccount, useBalance } from "wagmi";
 import Image from "next/image";
 import Link from "next/link";
-import { parseUnits } from "viem";
+import { parseUnits, formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
 import { useSupply, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
 import { USDC_ADDRESS, USDC_DECIMALS } from "@/lib/evm/constants";
@@ -324,6 +324,19 @@ export default function VaultPage() {
   const { vaults, isLoading: loadingVaults } = useAllVaults();
   const { positions } = useUserPositions(address);
 
+  // Fetch USDC balance from wallet
+  const { data: usdcBalance, refetch: refetchBalance } = useBalance({
+    address: address,
+    token: USDC_ADDRESS as `0x${string}`,
+    query: {
+      enabled: isConnected && !!address,
+    },
+  });
+
+  const walletBalance = usdcBalance
+    ? parseFloat(formatUnits(usdcBalance.value, USDC_DECIMALS))
+    : 0;
+
   const [vault, setVault] = useState<VaultData | null>(null);
   const [mode, setMode] = useState<'lend' | 'borrow'>('lend');
   const [amount, setAmount] = useState('');
@@ -404,7 +417,11 @@ export default function VaultPage() {
 
   const actionLoading = isSupplyPending || isBorrowPending || isRepayPending || isApprovePending;
   const isAmountValid = amount && parseFloat(amount) > 0;
-  const isActionDisabled = !vault || !isAmountValid || actionLoading;
+
+  // Check if user has sufficient balance for lend/repay operations
+  const numericAmount = parseFloat(amount) || 0;
+  const hasInsufficientBalance = mode === 'lend' && numericAmount > walletBalance;
+  const isActionDisabled = !vault || !isAmountValid || actionLoading || hasInsufficientBalance;
 
   const handleAction = () => {
     if (!vault) return;
@@ -414,6 +431,13 @@ export default function VaultPage() {
       setTxError("Montant invalide");
       return;
     }
+
+    // Check wallet balance for lend mode
+    if (mode === 'lend' && numericAmount > walletBalance) {
+      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} USDC`);
+      return;
+    }
+
     const amountString = numericAmount.toString();
 
     if (mode === 'lend') {
@@ -433,6 +457,13 @@ export default function VaultPage() {
       setTxError("Montant invalide");
       return;
     }
+
+    // Check wallet balance for repay
+    if (numericAmount > walletBalance) {
+      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} USDC`);
+      return;
+    }
+
     const amountString = numericAmount.toString();
     const amountBN = parseUnits(amountString, USDC_DECIMALS);
     approve(vaultAddress, amountBN);
@@ -441,11 +472,13 @@ export default function VaultPage() {
 
   const handleMaxClick = () => {
     if (mode === 'lend') {
-      // Set max from wallet balance (placeholder)
-      setAmount('0');
+      // Set max from wallet balance
+      setAmount(walletBalance > 0 ? walletBalance.toFixed(2) : '0');
     } else {
-      // Set max borrowable
-      setAmount(formatNumber(availableLiquidity));
+      // Set max borrowable (limited by available liquidity and user's max borrow capacity)
+      const maxBorrowable = userPosition ? parseFloat(userPosition.maxBorrow) : 0;
+      const maxAmount = Math.min(availableLiquidity, maxBorrowable > 0 ? maxBorrowable : availableLiquidity);
+      setAmount(formatNumber(maxAmount));
     }
   };
 
@@ -791,8 +824,8 @@ export default function VaultPage() {
                             {amount ? formatCurrency(parseFloat(amount) || 0) : '$0.00'}
                           </span>
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">
-                              {mode === 'lend' ? 'Wallet:' : 'Max:'} {userPosition ? formatNumber(userPosition.supplied) : '0.00'}
+                            <span className={`text-muted-foreground ${hasInsufficientBalance ? 'text-destructive' : ''}`}>
+                              {mode === 'lend' ? 'Wallet:' : 'Max:'} {mode === 'lend' ? formatNumber(walletBalance) : (userPosition ? formatNumber(parseFloat(userPosition.maxBorrow)) : '0.00')}
                             </span>
                             <button
                               type="button"
@@ -807,6 +840,12 @@ export default function VaultPage() {
                             </button>
                           </div>
                         </div>
+                        {/* Insufficient balance warning */}
+                        {hasInsufficientBalance && (
+                          <p className="text-xs text-destructive mt-2">
+                            Solde insuffisant ({formatNumber(walletBalance)} USDC disponible)
+                          </p>
+                        )}
                       </div>
 
                       {/* Available Info */}
@@ -815,7 +854,7 @@ export default function VaultPage() {
                           {mode === 'lend' ? 'Available to supply' : 'Available to borrow'}
                         </span>
                         <span className="font-medium">
-                          {mode === 'lend' ? '$0.00' : formatCurrency(availableLiquidity)}
+                          {mode === 'lend' ? formatCurrency(walletBalance) : formatCurrency(availableLiquidity)}
                         </span>
                       </div>
 
