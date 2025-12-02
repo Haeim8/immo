@@ -25,6 +25,9 @@ contract CantorVaultReader {
         address vaultAddress;
         uint256 maxLiquidity;
         uint256 borrowBaseRate;
+        uint256 borrowSlope;
+        uint256 maxBorrowRatio;
+        uint256 liquidationBonus;
         uint256 expectedReturn;
         bool isActive;
         uint256 createdAt;
@@ -40,6 +43,8 @@ contract CantorVaultReader {
         address cvtToken;
         uint256 cvtTotalSupply;
         bool isPaused;
+        // Underlying token
+        address underlyingToken;
     }
 
     struct UserPositionData {
@@ -99,9 +104,9 @@ contract CantorVaultReader {
                 uint256 _vaultId,
                 uint256 maxLiquidity,
                 uint256 borrowBaseRate,
-                ,
-                ,
-                ,
+                uint256 borrowSlope,
+                uint256 maxBorrowRatio,
+                uint256 liquidationBonus,
                 bool isActive,
                 uint256 createdAt,
 
@@ -111,6 +116,9 @@ contract CantorVaultReader {
             data.vaultAddress = vaultAddress;
             data.maxLiquidity = maxLiquidity;
             data.borrowBaseRate = borrowBaseRate;
+            data.borrowSlope = borrowSlope;
+            data.maxBorrowRatio = maxBorrowRatio;
+            data.liquidationBonus = liquidationBonus;
             data.isActive = isActive;
             data.createdAt = createdAt;
         }
@@ -143,11 +151,12 @@ contract CantorVaultReader {
             data.expectedReturn = (borrowRate * utilizationRate) / 10000;
         }
 
-        // CVT and pause state
+        // CVT, underlying token, and pause state
         {
             data.cvtToken = address(vault.cvtToken());
             data.cvtTotalSupply = CVT(data.cvtToken).totalSupply();
             data.isPaused = vault.paused();
+            data.underlyingToken = address(vault.token());
         }
 
         return data;

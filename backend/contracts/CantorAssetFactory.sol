@@ -137,7 +137,9 @@ contract CantorAssetFactory is
         if (params.token == address(0)) revert InvalidAddress();
         if (params.maxLiquidity == 0) revert InvalidAmount();
         if (params.borrowBaseRate > 10000) revert InvalidAmount();
+        if (params.borrowSlope > 50000) revert InvalidAmount(); // Max 500% slope to prevent overflow
         if (params.maxBorrowRatio > 10000) revert InvalidAmount();
+        if (params.liquidationBonus > 2000) revert InvalidAmount(); // Max 20% bonus
 
         // Clone vault implementation
         vaultAddress = Clones.clone(vaultImplementation);

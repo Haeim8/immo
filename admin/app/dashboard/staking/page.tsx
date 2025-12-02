@@ -28,9 +28,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { CONTRACTS, STAKING_ABI } from "@/lib/contracts"
 
-// Note: CVTStaking contract address should be added to CONTRACTS
-// For now we'll use a placeholder - update when deployed
-const STAKING_ADDRESS = process.env.NEXT_PUBLIC_STAKING_ADDRESS || ""
+const STAKING_ADDRESS = CONTRACTS.staking
 
 function formatAmount(value: string | number | undefined): string {
   if (!value) return "0"

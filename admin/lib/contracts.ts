@@ -1,16 +1,20 @@
-// Contract addresses on Base Sepolia
-// Updated: 2025-11-29 (New deployment with security fixes)
+// Contract addresses sur Base Sepolia (alignés avec backend/deployments-sepolia.json)
+// Mise à jour : 2025-12-02
+const STAKING_ADDRESS = "0x4E3C4B3aF1702Dd65BcDe4Cc1a1f23890451D0a9";
+
 export const CONTRACTS = {
   network: "baseSepolia",
   chainId: 84532,
   deployer: "0x222fD66bbfc6808e123aB51f5FB21644731dFDE2",
-  usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Base USDC
-  protocol: "0x13AF08E9C8246dB51681A2f37086CE8A4a247493",
-  feeCollector: "0xD7bbF421De7128c85671D35C3187c9FCe65f71f3",
-  priceOracle: "0x8d2e5019F48d3F6AE662525aCed5e934f71d1ACf",
-  collateralManager: "0xe729b6262d10798a6a0533C7C8424e804Eb3f2bF",
-  vaultImplementation: "0x0c80bFbaA80bD77533dCEaFb31481A02fd4c1690",
-  factory: "0x06A48c88dfd4Ce95CE412d4e9d816484c94B758F",
+  usdc: "0x45f591C36B3506a881eD54638a9456607c2Eed84", // USDC testnet
+  protocol: "0x6a14223324cEd59f89EB80A296a119B2834d1747",
+  feeCollector: "0x6FC8141187cC9c25Bd632393Da95bAcD88EA354e",
+  priceOracle: "0xc659BBBe7E819373b10a56d2d4afd152dde98317",
+  collateralManager: "0x06fd3Ba63a478648B88F5e3587c698C594D3b550",
+  vaultImplementation: "0x211BA241808e51CA363a1E0d19C87607C28D3e31",
+  factory: "0x98374B2f2c13b04829654C9997abF762d8414454",
+  reader: "0x085909eDc9214b8d8e924225ee431d5eB1091dAb",
+  staking: STAKING_ADDRESS,
 } as const;
 
 // Token addresses on Base Mainnet (for production)
@@ -139,28 +143,28 @@ export const PROTOCOL_ABI = [
 // ============== FEE COLLECTOR ABI ==============
 export const FEE_COLLECTOR_ABI = [
   {
-    inputs: [],
+    inputs: [{ internalType: "address", name: "token", type: "address" }],
     name: "totalFeesCollected",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [],
+    inputs: [{ internalType: "address", name: "token", type: "address" }],
     name: "totalFeesDistributed",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [],
+    inputs: [{ internalType: "address", name: "token", type: "address" }],
     name: "getAvailableBalance",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [],
+    inputs: [{ internalType: "address", name: "token", type: "address" }],
     name: "getFeeStats",
     outputs: [
       { internalType: "uint256", name: "collected", type: "uint256" },
@@ -178,8 +182,42 @@ export const FEE_COLLECTOR_ABI = [
     type: "function",
   },
   {
-    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    inputs: [],
+    name: "stakingContract",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "token", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
     name: "distributeToTreasury",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "token", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "distributeFees",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "notifier", type: "address" }],
+    name: "addNotifier",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "newStaking", type: "address" }],
+    name: "setStakingContract",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

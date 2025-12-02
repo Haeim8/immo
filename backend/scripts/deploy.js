@@ -1,18 +1,9 @@
 const { ethers, upgrades } = require("hardhat");
+const fs = require("fs");
 
 /**
  * Deploy the full CantorFi protocol
- *
- * Deployment Order:
- * 1. Deploy mock tokens (USDC, WETH) for testing
- * 2. Deploy CantorFiProtocol (upgradeable)
- * 3. Deploy FeeCollector (upgradeable)
- * 4. Deploy PriceOracle (upgradeable)
- * 5. Deploy CollateralManager (upgradeable)
- * 6. Deploy CantorVault implementation (for cloning)
- * 7. Deploy CantorAssetFactory (upgradeable)
- * 8. Configure all contracts (roles, addresses)
- * 9. Create a test vault
+ * Works on localhost (Hardhat) and Base Sepolia
  */
 async function main() {
   console.log("=".repeat(60));
@@ -23,46 +14,43 @@ async function main() {
   console.log("\nDeployer:", deployer.address);
   console.log("Balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "ETH");
 
-  const isLocalhost = (await ethers.provider.getNetwork()).chainId === 31337n;
-  console.log("\nNetwork:", isLocalhost ? "localhost (Hardhat)" : "external");
+  const chainId = (await ethers.provider.getNetwork()).chainId;
+  const isLocalhost = chainId === 31337n;
+  const isBaseSepolia = chainId === 84532n;
 
-  // Track deployed contracts
-  const deployment = {
-    timestamp: new Date().toISOString(),
-    network: isLocalhost ? "localhost" : "external",
-    deployer: deployer.address,
-    contracts: {}
-  };
+  console.log("\nChain ID:", chainId.toString());
+  console.log("Network:", isLocalhost ? "localhost" : isBaseSepolia ? "Base Sepolia" : "unknown");
+
+  // USDC address (existing on Base Sepolia, mock on localhost)
+  const USDC_BASE_SEPOLIA = "0x45f591C36B3506a881eD54638a9456607c2Eed84";
+
+  let usdcAddress;
+  let wethAddress;
 
   // ============================================
-  // 1. Deploy Mock Tokens (only for localhost)
+  // 1. Deploy Mock Tokens (localhost only)
   // ============================================
-  let usdc, weth;
-
   if (isLocalhost) {
     console.log("\n--- Deploying Mock Tokens ---");
 
     const MockERC20 = await ethers.getContractFactory("MockERC20");
 
-    // Deploy Mock USDC (6 decimals)
-    usdc = await MockERC20.deploy("USD Coin", "USDC", 6);
+    const usdc = await MockERC20.deploy("USD Coin", "USDC", 6);
     await usdc.waitForDeployment();
-    console.log("Mock USDC deployed:", await usdc.getAddress());
-    deployment.contracts.USDC = await usdc.getAddress();
+    usdcAddress = await usdc.getAddress();
+    console.log("Mock USDC:", usdcAddress);
 
-    // Deploy Mock WETH (18 decimals)
-    weth = await MockERC20.deploy("Wrapped Ether", "WETH", 18);
+    const weth = await MockERC20.deploy("Wrapped Ether", "WETH", 18);
     await weth.waitForDeployment();
-    console.log("Mock WETH deployed:", await weth.getAddress());
-    deployment.contracts.WETH = await weth.getAddress();
+    wethAddress = await weth.getAddress();
+    console.log("Mock WETH:", wethAddress);
 
-    // Mint some tokens for testing
-    const usdcAmount = ethers.parseUnits("10000000", 6); // 10M USDC
-    const wethAmount = ethers.parseEther("1000"); // 1000 WETH
-
-    await usdc.mint(deployer.address, usdcAmount);
-    await weth.mint(deployer.address, wethAmount);
+    await usdc.mint(deployer.address, ethers.parseUnits("10000000", 6));
+    await weth.mint(deployer.address, ethers.parseEther("1000"));
     console.log("Minted 10M USDC and 1000 WETH to deployer");
+  } else if (isBaseSepolia) {
+    usdcAddress = USDC_BASE_SEPOLIA;
+    console.log("\nUsing existing USDC:", usdcAddress);
   }
 
   // ============================================
@@ -75,7 +63,7 @@ async function main() {
     CantorFiProtocol,
     [
       deployer.address,  // admin
-      deployer.address,  // treasury (use deployer for testing)
+      deployer.address,  // treasury
       100,               // setupFee: 1%
       1000,              // performanceFee: 10%
       1500               // borrowFeeRate: 15%
@@ -84,8 +72,7 @@ async function main() {
   );
   await protocol.waitForDeployment();
   const protocolAddress = await protocol.getAddress();
-  console.log("CantorFiProtocol deployed:", protocolAddress);
-  deployment.contracts.CantorFiProtocol = protocolAddress;
+  console.log("CantorFiProtocol:", protocolAddress);
 
   // ============================================
   // 3. Deploy FeeCollector
@@ -95,16 +82,12 @@ async function main() {
   const FeeCollector = await ethers.getContractFactory("FeeCollector");
   const feeCollector = await upgrades.deployProxy(
     FeeCollector,
-    [
-      deployer.address,  // admin
-      deployer.address   // treasury
-    ],
+    [deployer.address, deployer.address],
     { initializer: "initialize", kind: "uups" }
   );
   await feeCollector.waitForDeployment();
   const feeCollectorAddress = await feeCollector.getAddress();
-  console.log("FeeCollector deployed:", feeCollectorAddress);
-  deployment.contracts.FeeCollector = feeCollectorAddress;
+  console.log("FeeCollector:", feeCollectorAddress);
 
   // ============================================
   // 4. Deploy PriceOracle
@@ -114,13 +97,12 @@ async function main() {
   const PriceOracle = await ethers.getContractFactory("PriceOracle");
   const priceOracle = await upgrades.deployProxy(
     PriceOracle,
-    [deployer.address],  // admin
+    [deployer.address],
     { initializer: "initialize", kind: "uups" }
   );
   await priceOracle.waitForDeployment();
   const priceOracleAddress = await priceOracle.getAddress();
-  console.log("PriceOracle deployed:", priceOracleAddress);
-  deployment.contracts.PriceOracle = priceOracleAddress;
+  console.log("PriceOracle:", priceOracleAddress);
 
   // ============================================
   // 5. Deploy CollateralManager
@@ -131,19 +113,18 @@ async function main() {
   const collateralManager = await upgrades.deployProxy(
     CollateralManager,
     [
-      priceOracleAddress,   // priceOracle
-      protocolAddress,      // protocol
-      deployer.address,     // admin
-      7000,                 // maxLTV: 70%
-      8000,                 // liquidationThreshold: 80%
-      500                   // liquidationBonus: 5%
+      priceOracleAddress,
+      protocolAddress,
+      deployer.address,
+      7000,  // maxLTV: 70%
+      8000,  // liquidationThreshold: 80%
+      500    // liquidationBonus: 5%
     ],
     { initializer: "initialize", kind: "uups" }
   );
   await collateralManager.waitForDeployment();
   const collateralManagerAddress = await collateralManager.getAddress();
-  console.log("CollateralManager deployed:", collateralManagerAddress);
-  deployment.contracts.CollateralManager = collateralManagerAddress;
+  console.log("CollateralManager:", collateralManagerAddress);
 
   // ============================================
   // 6. Deploy CantorVault Implementation
@@ -154,8 +135,7 @@ async function main() {
   const vaultImpl = await CantorVault.deploy();
   await vaultImpl.waitForDeployment();
   const vaultImplAddress = await vaultImpl.getAddress();
-  console.log("CantorVault Implementation deployed:", vaultImplAddress);
-  deployment.contracts.CantorVaultImplementation = vaultImplAddress;
+  console.log("CantorVault Implementation:", vaultImplAddress);
 
   // ============================================
   // 7. Deploy CantorAssetFactory
@@ -165,85 +145,111 @@ async function main() {
   const CantorAssetFactory = await ethers.getContractFactory("CantorAssetFactory");
   const factory = await upgrades.deployProxy(
     CantorAssetFactory,
-    [
-      vaultImplAddress,    // vault implementation
-      protocolAddress,     // protocol
-      deployer.address,    // admin
-      deployer.address     // treasury
-    ],
+    [vaultImplAddress, protocolAddress, deployer.address, deployer.address],
     { initializer: "initialize", kind: "uups" }
   );
   await factory.waitForDeployment();
   const factoryAddress = await factory.getAddress();
-  console.log("CantorAssetFactory deployed:", factoryAddress);
-  deployment.contracts.CantorAssetFactory = factoryAddress;
+  console.log("CantorAssetFactory:", factoryAddress);
 
   // ============================================
-  // 8. Configure Contracts
+  // 8. Deploy CantorVaultReader
+  // ============================================
+  console.log("\n--- Deploying CantorVaultReader ---");
+
+  const CantorVaultReader = await ethers.getContractFactory("CantorVaultReader");
+  const reader = await CantorVaultReader.deploy(protocolAddress);
+  await reader.waitForDeployment();
+  const readerAddress = await reader.getAddress();
+  console.log("CantorVaultReader:", readerAddress);
+
+  // ============================================
+  // 9. Configure Contracts
   // ============================================
   console.log("\n--- Configuring Contracts ---");
 
-  // Set FeeCollector in Protocol
   await protocol.setFeeCollector(feeCollectorAddress);
-  console.log("Protocol: FeeCollector set");
+  console.log("  Protocol: FeeCollector set");
 
-  // Add Factory to Protocol (IMPORTANT: enables vault registration)
   await protocol.addFactory(factoryAddress);
-  console.log("Protocol: Factory authorized");
+  console.log("  Protocol: Factory authorized");
 
-  // Set manual prices in PriceOracle (for localhost testing)
-  if (isLocalhost) {
-    // USDC = $1.00 (8 decimals)
-    await priceOracle.setManualPrice(await usdc.getAddress(), 100000000);
-    console.log("PriceOracle: USDC price set to $1.00");
+  await feeCollector.addNotifier(factoryAddress);
+  console.log("  FeeCollector: Factory authorized as notifier");
 
-    // WETH = $2000.00 (8 decimals)
-    await priceOracle.setManualPrice(await weth.getAddress(), 200000000000);
-    console.log("PriceOracle: WETH price set to $2000.00");
+  // Set USDC price
+  if (usdcAddress) {
+    await priceOracle.setManualPrice(usdcAddress, 100000000); // $1.00
+    console.log("  PriceOracle: USDC price set to $1.00");
+  }
+
+  if (isLocalhost && wethAddress) {
+    await priceOracle.setManualPrice(wethAddress, 200000000000); // $2000
+    console.log("  PriceOracle: WETH price set to $2000.00");
   }
 
   // ============================================
-  // 9. Create a Test Vault (localhost only)
+  // 10. Create Test Vault (localhost only)
   // ============================================
-  if (isLocalhost) {
+  let testVaultAddress;
+  if (isLocalhost && usdcAddress) {
     console.log("\n--- Creating Test USDC Vault ---");
 
     const createVaultTx = await factory.createVault({
-      token: await usdc.getAddress(),
-      maxLiquidity: ethers.parseUnits("1000000", 6), // 1M USDC max
-      borrowBaseRate: 200,      // 2% base rate
-      borrowSlope: 1000,        // 10% slope
-      maxBorrowRatio: 7000,     // 70% LTV
-      liquidationBonus: 500     // 5% bonus
+      token: usdcAddress,
+      maxLiquidity: ethers.parseUnits("1000000", 6),
+      borrowBaseRate: 200,
+      borrowSlope: 1000,
+      maxBorrowRatio: 7000,
+      liquidationBonus: 500
     });
 
     const receipt = await createVaultTx.wait();
-
-    // Get vault address from event
     const vaultCreatedEvent = receipt.logs.find(
       log => log.fragment && log.fragment.name === 'VaultCreated'
     );
 
     if (vaultCreatedEvent) {
-      const vaultAddress = vaultCreatedEvent.args.vaultAddress;
-      console.log("Test USDC Vault created:", vaultAddress);
-      deployment.contracts.TestUSDCVault = vaultAddress;
+      testVaultAddress = vaultCreatedEvent.args.vaultAddress;
+      console.log("Test USDC Vault:", testVaultAddress);
 
-      // Add vault to CollateralManager
-      await collateralManager.addVault(vaultAddress);
-      console.log("CollateralManager: Vault authorized");
+      await collateralManager.addVault(testVaultAddress);
+      await feeCollector.addNotifier(testVaultAddress);
 
-      // Add vault as notifier in FeeCollector
-      await feeCollector.addNotifier(vaultAddress);
-      console.log("FeeCollector: Vault authorized as notifier");
-
-      // Configure vault with CollateralManager
-      const vault = await ethers.getContractAt("CantorVault", vaultAddress);
+      const vault = await ethers.getContractAt("CantorVault", testVaultAddress);
       await vault.setCollateralManager(collateralManagerAddress);
       await vault.setCrossCollateralEnabled(true);
-      console.log("Vault: CollateralManager configured, cross-collateral enabled");
+      console.log("  Vault configured");
     }
   }
+
+  // ============================================
+  // Save deployment
+  // ============================================
+  const deployment = {
+    timestamp: new Date().toISOString(),
+    network: isLocalhost ? "localhost" : isBaseSepolia ? "baseSepolia" : "unknown",
+    chainId: Number(chainId),
+    deployer: deployer.address,
+    protocol: protocolAddress,
+    feeCollector: feeCollectorAddress,
+    priceOracle: priceOracleAddress,
+    collateralManager: collateralManagerAddress,
+    vaultImplementation: vaultImplAddress,
+    factory: factoryAddress,
+    reader: readerAddress,
+    usdc: usdcAddress || null
+  };
+
+  if (wethAddress) deployment.weth = wethAddress;
+  if (testVaultAddress) deployment.testVault = testVaultAddress;
+
+  const deploymentPath = isLocalhost
+    ? "./deployments-localhost.json"
+    : "./deployments-sepolia.json";
+
+  fs.writeFileSync(deploymentPath, JSON.stringify(deployment, null, 2));
+  console.log(`\nDeployment saved to ${deploymentPath}`);
 
   // ============================================
   // Summary
@@ -251,21 +257,31 @@ async function main() {
   console.log("\n" + "=".repeat(60));
   console.log("DEPLOYMENT COMPLETE");
   console.log("=".repeat(60));
-  console.log("\nDeployed Contracts:");
-  for (const [name, address] of Object.entries(deployment.contracts)) {
-    console.log(`  ${name}: ${address}`);
+  console.log("\nAddresses:");
+  console.log("  Protocol:          ", protocolAddress);
+  console.log("  FeeCollector:      ", feeCollectorAddress);
+  console.log("  PriceOracle:       ", priceOracleAddress);
+  console.log("  CollateralManager: ", collateralManagerAddress);
+  console.log("  VaultImplementation:", vaultImplAddress);
+  console.log("  Factory:           ", factoryAddress);
+  console.log("  Reader:            ", readerAddress);
+  if (usdcAddress) console.log("  USDC:              ", usdcAddress);
+
+  if (!isLocalhost) {
+    console.log("\n" + "=".repeat(60));
+    console.log("UPDATE constants.ts:");
+    console.log("=".repeat(60));
+    console.log(`
+export const PROTOCOL_ADDRESS = '${protocolAddress}' as const;
+export const USDC_ADDRESS = '${usdcAddress}' as const;
+export const FACTORY_ADDRESS = '${factoryAddress}' as const;
+export const FEE_COLLECTOR_ADDRESS = '${feeCollectorAddress}' as const;
+export const VAULT_IMPLEMENTATION_ADDRESS = '${vaultImplAddress}' as const;
+export const PRICE_ORACLE_ADDRESS = '${priceOracleAddress}' as const;
+export const COLLATERAL_MANAGER_ADDRESS = '${collateralManagerAddress}' as const;
+export const READER_ADDRESS = '${readerAddress}' as const;
+`);
   }
-
-  // Save deployment info
-  const fs = require("fs");
-  const deploymentPath = isLocalhost
-    ? "./deployments-localhost.json"
-    : "./deployments.json";
-
-  fs.writeFileSync(deploymentPath, JSON.stringify(deployment, null, 2));
-  console.log(`\nDeployment info saved to ${deploymentPath}`);
-
-  return deployment;
 }
 
 main()

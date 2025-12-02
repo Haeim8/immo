@@ -342,21 +342,22 @@ contract CantorVault is
         Position storage pos = positions[msg.sender];
         if (pos.amount < amount) revert InsufficientBalance();
 
-        // Check solvency if user has borrowed
+        // Update interests BEFORE solvency check to include accumulated interest
+        _updateInterests(msg.sender);
+        _updateUserRewards(msg.sender);
+
+        // Check solvency if user has borrowed (now includes updated interest)
         if (pos.borrowedAmount > 0) {
             uint256 remainingSupply = pos.amount - amount;
+            uint256 totalDebt = pos.borrowedAmount + pos.borrowInterestAccumulated;
             if (!CantorVaultInterestModel.isSolvent(
                 remainingSupply,
-                pos.borrowedAmount,
+                totalDebt,
                 vaultInfo.maxBorrowRatio
             )) {
                 revert PositionNotSolvent();
             }
         }
-
-        // Update interests and rewards before withdraw
-        _updateInterests(msg.sender);
-        _updateUserRewards(msg.sender);
 
         uint256 penalty = 0;
         uint256 amountToWithdraw = amount;
@@ -507,6 +508,9 @@ contract CantorVault is
                 : remainingAmount;
             pos.borrowInterestAccumulated -= interestPayment;
             remainingAmount -= interestPayment;
+
+            // Track total interest collected
+            vaultState.totalInterestCollected += interestPayment;
 
             // Split interest: protocol takes borrowFeeRate%, suppliers get the rest
             protocolFee = (interestPayment * borrowFeeRate) / 10000;
@@ -727,13 +731,27 @@ contract CantorVault is
             revert ExceedsMaxBorrow();
         }
 
+        // Update interests before modifying position
+        _updateInterests(msg.sender);
+        _updateUserRewards(msg.sender);
+
+        Position storage pos = positions[msg.sender];
+
+        // If first borrow, initialize lastInterestUpdate
+        if (pos.borrowedAmount == 0) {
+            pos.lastInterestUpdate = block.timestamp;
+        }
+
         // ===== EFFECTS (update state BEFORE external calls) =====
+        // Record debt in local position for interest accrual and liquidation
+        pos.borrowedAmount += amount;
+
         vaultState.totalBorrowed += amount;
         vaultState.availableLiquidity -= amount;
         _updateUtilization();
 
         // ===== INTERACTIONS (external calls AFTER state updates) =====
-        // Record debt in CollateralManager
+        // Record debt in CollateralManager for cross-vault tracking
         collateralManager.recordDebtIncrease(msg.sender, vaultInfo.vaultId, amount);
 
         // Transfer token to borrower
@@ -750,14 +768,48 @@ contract CantorVault is
         if (amount == 0) revert InvalidAmount();
         if (address(collateralManager) == address(0)) revert InvalidAddress();
 
-        // Transfer token from borrower to vault
-        token.safeTransferFrom(msg.sender, address(this), amount);
+        // Update interests before repayment
+        _updateInterests(msg.sender);
+        _updateUserRewards(msg.sender);
 
-        // Record repayment in CollateralManager
-        (uint256 interestPaid, uint256 principalPaid) = collateralManager.recordDebtRepayment(
+        Position storage pos = positions[msg.sender];
+
+        // Cap at total debt (principal + interest) in local position
+        uint256 totalLocalDebt = pos.borrowedAmount + pos.borrowInterestAccumulated;
+        uint256 actualAmount = amount > totalLocalDebt ? totalLocalDebt : amount;
+
+        // Transfer token from borrower to vault
+        token.safeTransferFrom(msg.sender, address(this), actualAmount);
+
+        // Calculate local interest and principal repayment
+        uint256 interestPaid = 0;
+        uint256 principalPaid = 0;
+
+        // First repay accumulated interest from local position
+        if (pos.borrowInterestAccumulated > 0 && actualAmount > 0) {
+            interestPaid = actualAmount > pos.borrowInterestAccumulated
+                ? pos.borrowInterestAccumulated
+                : actualAmount;
+            pos.borrowInterestAccumulated -= interestPaid;
+            actualAmount -= interestPaid;
+
+            // Track total interest collected
+            vaultState.totalInterestCollected += interestPaid;
+        }
+
+        // Then repay principal from local position
+        if (actualAmount > 0 && pos.borrowedAmount > 0) {
+            principalPaid = actualAmount > pos.borrowedAmount
+                ? pos.borrowedAmount
+                : actualAmount;
+            pos.borrowedAmount -= principalPaid;
+        }
+
+        // Record repayment in CollateralManager for cross-vault tracking
+        collateralManager.recordDebtRepayment(
             msg.sender,
             vaultInfo.vaultId,
-            amount
+            interestPaid + principalPaid
         );
 
         // Handle interest (split between protocol and suppliers)
@@ -786,10 +838,10 @@ contract CantorVault is
 
         // Update available liquidity (minus protocol fee)
         uint256 protocolFeeDeducted = (interestPaid * borrowFeeRate) / 10000;
-        vaultState.availableLiquidity += (amount - protocolFeeDeducted);
+        vaultState.availableLiquidity += (interestPaid + principalPaid - protocolFeeDeducted);
         _updateUtilization();
 
-        emit BorrowRepaid(msg.sender, amount);
+        emit BorrowRepaid(msg.sender, interestPaid + principalPaid);
     }
 
     // ============== CLAIM FUNCTIONS ==============

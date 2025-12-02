@@ -162,14 +162,14 @@ export function useAllVaults() {
       return {
         vaultId: Number(v.vaultId),
         vaultAddress: v.vaultAddress as `0x${string}`,
-        tokenAddress: v.cvtToken as `0x${string}`, // CVT token (le token sous-jacent n'est pas exposé par le reader)
+        tokenAddress: (v.underlyingToken || v.cvtToken) as `0x${string}`,
         tokenSymbol: 'USDC',
         tokenDecimals: decimals,
         maxLiquidity: formatUnits(BigInt(v.maxLiquidity || 0), decimals),
         borrowBaseRate: Number(v.borrowBaseRate || 0) / 100,
-        borrowSlope: 0,
-        maxBorrowRatio: 0,
-        liquidationBonus: 0,
+        borrowSlope: Number(v.borrowSlope || 0) / 100,
+        maxBorrowRatio: Number(v.maxBorrowRatio || 0) / 100,
+        liquidationBonus: Number(v.liquidationBonus || 0) / 100,
         isActive: v.isActive,
         createdAt: Number(v.createdAt || 0) * 1000,
         totalSupplied: formatUnits(BigInt(v.totalSupplied || 0), decimals),

@@ -156,7 +156,17 @@ contract PriceOracle is
         if (answer <= 0) revert InvalidPrice();
         if (block.timestamp - updatedAt > stalePriceThreshold) revert StalePrice();
 
-        return uint256(answer);
+        // Normalize to 8 decimals (PRICE_PRECISION)
+        uint8 feedDecimals = priceFeed.decimals();
+        if (feedDecimals == 8) {
+            return uint256(answer);
+        } else if (feedDecimals > 8) {
+            // Scale down (e.g., 18 decimals -> 8 decimals)
+            return uint256(answer) / (10 ** (feedDecimals - 8));
+        } else {
+            // Scale up (e.g., 6 decimals -> 8 decimals)
+            return uint256(answer) * (10 ** (8 - feedDecimals));
+        }
     }
 
     // ============== ADMIN FUNCTIONS ==============
