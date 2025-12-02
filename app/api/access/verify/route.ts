@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-const ACCESS_CODE = "010126";
+// Access code should be set via environment variable for security
+const ACCESS_CODE = process.env.ACCESS_CODE || "010126";
 const REGISTERED_USERS_KEY = "access-registered";
 const AUTH_TOKENS_KEY = "access-tokens";
 

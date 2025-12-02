@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Wallet, TrendingUp, Activity, ArrowUpRight, ArrowDownRight, Loader2, ExternalLink, Coins, Landmark } from "lucide-react";
 import { useAccount } from "wagmi";
@@ -29,272 +28,31 @@ function formatCurrency(value: string | number): string {
 }
 
 
-// Generate mock historical data for charts
-function generateHistoricalData(currentValue: number, days: number = 30, trend: 'up' | 'down' | 'stable' = 'up') {
-  const data: { date: string; value: number }[] = [];
-  const now = new Date();
 
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-
-    // Create realistic progression
-    const progress = (days - i) / days;
-    const noise = (Math.random() - 0.5) * 0.1;
-    let multiplier = 1;
-
-    if (trend === 'up') {
-      multiplier = 0.3 + progress * 0.7 + noise;
-    } else if (trend === 'down') {
-      multiplier = 1 - progress * 0.3 + noise;
-    } else {
-      multiplier = 0.85 + Math.random() * 0.3;
-    }
-
-    data.push({
-      date: date.toISOString().split('T')[0],
-      value: Math.max(0, currentValue * multiplier)
-    });
-  }
-
-  return data;
-}
-
-// Mini Line Chart Component
-function MiniChart({
-  data,
-  color,
-  height = 60,
-  showArea = true
-}: {
-  data: { date: string; value: number }[];
-  color: string;
-  height?: number;
-  showArea?: boolean;
-}) {
-  if (data.length === 0) return null;
-
-  const maxValue = Math.max(...data.map(d => d.value));
-  const minValue = Math.min(...data.map(d => d.value));
-  const range = maxValue - minValue || 1;
-
-  const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * 100;
-    const y = 100 - ((d.value - minValue) / range) * 100;
-    return `${x},${y}`;
-  }).join(' ');
-
-  const areaPoints = `0,100 ${points} 100,100`;
-
-  return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ height, width: '100%' }}>
-      {showArea && (
-        <polygon
-          points={areaPoints}
-          fill={`url(#gradient-${color})`}
-          opacity="0.3"
-        />
-      )}
-      <defs>
-        <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-}
-
-// Combined Chart with multiple lines
-function CombinedChart({
-  supplyData,
-  borrowData,
-  stakingData,
-  height = 200
-}: {
-  supplyData: { date: string; value: number }[];
-  borrowData: { date: string; value: number }[];
-  stakingData: { date: string; value: number }[];
-  height?: number;
-}) {
-  const allValues = [
-    ...supplyData.map(d => d.value),
-    ...borrowData.map(d => d.value),
-    ...stakingData.map(d => d.value)
-  ];
-
-  const maxValue = Math.max(...allValues, 1);
-  const minValue = 0;
-  const range = maxValue - minValue || 1;
-
-  const getPoints = (data: { date: string; value: number }[]) => {
-    if (data.length === 0) return '';
-    return data.map((d, i) => {
-      const x = (i / (data.length - 1)) * 100;
-      const y = 100 - ((d.value - minValue) / range) * 100;
-      return `${x},${y}`;
-    }).join(' ');
-  };
-
-  const supplyPoints = getPoints(supplyData);
-  const borrowPoints = getPoints(borrowData);
-  const stakingPoints = getPoints(stakingData);
-
-  // Generate Y-axis labels
-  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(pct => ({
-    value: minValue + range * (1 - pct),
-    y: pct * 100
-  }));
-
-  // Generate X-axis labels (dates)
-  const xLabels = supplyData.length > 0 ? [
-    supplyData[0],
-    supplyData[Math.floor(supplyData.length / 2)],
-    supplyData[supplyData.length - 1]
-  ] : [];
-
-  return (
-    <div className="relative" style={{ height }}>
-      {/* Y-axis labels */}
-      <div className="absolute left-0 top-0 bottom-6 w-12 flex flex-col justify-between text-[10px] text-muted-foreground">
-        {yLabels.map((label, i) => (
-          <span key={i}>{formatCurrency(label.value)}</span>
-        ))}
-      </div>
-
-      {/* Chart area */}
-      <div className="absolute left-14 right-0 top-0 bottom-6">
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-          {/* Grid lines */}
-          {[0, 25, 50, 75, 100].map(y => (
-            <line
-              key={y}
-              x1="0" y1={y} x2="100" y2={y}
-              stroke="currentColor"
-              strokeWidth="0.5"
-              className="text-border/30"
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
-
-          {/* Areas */}
-          {supplyPoints && (
-            <polygon
-              points={`0,100 ${supplyPoints} 100,100`}
-              fill="url(#supply-gradient)"
-              opacity="0.2"
-            />
-          )}
-          {stakingPoints && (
-            <polygon
-              points={`0,100 ${stakingPoints} 100,100`}
-              fill="url(#staking-gradient)"
-              opacity="0.2"
-            />
-          )}
-
-          {/* Lines */}
-          {supplyPoints && (
-            <polyline
-              points={supplyPoints}
-              fill="none"
-              stroke="#10b981"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          )}
-          {borrowPoints && (
-            <polyline
-              points={borrowPoints}
-              fill="none"
-              stroke="#f97316"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          )}
-          {stakingPoints && (
-            <polyline
-              points={stakingPoints}
-              fill="none"
-              stroke="#00d4aa"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          )}
-
-          <defs>
-            <linearGradient id="supply-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="staking-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#00d4aa" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#00d4aa" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-
-      {/* X-axis labels */}
-      <div className="absolute left-14 right-0 bottom-0 h-6 flex justify-between text-[10px] text-muted-foreground">
-        {xLabels.map((label, i) => (
-          <span key={i}>{new Date(label.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Chart Card Component
-function ChartCard({
+// Value Card Component (replaces ChartCard - no fake historical data)
+function ValueCard({
   title,
   value,
-  change,
-  data,
+  subtext,
   color,
   icon
 }: {
   title: string;
   value: string;
-  change?: string;
-  data: { date: string; value: number }[];
+  subtext?: string;
   color: string;
   icon: React.ReactNode;
 }) {
-  const isPositive = change && !change.startsWith('-');
-
   return (
     <div className="card-vault p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center`} style={{ backgroundColor: `${color}20` }}>
-            <span style={{ color }}>{icon}</span>
-          </div>
-          <span className="text-sm font-medium text-muted-foreground">{title}</span>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
+          <span style={{ color }}>{icon}</span>
         </div>
-        {change && (
-          <span className={`text-xs font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
-            {change}
-          </span>
-        )}
+        <span className="text-sm font-medium text-muted-foreground">{title}</span>
       </div>
-      <div className="text-2xl font-bold mb-3" style={{ color }}>{value}</div>
-      <MiniChart data={data} color={color} height={50} />
+      <div className="text-2xl font-bold" style={{ color }}>{value}</div>
+      {subtext && <p className="text-xs text-muted-foreground mt-1">{subtext}</p>}
     </div>
   );
 }
@@ -306,25 +64,6 @@ export default function PortfolioPage() {
   const portfolioT = useTranslations("portfolio");
   const stakingT = useTranslations("staking");
   const commonT = useTranslations("common");
-
-  // Generate historical data based on current positions
-  const chartData = useMemo(() => {
-    const supplyData = generateHistoricalData(totals.totalSupplied, 30, 'up');
-    const borrowData = generateHistoricalData(totals.totalBorrowed, 30, totals.totalBorrowed > 0 ? 'stable' : 'up');
-
-    // Calculate staking total
-    const positionsWithVault = positions.map(pos => {
-      const vault = vaults.find(v => v.vaultId === pos.vaultId);
-      return { ...pos, vault };
-    });
-    const stakingTotal = positionsWithVault
-      .filter(pos => parseFloat(pos.borrowed) === 0 && parseFloat(pos.supplied) > 0)
-      .reduce((sum, pos) => sum + parseFloat(pos.supplied), 0);
-
-    const stakingData = generateHistoricalData(stakingTotal, 30, 'up');
-
-    return { supplyData, borrowData, stakingData };
-  }, [totals, positions, vaults]);
 
   // Not connected
   if (!isConnected) {
@@ -608,75 +347,66 @@ export default function PortfolioPage() {
               )}
             </motion.div>
 
-            {/* Right Column - Charts (3/5) */}
+            {/* Right Column - Summary (3/5) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
               className="lg:col-span-3 space-y-4"
             >
-              {/* Supply & Borrow Charts */}
+              {/* Supply & Borrow Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <ChartCard
-                  title={portfolioT("supplied") || "Supply"}
+                <ValueCard
+                  title={portfolioT("supplied") || "Total Supply"}
                   value={formatCurrency(totals.totalSupplied)}
-                  change={totals.totalSupplied > 0 ? "+12.5%" : undefined}
-                  data={chartData.supplyData}
+                  subtext={`${positions.filter(p => parseFloat(p.supplied) > 0).length} positions`}
                   color="#10b981"
                   icon={<ArrowUpRight className="w-4 h-4" />}
                 />
-                <ChartCard
-                  title={portfolioT("borrowed") || "Borrow"}
+                <ValueCard
+                  title={portfolioT("borrowed") || "Total Borrow"}
                   value={formatCurrency(totals.totalBorrowed)}
-                  change={totals.totalBorrowed > 0 ? "-3.2%" : undefined}
-                  data={chartData.borrowData}
+                  subtext={`${lendingPositions.length} active loans`}
                   color="#f97316"
                   icon={<ArrowDownRight className="w-4 h-4" />}
                 />
               </div>
 
-              {/* Combined Portfolio Chart */}
+              {/* Portfolio Overview */}
               <div className="card-vault p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">{portfolioT("portfolioOverview") || "Portfolio Overview"}</h3>
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-success" />
-                      <span className="text-muted-foreground">Supply</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-accent" />
-                      <span className="text-muted-foreground">Borrow</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                      <span className="text-muted-foreground">Staking</span>
-                    </div>
-                  </div>
-                </div>
-
-                <CombinedChart
-                  supplyData={chartData.supplyData}
-                  borrowData={chartData.borrowData}
-                  stakingData={chartData.stakingData}
-                  height={220}
-                />
+                <h3 className="font-semibold mb-4">{portfolioT("portfolioOverview") || "Portfolio Overview"}</h3>
 
                 {/* Summary Stats */}
-                <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border/50">
-                  <div className="text-center">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 rounded-lg bg-success/5 border border-success/10">
                     <p className="text-xs text-muted-foreground mb-1">Total Supply</p>
-                    <p className="font-bold text-success">{formatCurrency(totals.totalSupplied)}</p>
+                    <p className="text-xl font-bold text-success">{formatCurrency(totals.totalSupplied)}</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center p-4 rounded-lg bg-accent/5 border border-accent/10">
                     <p className="text-xs text-muted-foreground mb-1">Total Borrow</p>
-                    <p className="font-bold text-accent">{formatCurrency(totals.totalBorrowed)}</p>
+                    <p className="text-xl font-bold text-accent">{formatCurrency(totals.totalBorrowed)}</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center p-4 rounded-lg bg-primary/5 border border-primary/10">
                     <p className="text-xs text-muted-foreground mb-1">Staking</p>
-                    <p className="font-bold text-primary">{formatCurrency(stakingTotal)}</p>
+                    <p className="text-xl font-bold text-primary">{formatCurrency(stakingTotal)}</p>
                   </div>
                 </div>
+
+                {/* Utilization */}
+                {totals.totalSupplied > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Utilization</span>
+                      <span className="font-medium">{((totals.totalBorrowed / totals.totalSupplied) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all"
+                        style={{ width: `${Math.min((totals.totalBorrowed / totals.totalSupplied) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Explorer Link */}

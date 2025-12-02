@@ -1,0 +1,9 @@
+{
+  "deny": [
+    "Bash(yarn build*)",
+    "Bash(npm run build*)",
+    "Bash(pnpm build*)",
+    "Bash(next build*)",
+    "Bash(*build*)"
+  ]
+}

@@ -10,7 +10,10 @@ import {
 import { useAccount } from "wagmi";
 import Image from "next/image";
 import Link from "next/link";
+import { parseUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
+import { useSupply, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
+import { USDC_ADDRESS, USDC_DECIMALS } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const tokenLogos: Record<string, string> = {
@@ -329,6 +332,13 @@ export default function VaultPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
   const [deadline, setDeadline] = useState('30');
+  const [txError, setTxError] = useState<string | null>(null);
+
+  const vaultAddress = (vault?.vaultAddress || '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  const { supply, isPending: isSupplyPending, error: supplyError } = useSupply(vaultAddress);
+  const { borrow, isPending: isBorrowPending, error: borrowError } = useBorrow(vaultAddress);
+  const { repayBorrow, isPending: isRepayPending, error: repayError } = useRepayBorrow(vaultAddress);
+  const { approve, isPending: isApprovePending, error: approveError } = useApproveToken(USDC_ADDRESS);
 
   useEffect(() => {
     if (!vaultId || loadingVaults) return;
@@ -349,6 +359,13 @@ export default function VaultPage() {
     symbol: v.tokenSymbol,
     balance: '0.00' // Would come from wallet balance
   }));
+
+  useEffect(() => {
+    const firstError = supplyError || borrowError || repayError || approveError;
+    if (firstError) {
+      setTxError(firstError.message);
+    }
+  }, [supplyError, borrowError, repayError, approveError]);
 
   if (loadingVaults) {
     return (
@@ -384,6 +401,43 @@ export default function VaultPage() {
   const availableLiquidity = parseFloat(vault.availableLiquidity);
   const supplyPercent = maxCapacity > 0 ? (totalDeposits / maxCapacity) * 100 : 0;
   const borrowPercent = totalDeposits > 0 ? (totalBorrows / totalDeposits) * 100 : 0;
+
+  const actionLoading = isSupplyPending || isBorrowPending || isRepayPending || isApprovePending;
+  const isAmountValid = amount && parseFloat(amount) > 0;
+  const isActionDisabled = !vault || !isAmountValid || actionLoading;
+
+  const handleAction = () => {
+    if (!vault) return;
+    setTxError(null);
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      setTxError("Montant invalide");
+      return;
+    }
+    const amountString = numericAmount.toString();
+
+    if (mode === 'lend') {
+      const amountBN = parseUnits(amountString, USDC_DECIMALS);
+      approve(vaultAddress, amountBN);
+      supply(amountString, USDC_DECIMALS);
+    } else {
+      borrow(amountString, USDC_DECIMALS);
+    }
+  };
+
+  const handleRepay = () => {
+    if (!vault) return;
+    setTxError(null);
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      setTxError("Montant invalide");
+      return;
+    }
+    const amountString = numericAmount.toString();
+    const amountBN = parseUnits(amountString, USDC_DECIMALS);
+    approve(vaultAddress, amountBN);
+    repayBorrow(amountString, USDC_DECIMALS);
+  };
 
   const handleMaxClick = () => {
     if (mode === 'lend') {
@@ -793,22 +847,45 @@ export default function VaultPage() {
                       {/* Action Button */}
                       <button
                         type="button"
+                        disabled={isActionDisabled}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // TODO: Implement supply/borrow transaction
-                          console.log(`${mode} ${amount} ${selectedToken || vault.tokenSymbol}`);
+                          handleAction();
                         }}
                         className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 ${
-                          amount && parseFloat(amount) > 0
-                            ? mode === 'lend'
+                          isActionDisabled
+                            ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                            : mode === 'lend'
                               ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                               : 'bg-accent text-white hover:bg-accent/90'
-                            : 'bg-secondary text-muted-foreground'
                         }`}
                       >
-                        {mode === 'lend' ? 'Supply' : 'Borrow'}
+                        {actionLoading ? 'Transaction...' : mode === 'lend' ? 'Supply' : 'Borrow'}
                       </button>
+
+                      {mode === 'borrow' && userPosition && parseFloat(userPosition.borrowed) > 0 && (
+                        <button
+                          type="button"
+                          disabled={isActionDisabled}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleRepay();
+                          }}
+                          className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 mt-2 ${
+                            isActionDisabled
+                              ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          }`}
+                        >
+                          {actionLoading ? 'Transaction...' : 'Repay borrow'}
+                        </button>
+                      )}
+
+                      {txError && (
+                        <p className="text-sm text-destructive mt-2">{txError}</p>
+                      )}
 
                       {/* Settings Button */}
                       <button

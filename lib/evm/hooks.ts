@@ -1,83 +1,19 @@
 /**
  * CantorFi Protocol - React Hooks
- * Avec cache local pour éviter les appels RPC coûteux
+ * Connected to CantorVaultReader contract for real data
  */
 
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
-import { PROTOCOL_ADDRESS, BLOCK_EXPLORER_URL } from './constants';
-import { PROTOCOL_ABI } from './abis';
+import { formatUnits } from 'viem';
+import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, USDC_DECIMALS } from './constants';
+import { PROTOCOL_ABI, READER_ABI } from './abis';
 import { getFromCache, setInCache } from './cache';
 
 // Re-exports
 export { BLOCK_EXPLORER_URL };
-
-// Mock data for preview when protocol is not connected - set to false in production
-const USE_MOCK_VAULTS = true;
-const MOCK_VAULTS_DATA: VaultData[] = [
-  {
-    vaultId: 1,
-    vaultAddress: '0x1234567890123456789012345678901234567890' as `0x${string}`,
-    tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`,
-    tokenSymbol: 'USDC',
-    tokenDecimals: 6,
-    maxLiquidity: '5000000',
-    borrowBaseRate: 2,
-    borrowSlope: 15,
-    maxBorrowRatio: 80,
-    liquidationBonus: 5,
-    isActive: true,
-    createdAt: Date.now() - 86400000 * 30,
-    totalSupplied: '2450000',
-    totalBorrowed: '1850000',
-    availableLiquidity: '600000',
-    utilizationRate: 75.5,
-    borrowRate: 8.5,
-    supplyRate: 6.4,
-  },
-  {
-    vaultId: 2,
-    vaultAddress: '0x2345678901234567890123456789012345678901' as `0x${string}`,
-    tokenAddress: '0x4200000000000000000000000000000000000006' as `0x${string}`,
-    tokenSymbol: 'WETH',
-    tokenDecimals: 18,
-    maxLiquidity: '2000000',
-    borrowBaseRate: 3,
-    borrowSlope: 20,
-    maxBorrowRatio: 75,
-    liquidationBonus: 8,
-    isActive: true,
-    createdAt: Date.now() - 86400000 * 20,
-    totalSupplied: '1200000',
-    totalBorrowed: '780000',
-    availableLiquidity: '420000',
-    utilizationRate: 65.0,
-    borrowRate: 12.2,
-    supplyRate: 7.9,
-  },
-  {
-    vaultId: 3,
-    vaultAddress: '0x3456789012345678901234567890123456789012' as `0x${string}`,
-    tokenAddress: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-    tokenSymbol: 'WBTC',
-    tokenDecimals: 8,
-    maxLiquidity: '1500000',
-    borrowBaseRate: 2.5,
-    borrowSlope: 18,
-    maxBorrowRatio: 70,
-    liquidationBonus: 10,
-    isActive: true,
-    createdAt: Date.now() - 86400000 * 15,
-    totalSupplied: '890000',
-    totalBorrowed: '450000',
-    availableLiquidity: '440000',
-    utilizationRate: 50.6,
-    borrowRate: 6.8,
-    supplyRate: 3.4,
-  },
-];
 
 // Types
 export interface VaultData {
@@ -114,6 +50,7 @@ export interface UserPosition {
   interestPending: string;
 }
 
+
 /**
  * Hook pour l'adresse du wallet connecté
  */
@@ -144,39 +81,31 @@ export function useVaultCount() {
     }
   }, [vaultCount]);
 
-  // Return cached value while loading
   const finalCount = cachedCount ?? Number(vaultCount ?? 0);
 
   return { vaultCount: finalCount, isLoading: isLoading && cachedCount === null };
 }
 
 /**
- * Hook pour tous les vaults (avec cache)
+ * Hook pour tous les vaults via Reader contract
  */
 export function useAllVaults() {
   const [vaults, setVaults] = useState<VaultData[]>(() => {
-    if (USE_MOCK_VAULTS) return MOCK_VAULTS_DATA;
     return getFromCache<VaultData[]>('allVaults') ?? [];
   });
-  const [isLoading, setIsLoading] = useState(!USE_MOCK_VAULTS);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const lastFetch = useRef<number>(0);
 
-  const { data: count, isLoading: countLoading, isError } = useReadContract({
-    address: PROTOCOL_ADDRESS,
-    abi: PROTOCOL_ABI,
-    functionName: 'vaultCount',
+  // Read vaults from Reader contract
+  const { data: readerData, isLoading: readerLoading, isError, refetch: refetchReader } = useReadContract({
+    address: READER_ADDRESS,
+    abi: READER_ABI,
+    functionName: 'getVaults',
+    args: [BigInt(0), BigInt(100)], // Get up to 100 vaults
   });
 
   useEffect(() => {
-    // If using mock data, return immediately
-    if (USE_MOCK_VAULTS) {
-      setVaults(MOCK_VAULTS_DATA);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
     // Check cache first
     const cached = getFromCache<VaultData[]>('allVaults');
     if (cached && cached.length > 0) {
@@ -189,7 +118,7 @@ export function useAllVaults() {
       }
     }
 
-    if (countLoading) {
+    if (readerLoading) {
       if (!cached || cached.length === 0) {
         setIsLoading(true);
       }
@@ -205,9 +134,7 @@ export function useAllVaults() {
       return;
     }
 
-    const vaultCount = Number(count ?? 0);
-
-    if (vaultCount === 0) {
+    if (!readerData || !Array.isArray(readerData) || readerData.length === 0) {
       setVaults([]);
       setInCache('allVaults', []);
       setIsLoading(false);
@@ -217,25 +144,60 @@ export function useAllVaults() {
     // Update last fetch time
     lastFetch.current = Date.now();
 
-    // Placeholder - les vrais appels seront implémentés plus tard
-    // Pour l'instant on garde le cache ou tableau vide
-    if (!cached || cached.length === 0) {
-      setVaults([]);
-      setInCache('allVaults', []);
-    }
+    // Transform reader data to VaultData format
+    const transformedVaults: VaultData[] = readerData.map((v: any) => {
+      const decimals = USDC_DECIMALS;
+
+      const utilizationBps = Number(v.utilizationRate || 0);
+      const utilizationRate = utilizationBps / 100; // bps -> %
+      const expectedReturnBps = Number(v.expectedReturn || 0); // supply APY in bps
+      const supplyRate = expectedReturnBps / 100; // %
+
+      // Approximate borrow APY from supply APY and utilization when available
+      const borrowRateBps =
+        utilizationBps > 0 ? Math.floor((expectedReturnBps * 10000) / utilizationBps) : 0;
+      const borrowRate =
+        borrowRateBps > 0 ? borrowRateBps / 100 : Number(v.borrowBaseRate || 0) / 100;
+
+      return {
+        vaultId: Number(v.vaultId),
+        vaultAddress: v.vaultAddress as `0x${string}`,
+        tokenAddress: v.cvtToken as `0x${string}`, // CVT token (le token sous-jacent n'est pas exposé par le reader)
+        tokenSymbol: 'USDC',
+        tokenDecimals: decimals,
+        maxLiquidity: formatUnits(BigInt(v.maxLiquidity || 0), decimals),
+        borrowBaseRate: Number(v.borrowBaseRate || 0) / 100,
+        borrowSlope: 0,
+        maxBorrowRatio: 0,
+        liquidationBonus: 0,
+        isActive: v.isActive,
+        createdAt: Number(v.createdAt || 0) * 1000,
+        totalSupplied: formatUnits(BigInt(v.totalSupplied || 0), decimals),
+        totalBorrowed: formatUnits(BigInt(v.totalBorrowed || 0), decimals),
+        availableLiquidity: formatUnits(BigInt(v.availableLiquidity || 0), decimals),
+        utilizationRate,
+        borrowRate,
+        supplyRate,
+      };
+    });
+
+    setVaults(transformedVaults);
+    setInCache('allVaults', transformedVaults);
     setIsLoading(false);
-  }, [count, countLoading, isError]);
+    setError(null);
+  }, [readerData, readerLoading, isError]);
 
   const refetch = useCallback(() => {
-    lastFetch.current = 0; // Force refetch
+    lastFetch.current = 0;
     setIsLoading(true);
-  }, []);
+    refetchReader();
+  }, [refetchReader]);
 
   return { vaults, isLoading, error, refetch };
 }
 
 /**
- * Hook pour les positions d'un utilisateur (avec cache)
+ * Hook pour les positions d'un utilisateur via Reader contract
  */
 export function useUserPositions(userAddress: `0x${string}` | undefined) {
   const { vaults, isLoading: isLoadingVaults } = useAllVaults();
@@ -254,29 +216,112 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
     return cached ?? { totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 };
   });
 
+  // Read user portfolio from Reader contract
+  const { data: portfolioData, isLoading: portfolioLoading } = useReadContract({
+    address: READER_ADDRESS,
+    abi: READER_ABI,
+    functionName: 'getUserPortfolio',
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!userAddress,
+    },
+  });
+
   useEffect(() => {
-    if (!userAddress || vaults.length === 0) {
+    if (!userAddress) {
       setPositions([]);
       setTotals({ totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 });
       setIsLoading(false);
       return;
     }
 
-    // Check cache
-    const cached = getFromCache<UserPosition[]>(`positions_${userAddress}`);
-    if (cached && cached.length > 0) {
-      setPositions(cached);
-      const cachedTotals = getFromCache<typeof totals>(`positions_${userAddress}_totals`);
-      if (cachedTotals) setTotals(cachedTotals);
+    if (portfolioLoading || isLoadingVaults) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!portfolioData) {
+      // Check cache
+      const cached = getFromCache<UserPosition[]>(`positions_${userAddress}`);
+      if (cached && cached.length > 0) {
+        setPositions(cached);
+        const cachedTotals = getFromCache<typeof totals>(`positions_${userAddress}_totals`);
+        if (cachedTotals) setTotals(cachedTotals);
+      } else {
+        setPositions([]);
+        setTotals({ totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 });
+      }
       setIsLoading(false);
       return;
     }
 
-    // Placeholder - positions seront chargées plus tard
-    setPositions([]);
-    setTotals({ totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 });
+    // portfolioData is [positions[], summary]
+    const [positionsData, summaryData] = portfolioData as [any[], any];
+
+    if (!positionsData || positionsData.length === 0) {
+      setPositions([]);
+      setTotals({ totalSupplied: 0, totalBorrowed: 0, totalInterestPending: 0 });
+      setIsLoading(false);
+      return;
+    }
+
+    const decimals = USDC_DECIMALS;
+
+    // Transform positions
+    const transformedPositions: UserPosition[] = positionsData.map((p: any) => {
+      const supplied = parseFloat(formatUnits(BigInt(p.supplyAmount || 0), decimals));
+      const borrowed = parseFloat(formatUnits(BigInt(p.borrowedAmount || 0), decimals));
+      const interestPending = parseFloat(formatUnits(BigInt(p.interestPending || 0), decimals));
+
+      // Find vault info
+      const vault = vaults.find(v => v.vaultId === Number(p.vaultId));
+      const maxBorrowRatio = vault?.maxBorrowRatio || 80;
+
+      // Calculate health factor
+      let healthFactor = 10000; // Infinite if no borrow
+      if (borrowed > 0) {
+        const maxBorrow = supplied * (maxBorrowRatio / 100);
+        healthFactor = maxBorrow > 0 ? (maxBorrow / borrowed) * 100 : 0;
+      }
+
+      // Calculate max additional borrow
+      const maxBorrowValue = supplied * (maxBorrowRatio / 100);
+      const maxBorrow = Math.max(0, maxBorrowValue - borrowed);
+
+      // Calculate withdrawable (considering borrow)
+      let withdrawable = supplied;
+      if (borrowed > 0) {
+        const requiredCollateral = borrowed / (maxBorrowRatio / 100);
+        withdrawable = Math.max(0, supplied - requiredCollateral);
+      }
+
+      return {
+        vaultId: Number(p.vaultId),
+        vaultAddress: p.vaultAddress as `0x${string}`,
+        supplied: supplied.toString(),
+        borrowed: borrowed.toString(),
+        interest: formatUnits(BigInt(p.borrowInterestAccumulated || 0), decimals),
+        healthFactor,
+        maxBorrow: maxBorrow.toString(),
+        withdrawable: withdrawable.toString(),
+        cvtBalance: formatUnits(BigInt(p.cvtBalance || 0), decimals),
+        interestPending: interestPending.toString(),
+      };
+    });
+
+    // Calculate totals from summary
+    const newTotals = {
+      totalSupplied: parseFloat(formatUnits(BigInt(summaryData?.totalInvested || 0), decimals)),
+      totalBorrowed: parseFloat(formatUnits(BigInt(summaryData?.totalBorrowed || 0), decimals)),
+      totalInterestPending: parseFloat(formatUnits(BigInt(summaryData?.totalPending || 0), decimals)),
+    };
+
+    setPositions(transformedPositions);
+    setTotals(newTotals);
+    setInCache(`positions_${userAddress}`, transformedPositions);
+    setInCache(`positions_${userAddress}_totals`, newTotals);
     setIsLoading(false);
-  }, [userAddress, vaults, isLoadingVaults]);
+  }, [userAddress, portfolioData, portfolioLoading, vaults, isLoadingVaults]);
 
   return { positions, totals, isLoading: isLoading || isLoadingVaults };
 }
@@ -323,7 +368,6 @@ export function useProtocolTotals() {
 
   return { ...totals, isLoading };
 }
-
 
 // Legacy hooks - compatibilité (retournent juste des valeurs vides)
 export function useAllPlaces() {

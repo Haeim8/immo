@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAllVaults, VaultData } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
+import ErrorBubble from "@/components/molecules/ErrorBubble";
 
 function formatCurrency(value: string | number): string {
   const num = typeof value === 'string' ? parseFloat(value) : value;
@@ -188,7 +189,7 @@ function VaultCardMobile({ vault, index, mode }: { vault: VaultData; index: numb
 
 export default function PropertyContainer() {
   const [mode, setMode] = useState<'lend' | 'borrow'>('lend');
-  const { vaults, isLoading, error } = useAllVaults();
+  const { vaults, isLoading, error, refetch } = useAllVaults();
   const vaultsT = useTranslations("vaults");
 
   if (isLoading) {
@@ -202,8 +203,10 @@ export default function PropertyContainer() {
 
   if (error) {
     return (
-      <div className="w-full py-12 flex flex-col items-center justify-center">
-        <p className="text-destructive text-sm">{error}</p>
+      <div className="w-full py-12 flex flex-col items-center justify-center px-2">
+        <div className="w-full max-w-xl">
+          <ErrorBubble code="READER_CALL_FAILED" details={error} onAction={refetch} />
+        </div>
       </div>
     );
   }

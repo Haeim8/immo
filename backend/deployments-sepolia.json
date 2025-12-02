@@ -8,6 +8,8 @@
   "vaultImplementation": "0x9780adB3A22A5124C4e11867502B87A9bb9D5B6a",
   "factory": "0x4b2F9C4Eb9eFF88Db3a502D9bB8C6aE0cBEFd3C8",
   "reader": "0x4972FCF414187bCaCc3DA7D438C448C2e582587E",
+  "priceOracle": "0x8d2e5019F48d3F6AE662525aCed5e934f71d1ACf",
+  "collateralManager": "0xe729b6262d10798a6a0533C7C8424e804Eb3f2bF",
   "deploymentTimestamp": "2025-11-26T04:54:55.621Z",
   "blockNumber": 34182304
 }
