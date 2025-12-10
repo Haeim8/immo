@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { formatUnits } from 'viem';
-import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, USDC_DECIMALS } from './constants';
+import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, USDC_DECIMALS, CHAIN_ID } from './constants';
 import { PROTOCOL_ABI, READER_ABI } from './abis';
 import { getFromCache, setInCache } from './cache';
 
@@ -71,6 +71,7 @@ export function useVaultCount() {
     address: PROTOCOL_ADDRESS,
     abi: PROTOCOL_ABI,
     functionName: 'vaultCount',
+    chainId: CHAIN_ID,
   });
 
   useEffect(() => {
@@ -103,6 +104,7 @@ export function useAllVaults() {
     abi: READER_ABI,
     functionName: 'getVaults',
     args: [BigInt(0), BigInt(100)], // Get up to 100 vaults
+    chainId: CHAIN_ID,
   });
 
   useEffect(() => {
@@ -222,6 +224,7 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
     abi: READER_ABI,
     functionName: 'getUserPortfolio',
     args: userAddress ? [userAddress] : undefined,
+    chainId: CHAIN_ID,
     query: {
       enabled: !!userAddress,
     },
