@@ -16,6 +16,7 @@ export interface Dictionary {
     claim: string;
     close: string;
     confirm: string;
+    buy: string;
   };
   navbar: {
     home: string;
@@ -384,6 +385,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       claim: "Réclamer",
       close: "Fermer",
       confirm: "Confirmer",
+      buy: "Acheter",
     },
     navbar: {
       home: "Accueil",
@@ -765,6 +767,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       claim: "Claim",
       close: "Close",
       confirm: "Confirm",
+      buy: "Buy",
     },
     navbar: {
       home: "Home",
@@ -1146,6 +1149,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       claim: "Cobrar",
       close: "Cerrar",
       confirm: "Confirmar",
+      buy: "Comprar",
     },
     navbar: {
       home: "Inicio",

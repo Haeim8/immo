@@ -15,6 +15,7 @@ import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@
 import { useSupply, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
 import { USDC_ADDRESS, USDC_DECIMALS } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { BuyCryptoButton } from "@/components/buy-crypto-button";
 
 const tokenLogos: Record<string, string> = {
   USDC: "/usc.png",
@@ -842,9 +843,14 @@ export default function VaultPage() {
                         </div>
                         {/* Insufficient balance warning */}
                         {hasInsufficientBalance && (
-                          <p className="text-xs text-destructive mt-2">
-                            Solde insuffisant ({formatNumber(walletBalance)} USDC disponible)
-                          </p>
+                          <div className="mt-2">
+                            <p className="text-xs text-destructive">
+                              Solde insuffisant ({formatNumber(walletBalance)} USDC disponible)
+                            </p>
+                            <div className="mt-2">
+                              <BuyCryptoButton />
+                            </div>
+                          </div>
                         )}
                       </div>
 
@@ -972,6 +978,13 @@ export default function VaultPage() {
                       <p className="text-muted-foreground mb-4">
                         Connect your wallet to {mode === 'lend' ? 'supply' : 'borrow'} assets
                       </p>
+
+                      {/* Buy Crypto Option for new users */}
+                      <div className="mb-4">
+                        <p className="text-xs text-muted-foreground mb-2">New to crypto?</p>
+                        <BuyCryptoButton />
+                      </div>
+
                       <ConnectButton.Custom>
                         {({ openConnectModal, mounted }) => {
                           const ready = mounted;

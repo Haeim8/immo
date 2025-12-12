@@ -19,7 +19,10 @@ export default function AppLayout({
         <div className="fixed inset-0 -z-20 bg-background" />
 
         {/* Main Frame - Morpho style */}
-        <div className="fixed inset-0 flex flex-col p-0 md:p-3 lg:p-4">
+        <div
+          className="fixed inset-x-0 top-0 flex flex-col p-0 md:p-3 lg:p-4 h-dvh"
+          style={{ minHeight: '-webkit-fill-available' }}
+        >
           <div className="relative flex-1 flex flex-col w-full h-full bg-card border-0 md:border border-border rounded-none md:rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl shadow-black/20">
 
             {/* Global Background - inside container */}

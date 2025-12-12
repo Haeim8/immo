@@ -4,6 +4,7 @@ import { FC, ReactNode, useState, useEffect, useMemo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
+import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { WagmiProvider, http, createStorage, cookieStorage } from 'wagmi';
 import { APP_NAME, PROJECT_ID, chains } from '@/lib/wagmi-config';
 import { baseSepolia, base } from 'wagmi/chains';
@@ -87,7 +88,12 @@ export const EVMWalletProvider: FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowWrapper>{children}</RainbowWrapper>
+        <OnchainKitProvider
+          chain={baseSepolia}
+          apiKey={process.env.NEXT_PUBLIC_COINBASE_CDP_API_KEY}
+        >
+          <RainbowWrapper>{children}</RainbowWrapper>
+        </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

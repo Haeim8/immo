@@ -10,6 +10,7 @@ import AdminLink from "@/components/molecules/AdminLink";
 import { Wallet, LogOut, X, Home, Trophy, BarChart3, ChevronRight, Coins, Settings, Menu, type LucideIcon } from "lucide-react";
 import { DiscordLogoIcon, TwitterLogoIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { BuyCryptoButton } from "@/components/buy-crypto-button";
 import { useWalletAddress, useIsAdmin, useIsTeamMember } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
 import { useDisconnect } from "wagmi";
@@ -315,6 +316,9 @@ export default function HeaderContent() {
           <div className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg bg-secondary/50 border border-border/50 hover:border-border transition-colors cursor-default" title={selectedNetwork === "sepolia" ? "Base Sepolia" : "Base Mainnet"}>
             <BaseIcon className="w-5 h-5" />
           </div>
+
+          {/* Buy Crypto - Onramp */}
+          <BuyCryptoButton />
 
           {/* Wallet Connection */}
           <ConnectButton.Custom>
