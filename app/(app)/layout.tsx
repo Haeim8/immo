@@ -1,5 +1,6 @@
 import { EVMWalletProvider } from "@/components/wagmi-provider";
 import { IntlProvider } from "@/components/providers/IntlProvider";
+import { ToastProvider } from "@/components/ui/toast-notification";
 import HeaderContent from "@/components/HeaderContent";
 import FooterContent from "@/components/FooterContent";
 import ErrorFilter from "@/components/ErrorFilter";
@@ -13,6 +14,7 @@ export default function AppLayout({
   return (
     <IntlProvider>
       <EVMWalletProvider>
+        <ToastProvider>
         <ErrorFilter />
 
         {/* Background */}
@@ -46,6 +48,7 @@ export default function AppLayout({
             </footer>
           </div>
         </div>
+        </ToastProvider>
       </EVMWalletProvider>
     </IntlProvider>
   );

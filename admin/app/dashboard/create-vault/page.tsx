@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
 import { parseUnits } from "viem"
 import {
   IconCheck,
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { CONTRACTS, ERC20_ABI, FACTORY_ABI, POOL_CONFIG, type PoolType } from "@/lib/contracts"
+import { CONTRACTS, FACTORY_ABI, POOL_CONFIG, type PoolType } from "@/lib/contracts"
 
 // Token options for vault
 const TOKEN_OPTIONS: { value: PoolType; label: string; description: string; address: string }[] = [
@@ -54,7 +54,7 @@ export default function CreateVaultPage() {
     // Token selection
     tokenType: "usdc" as PoolType,
     customTokenAddress: "",
-    customTokenDecimals: "",
+    customTokenDecimals: "18",
 
     // Financial - max liquidity (will be converted based on token decimals)
     maxLiquidity: "",
@@ -81,52 +81,8 @@ export default function CreateVaultPage() {
   }
 
   const selectedToken = TOKEN_OPTIONS.find(t => t.value === formData.tokenType)
-  const isCustomAddressValid = useMemo(
-    () => /^0x[a-fA-F0-9]{40}$/.test(formData.customTokenAddress),
-    [formData.customTokenAddress]
-  )
-
-  const customTokenContracts = useMemo(() => {
-    if (tokenMode !== "custom" || !isCustomAddressValid) return []
-    const tokenAddress = formData.customTokenAddress as `0x${string}`
-    return [
-      { address: tokenAddress, abi: ERC20_ABI, functionName: "symbol" as const },
-      { address: tokenAddress, abi: ERC20_ABI, functionName: "decimals" as const },
-      { address: tokenAddress, abi: ERC20_ABI, functionName: "name" as const },
-    ]
-  }, [tokenMode, isCustomAddressValid, formData.customTokenAddress])
-
-  const { data: customTokenMeta, isLoading: isLoadingCustomMeta, isError: isCustomMetaError } = useReadContracts({
-    contracts: customTokenContracts,
-    query: {
-      enabled: isConnected && customTokenContracts.length > 0,
-      retry: 1,
-      staleTime: 30000,
-      gcTime: 60000,
-    },
-  })
-
-  const detectedTokenSymbol = (customTokenMeta?.[0]?.result as string | undefined) ?? undefined
-  const detectedTokenDecimals = customTokenMeta?.[1]?.result !== undefined
-    ? Number(customTokenMeta?.[1]?.result)
-    : undefined
-  const detectedTokenName = (customTokenMeta?.[2]?.result as string | undefined) ?? undefined
-
-  // Keep decimals field in sync to avoid misconfigurations (6 vs 18)
-  useEffect(() => {
-    if (tokenMode !== "custom") return
-    if (detectedTokenDecimals === undefined) return
-    if (formData.customTokenDecimals === String(detectedTokenDecimals)) return
-    setFormData((prev) => ({ ...prev, customTokenDecimals: String(detectedTokenDecimals) }))
-  }, [tokenMode, detectedTokenDecimals, formData.customTokenDecimals])
-
-  const tokenDecimals = tokenMode === 'custom'
-    ? (detectedTokenDecimals ?? Number(formData.customTokenDecimals || 0))
-    : POOL_CONFIG[formData.tokenType].decimals
-
-  const tokenSymbol = tokenMode === 'custom'
-    ? (detectedTokenSymbol ?? 'Custom Token')
-    : POOL_CONFIG[formData.tokenType].symbol
+  const tokenDecimals = tokenMode === 'custom' ? Number(formData.customTokenDecimals) : POOL_CONFIG[formData.tokenType].decimals
+  const tokenSymbol = tokenMode === 'custom' ? 'Custom Token' : POOL_CONFIG[formData.tokenType].symbol
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -142,8 +98,8 @@ export default function CreateVaultPage() {
         alert("Please enter a valid token address")
         return
       }
-      if (detectedTokenDecimals === undefined || isCustomMetaError) {
-        alert("Unable to read token metadata (symbol/decimals). Check the address or network.")
+      if (!formData.customTokenDecimals || Number(formData.customTokenDecimals) < 0 || Number(formData.customTokenDecimals) > 18) {
+        alert("Token decimals must be between 0 and 18")
         return
       }
     }
@@ -183,10 +139,7 @@ export default function CreateVaultPage() {
     formData.maxLiquidity &&
     Number(formData.maxLiquidity) > 0 &&
     isConnected &&
-    (
-      tokenMode === 'preset' ||
-      (isCustomAddressValid && detectedTokenDecimals !== undefined && !isCustomMetaError)
-    )
+    (tokenMode === 'preset' || (formData.customTokenAddress && formData.customTokenDecimals))
 
   if (isSuccess) {
     setTimeout(() => {
@@ -304,54 +257,21 @@ export default function CreateVaultPage() {
                         ERC20 token contract address (e.g., USDT, DAI, WBTC)
                       </p>
                     </div>
-                    <div className="rounded-lg border border-border bg-muted/30 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium">Detected Token</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {isCustomAddressValid ? formData.customTokenAddress : "Enter a valid address to detect symbol/decimals"}
-                          </p>
-                        </div>
-                        {isLoadingCustomMeta && isCustomAddressValid && (
-                          <Badge variant="outline">Detecting…</Badge>
-                        )}
-                        {!isLoadingCustomMeta && isCustomAddressValid && !isCustomMetaError && detectedTokenSymbol && detectedTokenDecimals !== undefined && (
-                          <Badge variant="outline">{detectedTokenSymbol} · {detectedTokenDecimals} decimals</Badge>
-                        )}
-                        {!isLoadingCustomMeta && isCustomAddressValid && isCustomMetaError && (
-                          <Badge variant="destructive">Metadata error</Badge>
-                        )}
-                      </div>
-
-                      {!isLoadingCustomMeta && isCustomAddressValid && !isCustomMetaError && (detectedTokenName || detectedTokenSymbol) && (
-                        <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                          <div>
-                            <p className="text-muted-foreground">Name</p>
-                            <p className="font-medium truncate">{detectedTokenName || "—"}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Symbol</p>
-                            <p className="font-medium truncate">{detectedTokenSymbol || "—"}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mt-3">
-                        <Label htmlFor="customTokenDecimals">Token Decimals</Label>
-                        <Input
-                          id="customTokenDecimals"
-                          type="number"
-                          min="0"
-                          max="18"
-                          placeholder="Auto-detected"
-                          value={formData.customTokenDecimals}
-                          onChange={(e) => handleChange("customTokenDecimals", e.target.value)}
-                          disabled={!!detectedTokenDecimals}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Auto-detected from the token contract to prevent wrong maxLiquidity scaling.
-                        </p>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customTokenDecimals">Token Decimals *</Label>
+                      <Input
+                        id="customTokenDecimals"
+                        type="number"
+                        min="0"
+                        max="18"
+                        placeholder="18"
+                        value={formData.customTokenDecimals}
+                        onChange={(e) => handleChange("customTokenDecimals", e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Most tokens use 18 decimals. USDC/USDT use 6 decimals.
+                      </p>
                     </div>
                   </div>
                 )}

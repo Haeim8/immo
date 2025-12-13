@@ -12,7 +12,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { parseUnits, formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
-import { CHAIN_ID } from "@/lib/evm/constants";
 import { useSupply, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { BuyCryptoButton } from "@/components/buy-crypto-button";
@@ -331,7 +330,6 @@ export default function VaultPage() {
   const { data: tokenBalance } = useBalance({
     address: address,
     token: vault?.tokenAddress,
-    chainId: CHAIN_ID,
     query: {
       enabled: isConnected && !!address && !!vault?.tokenAddress,
     },
@@ -482,9 +480,8 @@ export default function VaultPage() {
 
     const amountString = numericAmount.toString();
     const amountBN = parseUnits(amountString, vault.tokenDecimals);
-    // Stocker l'action en attente puis lancer approve
-    setPendingAction({ type: 'repay', amount: amountString, decimals: vault.tokenDecimals });
     approve(vaultAddress, amountBN);
+    repayBorrow(amountString, vault.tokenDecimals);
   };
 
   const handleMaxClick = () => {

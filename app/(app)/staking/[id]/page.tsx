@@ -12,7 +12,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
-import { CHAIN_ID } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTranslations } from "@/components/providers/IntlProvider";
 
@@ -153,7 +152,6 @@ export default function StakingDetailPage() {
   const { data: cvtBalance } = useBalance({
     address: address,
     token: vault?.cvtTokenAddress,
-    chainId: CHAIN_ID,
     query: {
       enabled: isConnected && !!address && !!vault?.cvtTokenAddress,
     },
