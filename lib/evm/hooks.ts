@@ -6,10 +6,10 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
+import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
-import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, USDC_DECIMALS, CHAIN_ID } from './constants';
-import { PROTOCOL_ABI, READER_ABI } from './abis';
+import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, CHAIN_ID } from './constants';
+import { PROTOCOL_ABI, READER_ABI, ERC20_ABI } from './abis';
 import { getFromCache, setInCache } from './cache';
 
 // Re-exports
@@ -20,6 +20,7 @@ export interface VaultData {
   vaultId: number;
   vaultAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
+  cvtTokenAddress: `0x${string}`;
   tokenSymbol: string;
   tokenDecimals: number;
   maxLiquidity: string;
@@ -107,6 +108,50 @@ export function useAllVaults() {
     chainId: CHAIN_ID,
   });
 
+  // Extract unique token addresses from reader data
+  const tokenAddresses = useMemo(() => {
+    if (!readerData || !Array.isArray(readerData)) return [];
+    const uniqueTokens = new Set<string>();
+    readerData.forEach((v: any) => {
+      const tokenAddr = (v.underlyingToken || v.cvtToken)?.toLowerCase();
+      if (tokenAddr) uniqueTokens.add(tokenAddr);
+    });
+    return Array.from(uniqueTokens);
+  }, [readerData]);
+
+  // Build multicall contracts for symbol and decimals
+  const tokenContracts = useMemo(() => {
+    const contracts: any[] = [];
+    tokenAddresses.forEach((tokenAddr) => {
+      contracts.push(
+        {
+          address: tokenAddr as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'symbol',
+          chainId: CHAIN_ID,
+        },
+        {
+          address: tokenAddr as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'decimals',
+          chainId: CHAIN_ID,
+        }
+      );
+    });
+    return contracts;
+  }, [tokenAddresses]);
+
+  // Multicall to read all token symbols and decimals.
+  // NOTE: wagmi types can explode on dynamic contract arrays; cast to `any` to keep TS fast & stable.
+  const tokenRead = useReadContracts({
+    contracts: tokenContracts as any,
+    query: {
+      enabled: tokenContracts.length > 0,
+    },
+  } as any) as { data?: any[]; isLoading: boolean };
+  const tokenData = tokenRead.data;
+  const tokenLoading = tokenRead.isLoading;
+
   useEffect(() => {
     // Check cache first
     const cached = getFromCache<VaultData[]>('allVaults');
@@ -120,7 +165,7 @@ export function useAllVaults() {
       }
     }
 
-    if (readerLoading) {
+    if (readerLoading || tokenLoading) {
       if (!cached || cached.length === 0) {
         setIsLoading(true);
       }
@@ -143,12 +188,29 @@ export function useAllVaults() {
       return;
     }
 
+    // Build token info map from multicall results
+    const tokenInfoMap = new Map<string, { symbol: string; decimals: number }>();
+    if (tokenData && tokenAddresses.length > 0) {
+      tokenAddresses.forEach((tokenAddr, idx) => {
+        const symbolResult = tokenData[idx * 2];
+        const decimalsResult = tokenData[idx * 2 + 1];
+
+        const symbol = symbolResult?.result as string || 'UNKNOWN';
+        const decimals = decimalsResult?.result as number || 18;
+
+        tokenInfoMap.set(tokenAddr.toLowerCase(), { symbol, decimals });
+      });
+    }
+
     // Update last fetch time
     lastFetch.current = Date.now();
 
     // Transform reader data to VaultData format
     const transformedVaults: VaultData[] = readerData.map((v: any) => {
-      const decimals = USDC_DECIMALS;
+      const tokenAddress = v.underlyingToken as `0x${string}`;
+      const cvtTokenAddress = v.cvtToken as `0x${string}`;
+      const tokenInfo = tokenInfoMap.get(tokenAddress.toLowerCase()) || { symbol: 'UNKNOWN', decimals: 18 };
+      const decimals = tokenInfo.decimals;
 
       const utilizationBps = Number(v.utilizationRate || 0);
       const utilizationRate = utilizationBps / 100; // bps -> %
@@ -164,8 +226,9 @@ export function useAllVaults() {
       return {
         vaultId: Number(v.vaultId),
         vaultAddress: v.vaultAddress as `0x${string}`,
-        tokenAddress: (v.underlyingToken || v.cvtToken) as `0x${string}`,
-        tokenSymbol: 'USDC',
+        tokenAddress,
+        cvtTokenAddress,
+        tokenSymbol: tokenInfo.symbol,
         tokenDecimals: decimals,
         maxLiquidity: formatUnits(BigInt(v.maxLiquidity || 0), decimals),
         borrowBaseRate: Number(v.borrowBaseRate || 0) / 100,
@@ -187,7 +250,7 @@ export function useAllVaults() {
     setInCache('allVaults', transformedVaults);
     setIsLoading(false);
     setError(null);
-  }, [readerData, readerLoading, isError]);
+  }, [readerData, readerLoading, isError, tokenData, tokenLoading, tokenAddresses]);
 
   const refetch = useCallback(() => {
     lastFetch.current = 0;
@@ -259,7 +322,7 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
     }
 
     // portfolioData is [positions[], summary]
-    const [positionsData, summaryData] = portfolioData as [any[], any];
+    const [positionsData] = portfolioData as [any[], any];
 
     if (!positionsData || positionsData.length === 0) {
       setPositions([]);
@@ -268,17 +331,16 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
       return;
     }
 
-    const decimals = USDC_DECIMALS;
-
     // Transform positions
     const transformedPositions: UserPosition[] = positionsData.map((p: any) => {
+      // Find vault info
+      const vault = vaults.find(v => v.vaultId === Number(p.vaultId));
+      const decimals = vault?.tokenDecimals || 18;
+      const maxBorrowRatio = vault?.maxBorrowRatio || 80;
+
       const supplied = parseFloat(formatUnits(BigInt(p.supplyAmount || 0), decimals));
       const borrowed = parseFloat(formatUnits(BigInt(p.borrowedAmount || 0), decimals));
       const interestPending = parseFloat(formatUnits(BigInt(p.interestPending || 0), decimals));
-
-      // Find vault info
-      const vault = vaults.find(v => v.vaultId === Number(p.vaultId));
-      const maxBorrowRatio = vault?.maxBorrowRatio || 80;
 
       // Calculate health factor
       let healthFactor = 10000; // Infinite if no borrow
@@ -307,16 +369,16 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
         healthFactor,
         maxBorrow: maxBorrow.toString(),
         withdrawable: withdrawable.toString(),
-        cvtBalance: formatUnits(BigInt(p.cvtBalance || 0), decimals),
+        cvtBalance: formatUnits(BigInt(p.cvtBalance || 0), 18), // CVT always has 18 decimals
         interestPending: interestPending.toString(),
       };
     });
 
-    // Calculate totals from summary
+    // Calculate totals from transformed positions (more accurate for multi-token support)
     const newTotals = {
-      totalSupplied: parseFloat(formatUnits(BigInt(summaryData?.totalInvested || 0), decimals)),
-      totalBorrowed: parseFloat(formatUnits(BigInt(summaryData?.totalBorrowed || 0), decimals)),
-      totalInterestPending: parseFloat(formatUnits(BigInt(summaryData?.totalPending || 0), decimals)),
+      totalSupplied: transformedPositions.reduce((sum, p) => sum + parseFloat(p.supplied), 0),
+      totalBorrowed: transformedPositions.reduce((sum, p) => sum + parseFloat(p.borrowed), 0),
+      totalInterestPending: transformedPositions.reduce((sum, p) => sum + parseFloat(p.interestPending), 0),
     };
 
     setPositions(transformedPositions);

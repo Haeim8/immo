@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./CantorVaultInterestModel.sol";
@@ -195,6 +196,48 @@ contract CantorVault is
         _;
     }
 
+    // ============== INTERNAL HELPERS ==============
+
+    /**
+     * @dev Scale amount from underlying token decimals to CVT decimals (18)
+     * @param amount Amount in underlying token units
+     * @return Scaled amount in CVT units (18 decimals)
+     */
+    function _scaleToCVT(uint256 amount) internal view returns (uint256) {
+        uint8 tokenDecimals = IERC20Metadata(address(token)).decimals();
+        uint8 cvtDecimals = 18; // CVT always has 18 decimals
+
+        if (tokenDecimals == cvtDecimals) {
+            return amount;
+        } else if (tokenDecimals < cvtDecimals) {
+            // Scale up (e.g., USDC 6 decimals -> CVT 18 decimals)
+            return amount * (10 ** (cvtDecimals - tokenDecimals));
+        } else {
+            // Scale down (shouldn't happen but handle it)
+            return amount / (10 ** (tokenDecimals - cvtDecimals));
+        }
+    }
+
+    /**
+     * @dev Scale amount from CVT decimals (18) back to underlying token decimals
+     * @param cvtAmount Amount in CVT units (18 decimals)
+     * @return Scaled amount in underlying token units
+     */
+    function _scaleFromCVT(uint256 cvtAmount) internal view returns (uint256) {
+        uint8 tokenDecimals = IERC20Metadata(address(token)).decimals();
+        uint8 cvtDecimals = 18; // CVT always has 18 decimals
+
+        if (tokenDecimals == cvtDecimals) {
+            return cvtAmount;
+        } else if (tokenDecimals < cvtDecimals) {
+            // Scale down (e.g., CVT 18 decimals -> USDC 6 decimals)
+            return cvtAmount / (10 ** (cvtDecimals - tokenDecimals));
+        } else {
+            // Scale up (shouldn't happen but handle it)
+            return cvtAmount * (10 ** (tokenDecimals - cvtDecimals));
+        }
+    }
+
     // ============== CONSTRUCTOR ==============
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -299,9 +342,12 @@ contract CantorVault is
         }
 
         // ===== EFFECTS (update state BEFORE external calls) =====
+        // Calculate CVT amount (scaled to 18 decimals)
+        uint256 cvtAmount = _scaleToCVT(amount);
+
         // Update position
         pos.amount += amount;
-        pos.cvtBalance += amount;
+        pos.cvtBalance += cvtAmount; // Store in CVT units (18 decimals)
 
         // Setup lock if configured
         if (lockConfig.hasLock) {
@@ -319,15 +365,15 @@ contract CantorVault is
         // Transfer token from supplier to vault
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        // Mint CVT tokens 1:1
-        cvtToken.mint(msg.sender, amount);
+        // Mint CVT tokens (scaled to 18 decimals)
+        cvtToken.mint(msg.sender, cvtAmount);
 
         // Record collateral in CollateralManager if cross-collateral is enabled
         if (crossCollateralEnabled && address(collateralManager) != address(0)) {
             collateralManager.recordCollateralDeposit(msg.sender, vaultInfo.vaultId, amount);
         }
 
-        emit Supplied(msg.sender, amount, amount);
+        emit Supplied(msg.sender, amount, cvtAmount);
     }
 
     /**
@@ -383,9 +429,12 @@ contract CantorVault is
         }
 
         // ===== EFFECTS (update state BEFORE external calls) =====
+        // Calculate CVT amount to burn (scaled to 18 decimals)
+        uint256 cvtAmount = _scaleToCVT(amount);
+
         // Update position
         pos.amount -= amount;
-        pos.cvtBalance -= amount;
+        pos.cvtBalance -= cvtAmount; // CVT balance is in 18 decimals
 
         // Update vault state
         vaultState.totalSupplied -= amount;
@@ -393,8 +442,8 @@ contract CantorVault is
         _updateUtilization();
 
         // ===== INTERACTIONS (external calls AFTER state updates) =====
-        // Burn CVT tokens
-        cvtToken.burn(msg.sender, amount);
+        // Burn CVT tokens (scaled to 18 decimals)
+        cvtToken.burn(msg.sender, cvtAmount);
 
         // Record withdrawal in CollateralManager if cross-collateral is enabled
         if (crossCollateralEnabled && address(collateralManager) != address(0)) {
@@ -404,7 +453,7 @@ contract CantorVault is
         // Transfer token to withdrawer (minus penalty)
         token.safeTransfer(msg.sender, amountToWithdraw);
 
-        emit Withdrawn(msg.sender, amountToWithdraw, amount, penalty);
+        emit Withdrawn(msg.sender, amountToWithdraw, cvtAmount, penalty);
     }
 
     // ============== BORROW / REPAY ==============
@@ -976,8 +1025,9 @@ contract CantorVault is
         _updateUtilization();
 
         // ===== INTERACTIONS (external calls AFTER state updates) =====
-        // Burn CVT tokens
-        cvtToken.burn(borrower, collateral);
+        // Burn CVT tokens (scaled to 18 decimals)
+        uint256 cvtToBurn = _scaleToCVT(collateral);
+        cvtToken.burn(borrower, cvtToBurn);
 
         // Pay liquidator bonus (incentive)
         if (liquidatorBonus > 0) {

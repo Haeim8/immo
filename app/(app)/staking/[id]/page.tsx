@@ -12,7 +12,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
-import { USDC_ADDRESS, USDC_DECIMALS } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTranslations } from "@/components/providers/IntlProvider";
 
@@ -147,20 +146,21 @@ export default function StakingDetailPage() {
   const stakingT = useTranslations("staking");
   const commonT = useTranslations("common");
 
-  // Fetch USDC balance from wallet
-  const { data: usdcBalance } = useBalance({
+  const [vault, setVault] = useState<VaultData | null>(null);
+
+  // Fetch CVT token balance from wallet (for staking)
+  const { data: cvtBalance } = useBalance({
     address: address,
-    token: USDC_ADDRESS as `0x${string}`,
+    token: vault?.cvtTokenAddress,
     query: {
-      enabled: isConnected && !!address,
+      enabled: isConnected && !!address && !!vault?.cvtTokenAddress,
     },
   });
 
-  const walletBalance = usdcBalance
-    ? parseFloat(formatUnits(usdcBalance.value, USDC_DECIMALS))
+  // CVT tokens always have 18 decimals (OpenZeppelin ERC20 default)
+  const cvtWalletBalance = cvtBalance
+    ? parseFloat(formatUnits(cvtBalance.value, 18))
     : 0;
-
-  const [vault, setVault] = useState<VaultData | null>(null);
   const [amount, setAmount] = useState('');
   const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
   const [txError, setTxError] = useState<string | null>(null);
@@ -214,14 +214,14 @@ export default function StakingDetailPage() {
 
   // Check if user has sufficient balance for stake operations
   const numericAmount = parseFloat(amount) || 0;
-  const hasInsufficientBalance = mode === 'stake' && numericAmount > walletBalance;
+  const hasInsufficientBalance = mode === 'stake' && numericAmount > cvtWalletBalance;
   const hasInsufficientStake = mode === 'unstake' && numericAmount > userStaked;
   const isActionDisabled = !amount || numericAmount <= 0 || hasInsufficientBalance || hasInsufficientStake;
 
   const handleMaxClick = () => {
     if (mode === 'stake') {
-      // Set max from wallet balance
-      setAmount(walletBalance > 0 ? walletBalance.toFixed(2) : '0');
+      // Set max from CVT wallet balance
+      setAmount(cvtWalletBalance > 0 ? cvtWalletBalance.toFixed(2) : '0');
     } else {
       // Set max unstake (user's staked amount)
       setAmount(userStaked > 0 ? userStaked.toFixed(4) : '0');
@@ -236,17 +236,17 @@ export default function StakingDetailPage() {
       return;
     }
 
-    if (mode === 'stake' && numericAmount > walletBalance) {
-      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} USDC`);
+    if (mode === 'stake' && numericAmount > cvtWalletBalance) {
+      setTxError(`Solde insuffisant. Vous avez ${formatNumber(cvtWalletBalance)} CVT`);
       return;
     }
 
     if (mode === 'unstake' && numericAmount > userStaked) {
-      setTxError(`Vous n'avez que ${formatNumber(userStaked)} USDC en stake`);
+      setTxError(`Vous n'avez que ${formatNumber(userStaked)} CVT en stake`);
       return;
     }
 
-    console.log(`${mode} ${amount} ${vault.tokenSymbol}`);
+    console.log(`${mode} ${amount} CVT`);
     // TODO: Call actual stake/unstake contract function
   };
 
@@ -532,7 +532,7 @@ export default function StakingDetailPage() {
                           </span>
                           <div className="flex items-center gap-2">
                             <span className={`text-muted-foreground ${(hasInsufficientBalance || hasInsufficientStake) ? 'text-destructive' : ''}`}>
-                              {mode === 'stake' ? 'Balance:' : 'Staked:'} {mode === 'stake' ? formatNumber(walletBalance) : formatNumber(userStaked)}
+                              {mode === 'stake' ? 'Balance:' : 'Staked:'} {mode === 'stake' ? formatNumber(cvtWalletBalance) : formatNumber(userStaked)}
                             </span>
                             <button
                               type="button"
@@ -546,12 +546,12 @@ export default function StakingDetailPage() {
                         {/* Insufficient balance warning */}
                         {hasInsufficientBalance && (
                           <p className="text-xs text-destructive mt-2">
-                            Solde insuffisant ({formatNumber(walletBalance)} USDC disponible)
+                            Solde insuffisant ({formatNumber(cvtWalletBalance)} CVT disponible)
                           </p>
                         )}
                         {hasInsufficientStake && (
                           <p className="text-xs text-destructive mt-2">
-                            Stake insuffisant ({formatNumber(userStaked)} USDC en stake)
+                            Stake insuffisant ({formatNumber(userStaked)} CVT en stake)
                           </p>
                         )}
                       </div>

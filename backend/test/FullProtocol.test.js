@@ -954,24 +954,25 @@ describe("CantorFi Full Protocol Tests", function () {
       const usdcAmount = ethers.parseUnits("10000", 6);
       await usdc.connect(user1).approve(usdcResult.vaultAddress, usdcAmount);
       await usdcVault.connect(user1).supply(usdcAmount, NO_LOCK);
-      let cvtBalance = await usdcCvt.balanceOf(user1.address);
-      await usdcCvt.connect(user1).approve(await usdcStaking.getAddress(), cvtBalance);
-      await usdcStaking.connect(user1).stake(cvtBalance, ONE_MONTH);
+      const usdcCvtBalance = await usdcCvt.balanceOf(user1.address);
+      await usdcCvt.connect(user1).approve(await usdcStaking.getAddress(), usdcCvtBalance);
+      await usdcStaking.connect(user1).stake(usdcCvtBalance, ONE_MONTH);
 
       // User supplies and stakes on WETH vault
       const wethAmount = ethers.parseUnits("10000", 18);
       await weth.connect(user1).approve(wethResult.vaultAddress, wethAmount);
       await wethVault.connect(user1).supply(wethAmount, NO_LOCK);
-      cvtBalance = await wethCvt.balanceOf(user1.address);
-      await wethCvt.connect(user1).approve(await wethStaking.getAddress(), cvtBalance);
-      await wethStaking.connect(user1).stake(cvtBalance, ONE_MONTH);
+      const wethCvtBalance = await wethCvt.balanceOf(user1.address);
+      await wethCvt.connect(user1).approve(await wethStaking.getAddress(), wethCvtBalance);
+      await wethStaking.connect(user1).stake(wethCvtBalance, ONE_MONTH);
 
       // Verify both staking positions
       const usdcPosition = await usdcStaking.getStakePosition(user1.address);
       const wethPosition = await wethStaking.getStakePosition(user1.address);
 
-      expect(usdcPosition.amount).to.equal(usdcAmount);
-      expect(wethPosition.amount).to.equal(wethAmount);
+      // CVT is always 18 decimals, so staked amount = CVT balance (scaled from underlying)
+      expect(usdcPosition.amount).to.equal(usdcCvtBalance);
+      expect(wethPosition.amount).to.equal(wethCvtBalance);
     });
   });
 

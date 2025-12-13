@@ -13,7 +13,6 @@ import Link from "next/link";
 import { parseUnits, formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
 import { useSupply, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
-import { USDC_ADDRESS, USDC_DECIMALS } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { BuyCryptoButton } from "@/components/buy-crypto-button";
 
@@ -326,19 +325,19 @@ export default function VaultPage() {
   const { positions } = useUserPositions(address);
 
   // Fetch USDC balance from wallet
-  const { data: usdcBalance, refetch: refetchBalance } = useBalance({
+  const [vault, setVault] = useState<VaultData | null>(null);
+
+  const { data: tokenBalance } = useBalance({
     address: address,
-    token: USDC_ADDRESS as `0x${string}`,
+    token: vault?.tokenAddress,
     query: {
-      enabled: isConnected && !!address,
+      enabled: isConnected && !!address && !!vault?.tokenAddress,
     },
   });
 
-  const walletBalance = usdcBalance
-    ? parseFloat(formatUnits(usdcBalance.value, USDC_DECIMALS))
+  const walletBalance = tokenBalance && vault
+    ? parseFloat(formatUnits(tokenBalance.value, vault.tokenDecimals))
     : 0;
-
-  const [vault, setVault] = useState<VaultData | null>(null);
   const [mode, setMode] = useState<'lend' | 'borrow'>('lend');
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
@@ -352,7 +351,7 @@ export default function VaultPage() {
   const { supply, isPending: isSupplyPending, error: supplyError } = useSupply(vaultAddress);
   const { borrow, isPending: isBorrowPending, error: borrowError } = useBorrow(vaultAddress);
   const { repayBorrow, isPending: isRepayPending, error: repayError } = useRepayBorrow(vaultAddress);
-  const { approve, isPending: isApprovePending, error: approveError } = useApproveToken(USDC_ADDRESS);
+  const { approve, isPending: isApprovePending, error: approveError } = useApproveToken(vault?.tokenAddress);
 
   useEffect(() => {
     if (!vaultId || loadingVaults) return;
@@ -435,18 +434,18 @@ export default function VaultPage() {
 
     // Check wallet balance for lend mode
     if (mode === 'lend' && numericAmount > walletBalance) {
-      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} USDC`);
+      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} ${vault?.tokenSymbol || ''}`);
       return;
     }
 
     const amountString = numericAmount.toString();
 
     if (mode === 'lend') {
-      const amountBN = parseUnits(amountString, USDC_DECIMALS);
+      const amountBN = parseUnits(amountString, vault.tokenDecimals);
       approve(vaultAddress, amountBN);
-      supply(amountString, USDC_DECIMALS);
+      supply(amountString, vault.tokenDecimals);
     } else {
-      borrow(amountString, USDC_DECIMALS);
+      borrow(amountString, vault.tokenDecimals);
     }
   };
 
@@ -461,14 +460,14 @@ export default function VaultPage() {
 
     // Check wallet balance for repay
     if (numericAmount > walletBalance) {
-      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} USDC`);
+      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} ${vault.tokenSymbol}`);
       return;
     }
 
     const amountString = numericAmount.toString();
-    const amountBN = parseUnits(amountString, USDC_DECIMALS);
+    const amountBN = parseUnits(amountString, vault.tokenDecimals);
     approve(vaultAddress, amountBN);
-    repayBorrow(amountString, USDC_DECIMALS);
+    repayBorrow(amountString, vault.tokenDecimals);
   };
 
   const handleMaxClick = () => {
@@ -845,7 +844,7 @@ export default function VaultPage() {
                         {hasInsufficientBalance && (
                           <div className="mt-2">
                             <p className="text-xs text-destructive">
-                              Solde insuffisant ({formatNumber(walletBalance)} USDC disponible)
+                              Solde insuffisant ({formatNumber(walletBalance)} {vault.tokenSymbol} disponible)
                             </p>
                             <div className="mt-2">
                               <BuyCryptoButton />
