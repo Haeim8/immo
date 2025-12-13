@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
 import { parseUnits } from "viem"
 import {
-  IconBuildingBank,
   IconCheck,
   IconLoader2,
   IconArrowLeft,
@@ -40,8 +39,8 @@ const TOKEN_OPTIONS: { value: PoolType; label: string; description: string; addr
   },
   {
     value: "weth",
-    label: "WETH",
-    description: "Wrapped Ether",
+    label: "ETH",
+    description: "Wrapped Ether (WETH)",
     address: POOL_CONFIG.weth.token
   },
 ]
@@ -50,9 +49,12 @@ export default function CreateVaultPage() {
   const router = useRouter()
   const { isConnected } = useAccount()
 
+  const [tokenMode, setTokenMode] = useState<'preset' | 'custom'>('custom')
   const [formData, setFormData] = useState({
     // Token selection
     tokenType: "usdc" as PoolType,
+    customTokenAddress: "",
+    customTokenDecimals: "18",
 
     // Financial - max liquidity (will be converted based on token decimals)
     maxLiquidity: "",
@@ -79,7 +81,8 @@ export default function CreateVaultPage() {
   }
 
   const selectedToken = TOKEN_OPTIONS.find(t => t.value === formData.tokenType)
-  const tokenDecimals = POOL_CONFIG[formData.tokenType].decimals
+  const tokenDecimals = tokenMode === 'custom' ? Number(formData.customTokenDecimals) : POOL_CONFIG[formData.tokenType].decimals
+  const tokenSymbol = tokenMode === 'custom' ? 'Custom Token' : POOL_CONFIG[formData.tokenType].symbol
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,8 +92,20 @@ export default function CreateVaultPage() {
       return
     }
 
+    // Validate custom token if in custom mode
+    if (tokenMode === 'custom') {
+      if (!formData.customTokenAddress || !formData.customTokenAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+        alert("Please enter a valid token address")
+        return
+      }
+      if (!formData.customTokenDecimals || Number(formData.customTokenDecimals) < 0 || Number(formData.customTokenDecimals) > 18) {
+        alert("Token decimals must be between 0 and 18")
+        return
+      }
+    }
+
     // Get token address
-    const tokenAddress = POOL_CONFIG[formData.tokenType].token as `0x${string}`
+    const finalTokenAddress = (tokenMode === 'custom' ? formData.customTokenAddress : POOL_CONFIG[formData.tokenType].token) as `0x${string}`
 
     // Convert max liquidity to token decimals
     const maxLiquidity = parseUnits(formData.maxLiquidity || "0", tokenDecimals)
@@ -102,7 +117,7 @@ export default function CreateVaultPage() {
     const liquidationBonus = BigInt(Math.round(Number(formData.liquidationBonus) * 100))
 
     const params = {
-      token: tokenAddress,
+      token: finalTokenAddress,
       maxLiquidity,
       borrowBaseRate,
       borrowSlope,
@@ -123,7 +138,8 @@ export default function CreateVaultPage() {
   const isFormValid =
     formData.maxLiquidity &&
     Number(formData.maxLiquidity) > 0 &&
-    isConnected
+    isConnected &&
+    (tokenMode === 'preset' || (formData.customTokenAddress && formData.customTokenDecimals))
 
   if (isSuccess) {
     setTimeout(() => {
@@ -180,26 +196,85 @@ export default function CreateVaultPage() {
                 </CardTitle>
                 <CardDescription>Select which token this vault will use for supply/borrow</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {TOKEN_OPTIONS.map((token) => (
-                    <div
-                      key={token.value}
-                      onClick={() => handleChange("tokenType", token.value)}
-                      className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
-                        formData.tokenType === token.value
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <p className="font-medium">{token.label}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{token.description}</p>
-                      <p className="text-xs font-mono text-muted-foreground mt-2 truncate">
-                        {token.address}
+              <CardContent className="space-y-4">
+                {/* Mode Toggle */}
+                <div className="flex items-center gap-2 p-1 rounded-lg bg-muted w-fit">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tokenMode === 'preset' ? 'default' : 'ghost'}
+                    onClick={() => setTokenMode('preset')}
+                  >
+                    Presets
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tokenMode === 'custom' ? 'default' : 'ghost'}
+                    onClick={() => setTokenMode('custom')}
+                  >
+                    Custom Token
+                  </Button>
+                </div>
+
+                {/* Preset Tokens */}
+                {tokenMode === 'preset' && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {TOKEN_OPTIONS.map((token) => (
+                      <div
+                        key={token.value}
+                        onClick={() => handleChange("tokenType", token.value)}
+                        className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                          formData.tokenType === token.value
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <p className="font-medium">{token.label}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{token.description}</p>
+                        <p className="text-xs font-mono text-muted-foreground mt-2 truncate">
+                          {token.address}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Custom Token */}
+                {tokenMode === 'custom' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="customTokenAddress">Token Address *</Label>
+                      <Input
+                        id="customTokenAddress"
+                        type="text"
+                        placeholder="0x..."
+                        value={formData.customTokenAddress}
+                        onChange={(e) => handleChange("customTokenAddress", e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        ERC20 token contract address (e.g., USDT, DAI, WBTC)
                       </p>
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customTokenDecimals">Token Decimals *</Label>
+                      <Input
+                        id="customTokenDecimals"
+                        type="number"
+                        min="0"
+                        max="18"
+                        placeholder="18"
+                        value={formData.customTokenDecimals}
+                        onChange={(e) => handleChange("customTokenDecimals", e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Most tokens use 18 decimals. USDC/USDT use 6 decimals.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -214,20 +289,20 @@ export default function CreateVaultPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="maxLiquidity">
-                    Max Liquidity ({POOL_CONFIG[formData.tokenType].symbol}) *
+                    Max Liquidity ({tokenSymbol}) *
                   </Label>
                   <Input
                     id="maxLiquidity"
                     type="number"
                     min="0"
-                    step={formData.tokenType === "usdc" ? "1" : "0.01"}
-                    placeholder={formData.tokenType === "usdc" ? "e.g., 100000" : "e.g., 50"}
+                    step="any"
+                    placeholder={tokenMode === 'custom' ? "e.g., 1000000" : (formData.tokenType === "usdc" ? "e.g., 100000" : "e.g., 50")}
                     value={formData.maxLiquidity}
                     onChange={(e) => handleChange("maxLiquidity", e.target.value)}
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Maximum amount of {POOL_CONFIG[formData.tokenType].symbol} that can be supplied to this vault
+                    Maximum amount of {tokenSymbol} that can be supplied to this vault
                   </p>
                 </div>
               </CardContent>
@@ -374,14 +449,21 @@ export default function CreateVaultPage() {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Token</p>
-                  <Badge className="mt-1">{selectedToken?.label}</Badge>
+                  {tokenMode === 'preset' ? (
+                    <Badge className="mt-1">{selectedToken?.label}</Badge>
+                  ) : (
+                    <div className="mt-1 space-y-1">
+                      <p className="text-xs font-mono truncate">{formData.customTokenAddress || 'Not set'}</p>
+                      <p className="text-xs text-muted-foreground">{formData.customTokenDecimals} decimals</p>
+                    </div>
+                  )}
                 </div>
                 <Separator />
                 {formData.maxLiquidity && (
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Max Liquidity</span>
                     <span className="font-medium">
-                      {Number(formData.maxLiquidity).toLocaleString()} {POOL_CONFIG[formData.tokenType].symbol}
+                      {Number(formData.maxLiquidity).toLocaleString()} {tokenSymbol}
                     </span>
                   </div>
                 )}

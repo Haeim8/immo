@@ -281,7 +281,9 @@ export default function StakingDetailPage() {
             <TokenIcon symbol={vault.tokenSymbol} size="xl" />
           </div>
           <div className="flex items-center justify-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold">{vault.tokenSymbol} Staking</h1>
+            <h1 className="text-3xl font-bold">
+              {stakingT("stakeCVT") || "Stake CVT"} ({stakingT("earn") || "Earn"} {vault.tokenSymbol})
+            </h1>
             <Link
               href={`${BLOCK_EXPLORER_URL}/address/${vault.vaultAddress}`}
               target="_blank"
@@ -291,7 +293,7 @@ export default function StakingDetailPage() {
             </Link>
           </div>
           <p className="text-muted-foreground">
-            {stakingT("poolDescription") || "Stake your tokens to earn passive yield"}
+            {stakingT("poolDescription") || `Supply ${vault.tokenSymbol} to the vault, receive CVT tokens, then stake CVT to earn ${vault.tokenSymbol} rewards`}
           </p>
           <div className="flex items-center justify-center gap-2 mt-3">
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${

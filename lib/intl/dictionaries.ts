@@ -367,6 +367,38 @@ export interface Dictionary {
     collateralizedDesc: string;
     flexibleDesc: string;
     loading: string;
+    stakeCVT: string;
+    poolDescription: string;
+    backToPools: string;
+    poolStats: string;
+    currentAPY: string;
+    ofCapacity: string;
+    available: string;
+    toStake: string;
+    lockPeriod: string;
+    none: string;
+    withdrawalTime: string;
+    instant: string;
+    stakingFee: string;
+    minStake: string;
+    yourPosition: string;
+    staked: string;
+    value: string;
+    earning: string;
+    claimRewards: string;
+    howItWorks: string;
+    step1Title: string;
+    step1Desc: string;
+    step2Title: string;
+    step2Desc: string;
+    step3Title: string;
+    step3Desc: string;
+    unstake: string;
+    stakeTokens: string;
+    unstakeTokens: string;
+    connectToStake: string;
+    poolSize: string;
+    capacity: string;
   };
 }
 
@@ -751,6 +783,38 @@ export const dictionaries: Record<Locale, Dictionary> = {
       collateralizedDesc: "Tous les prêts sont sur-collatéralisés et liquidables.",
       flexibleDesc: "Pas de période de blocage. Retirez à tout moment selon la liquidité.",
       loading: "Chargement des pools de staking...",
+      stakeCVT: "Staker CVT",
+      poolDescription: "Fournissez des tokens au vault, recevez des CVT, puis stakez vos CVT pour gagner des récompenses",
+      backToPools: "Retour aux pools",
+      poolStats: "Statistiques du pool",
+      currentAPY: "APY actuel",
+      ofCapacity: "de la capacité",
+      available: "Disponible",
+      toStake: "à staker",
+      lockPeriod: "Période de blocage",
+      none: "Aucune",
+      withdrawalTime: "Délai de retrait",
+      instant: "Instantané",
+      stakingFee: "Frais de staking",
+      minStake: "Stake minimum",
+      yourPosition: "Votre position",
+      staked: "Staké",
+      value: "Valeur",
+      earning: "Rendement",
+      claimRewards: "Réclamer",
+      howItWorks: "Comment ça marche",
+      step1Title: "Déposer",
+      step1Desc: "Stakez vos tokens dans le pool",
+      step2Title: "Gagner",
+      step2Desc: "Accumulez des récompenses au fil du temps",
+      step3Title: "Retirer",
+      step3Desc: "Retirez à tout moment sans frais",
+      unstake: "Retirer",
+      stakeTokens: "Staker",
+      unstakeTokens: "Retirer",
+      connectToStake: "Connectez votre wallet pour staker des tokens",
+      poolSize: "Taille du pool",
+      capacity: "Capacité",
     },
   },
   en: {
@@ -1133,6 +1197,38 @@ export const dictionaries: Record<Locale, Dictionary> = {
       collateralizedDesc: "All loans are over-collateralized and liquidatable.",
       flexibleDesc: "No lock-up periods. Withdraw anytime subject to liquidity.",
       loading: "Loading staking pools...",
+      stakeCVT: "Stake CVT",
+      poolDescription: "Supply tokens to the vault, receive CVT, then stake CVT to earn rewards",
+      backToPools: "Back to pools",
+      poolStats: "Pool Statistics",
+      currentAPY: "Current APY",
+      ofCapacity: "of capacity",
+      available: "Available",
+      toStake: "to stake",
+      lockPeriod: "Lock Period",
+      none: "None",
+      withdrawalTime: "Withdrawal Time",
+      instant: "Instant",
+      stakingFee: "Staking Fee",
+      minStake: "Min. Stake",
+      yourPosition: "Your Position",
+      staked: "Staked",
+      value: "Value",
+      earning: "Earning",
+      claimRewards: "Claim",
+      howItWorks: "How Staking Works",
+      step1Title: "Deposit",
+      step1Desc: "Stake your tokens in the pool",
+      step2Title: "Earn",
+      step2Desc: "Accumulate rewards over time",
+      step3Title: "Withdraw",
+      step3Desc: "Unstake anytime with no fees",
+      unstake: "Unstake",
+      stakeTokens: "Stake",
+      unstakeTokens: "Unstake",
+      connectToStake: "Connect your wallet to stake tokens",
+      poolSize: "Pool size",
+      capacity: "Capacity",
     },
   },
   es: {
@@ -1515,6 +1611,38 @@ export const dictionaries: Record<Locale, Dictionary> = {
       collateralizedDesc: "Todos los préstamos están sobre-colateralizados y son liquidables.",
       flexibleDesc: "Sin períodos de bloqueo. Retira en cualquier momento según la liquidez.",
       loading: "Cargando pools de staking...",
+      stakeCVT: "Stakear CVT",
+      poolDescription: "Suministra tokens al vault, recibe CVT, luego stakea CVT para ganar recompensas",
+      backToPools: "Volver a pools",
+      poolStats: "Estadísticas del pool",
+      currentAPY: "APY actual",
+      ofCapacity: "de capacidad",
+      available: "Disponible",
+      toStake: "para stakear",
+      lockPeriod: "Período de bloqueo",
+      none: "Ninguno",
+      withdrawalTime: "Tiempo de retiro",
+      instant: "Instantáneo",
+      stakingFee: "Comisión de staking",
+      minStake: "Stake mínimo",
+      yourPosition: "Tu posición",
+      staked: "En Stake",
+      value: "Valor",
+      earning: "Ganando",
+      claimRewards: "Reclamar",
+      howItWorks: "Cómo funciona el Staking",
+      step1Title: "Depositar",
+      step1Desc: "Stakea tus tokens en el pool",
+      step2Title: "Ganar",
+      step2Desc: "Acumula recompensas con el tiempo",
+      step3Title: "Retirar",
+      step3Desc: "Retira en cualquier momento sin comisiones",
+      unstake: "Retirar",
+      stakeTokens: "Stakear",
+      unstakeTokens: "Retirar",
+      connectToStake: "Conecta tu wallet para stakear tokens",
+      poolSize: "Tamaño del pool",
+      capacity: "Capacidad",
     },
   },
 };
