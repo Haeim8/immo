@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
 import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, CHAIN_ID } from './constants';
-import { PROTOCOL_ABI, READER_ABI, ERC20_ABI } from './abis';
+import { PROTOCOL_ABI, READER_ABI, VAULT_ABI, ERC20_ABI } from './abis';
 import { getFromCache, setInCache } from './cache';
 
 // Re-exports
@@ -21,6 +21,8 @@ export interface VaultData {
   vaultAddress: `0x${string}`;
   tokenAddress: `0x${string}`;
   cvtTokenAddress: `0x${string}`;
+  cvtSymbol: string;
+  stakingContractAddress: `0x${string}` | null;
   tokenSymbol: string;
   tokenDecimals: number;
   maxLiquidity: string;
@@ -113,10 +115,23 @@ export function useAllVaults() {
     if (!readerData || !Array.isArray(readerData)) return [];
     const uniqueTokens = new Set<string>();
     readerData.forEach((v: any) => {
-      const tokenAddr = (v.underlyingToken || v.cvtToken)?.toLowerCase();
-      if (tokenAddr) uniqueTokens.add(tokenAddr);
+      const underlying = (v.underlyingToken as string | undefined)?.toLowerCase();
+      const cvt = (v.cvtToken as string | undefined)?.toLowerCase();
+      if (underlying) uniqueTokens.add(underlying);
+      if (cvt) uniqueTokens.add(cvt);
     });
     return Array.from(uniqueTokens);
+  }, [readerData]);
+
+  // Read stakingContract address from each vault (ordered like readerData)
+  const stakingContracts = useMemo(() => {
+    if (!readerData || !Array.isArray(readerData)) return [];
+    return readerData.map((v: any) => ({
+      address: v.vaultAddress as `0x${string}`,
+      abi: VAULT_ABI,
+      functionName: 'stakingContract' as const,
+      chainId: CHAIN_ID,
+    }));
   }, [readerData]);
 
   // Build multicall contracts for symbol and decimals
@@ -152,6 +167,15 @@ export function useAllVaults() {
   const tokenData = tokenRead.data;
   const tokenLoading = tokenRead.isLoading;
 
+  const stakingRead = useReadContracts({
+    contracts: stakingContracts as any,
+    query: {
+      enabled: stakingContracts.length > 0,
+    },
+  } as any) as { data?: any[]; isLoading: boolean };
+  const stakingData = stakingRead.data;
+  const stakingLoading = stakingRead.isLoading;
+
   useEffect(() => {
     // Check cache first
     const cached = getFromCache<VaultData[]>('allVaults');
@@ -161,7 +185,13 @@ export function useAllVaults() {
     const cacheOutdated = cached && readerVaultCount > cached.length;
 
     if (cached && cached.length > 0 && !cacheOutdated) {
-      setVaults(cached);
+      // Backward-compatible cache migration (older cache entries may miss new fields)
+      const normalized = cached.map((v) => ({
+        ...v,
+        cvtSymbol: (v as any).cvtSymbol ?? `cvt${v.vaultId}`,
+        stakingContractAddress: (v as any).stakingContractAddress ?? null,
+      }));
+      setVaults(normalized);
       setIsLoading(false);
 
       // Don't refetch if less than 30 seconds
@@ -170,7 +200,7 @@ export function useAllVaults() {
       }
     }
 
-    if (readerLoading || tokenLoading) {
+    if (readerLoading || tokenLoading || stakingLoading) {
       if (!cached || cached.length === 0) {
         setIsLoading(true);
       }
@@ -211,11 +241,21 @@ export function useAllVaults() {
     lastFetch.current = Date.now();
 
     // Transform reader data to VaultData format
-    const transformedVaults: VaultData[] = readerData.map((v: any) => {
+    const transformedVaults: VaultData[] = readerData.map((v: any, idx: number) => {
       const tokenAddress = v.underlyingToken as `0x${string}`;
       const cvtTokenAddress = v.cvtToken as `0x${string}`;
       const tokenInfo = tokenInfoMap.get(tokenAddress.toLowerCase()) || { symbol: 'UNKNOWN', decimals: 18 };
       const decimals = tokenInfo.decimals;
+      const cvtInfo =
+        tokenInfoMap.get(cvtTokenAddress.toLowerCase()) ||
+        { symbol: `cvt${Number(v.vaultId)}`, decimals: 18 };
+      const cvtSymbol = cvtInfo.symbol;
+
+      const stakingResult = stakingData?.[idx]?.result as string | undefined;
+      const stakingContractAddress =
+        stakingResult && stakingResult !== '0x0000000000000000000000000000000000000000'
+          ? (stakingResult as `0x${string}`)
+          : null;
 
       const utilizationBps = Number(v.utilizationRate || 0);
       const utilizationRate = utilizationBps / 100; // bps -> %
@@ -233,6 +273,8 @@ export function useAllVaults() {
         vaultAddress: v.vaultAddress as `0x${string}`,
         tokenAddress,
         cvtTokenAddress,
+        cvtSymbol,
+        stakingContractAddress,
         tokenSymbol: tokenInfo.symbol,
         tokenDecimals: decimals,
         maxLiquidity: formatUnits(BigInt(v.maxLiquidity || 0), decimals),
@@ -255,7 +297,7 @@ export function useAllVaults() {
     setInCache('allVaults', transformedVaults);
     setIsLoading(false);
     setError(null);
-  }, [readerData, readerLoading, isError, tokenData, tokenLoading, tokenAddresses]);
+  }, [readerData, readerLoading, isError, tokenData, tokenLoading, tokenAddresses, stakingData, stakingLoading]);
 
   const refetch = useCallback(() => {
     lastFetch.current = 0;

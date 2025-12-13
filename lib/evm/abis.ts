@@ -229,6 +229,14 @@ export const VAULT_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
+  // View: stakingContract (CVT staking)
+  {
+    inputs: [],
+    name: 'stakingContract',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const;
 
 // Reader ABI (CantorVaultReader.sol) - Aggregates data for frontend
@@ -374,6 +382,118 @@ export const READER_ABI = [
     name: 'calculateCurrentAPY',
     outputs: [{ internalType: 'uint256', name: 'currentAPY', type: 'uint256' }],
     stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
+
+// CVTStaking ABI (per-vault staking)
+export const STAKING_ABI = [
+  // Read
+  {
+    inputs: [],
+    name: 'vault',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'cvtToken',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'underlyingToken',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'totalStaked',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'maxProtocolBorrowRatio',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'rewardIndex',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'paused',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'getStakePosition',
+    outputs: [
+      {
+        components: [
+          { internalType: 'uint256', name: 'amount', type: 'uint256' },
+          { internalType: 'uint256', name: 'lockEndTime', type: 'uint256' },
+          { internalType: 'uint256', name: 'rewardIndexSnapshot', type: 'uint256' },
+          { internalType: 'uint256', name: 'pendingRewards', type: 'uint256' },
+        ],
+        internalType: 'struct CVTStaking.StakePosition',
+        name: 'position',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'getPendingRewards',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'isLockExpired',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // Write
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amount', type: 'uint256' },
+      { internalType: 'uint256', name: 'lockDuration', type: 'uint256' },
+    ],
+    name: 'stake',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'unstake',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'claimRewards',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
 ] as const;

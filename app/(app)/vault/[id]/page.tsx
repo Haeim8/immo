@@ -12,6 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { parseUnits, formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
+import { CHAIN_ID } from "@/lib/evm/constants";
 import { useSupply, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { BuyCryptoButton } from "@/components/buy-crypto-button";
@@ -330,6 +331,7 @@ export default function VaultPage() {
   const { data: tokenBalance } = useBalance({
     address: address,
     token: vault?.tokenAddress,
+    chainId: CHAIN_ID,
     query: {
       enabled: isConnected && !!address && !!vault?.tokenAddress,
     },
@@ -346,12 +348,25 @@ export default function VaultPage() {
   const [slippage, setSlippage] = useState('0.5');
   const [deadline, setDeadline] = useState('30');
   const [txError, setTxError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ type: 'supply' | 'repay'; amount: string; decimals: number } | null>(null);
 
   const vaultAddress = (vault?.vaultAddress || '0x0000000000000000000000000000000000000000') as `0x${string}`;
   const { supply, isPending: isSupplyPending, error: supplyError } = useSupply(vaultAddress);
   const { borrow, isPending: isBorrowPending, error: borrowError } = useBorrow(vaultAddress);
   const { repayBorrow, isPending: isRepayPending, error: repayError } = useRepayBorrow(vaultAddress);
-  const { approve, isPending: isApprovePending, error: approveError } = useApproveToken(vault?.tokenAddress);
+  const { approve, isPending: isApprovePending, error: approveError, isSuccess: approveSuccess } = useApproveToken(vault?.tokenAddress);
+
+  // Quand l'approve est confirmé, lancer le supply ou repay
+  useEffect(() => {
+    if (approveSuccess && pendingAction) {
+      if (pendingAction.type === 'supply') {
+        supply(pendingAction.amount, pendingAction.decimals);
+      } else if (pendingAction.type === 'repay') {
+        repayBorrow(pendingAction.amount, pendingAction.decimals);
+      }
+      setPendingAction(null);
+    }
+  }, [approveSuccess, pendingAction, supply, repayBorrow]);
 
   useEffect(() => {
     if (!vaultId || loadingVaults) return;
@@ -442,8 +457,9 @@ export default function VaultPage() {
 
     if (mode === 'lend') {
       const amountBN = parseUnits(amountString, vault.tokenDecimals);
+      // Stocker l'action en attente puis lancer approve
+      setPendingAction({ type: 'supply', amount: amountString, decimals: vault.tokenDecimals });
       approve(vaultAddress, amountBN);
-      supply(amountString, vault.tokenDecimals);
     } else {
       borrow(amountString, vault.tokenDecimals);
     }
@@ -466,8 +482,9 @@ export default function VaultPage() {
 
     const amountString = numericAmount.toString();
     const amountBN = parseUnits(amountString, vault.tokenDecimals);
+    // Stocker l'action en attente puis lancer approve
+    setPendingAction({ type: 'repay', amount: amountString, decimals: vault.tokenDecimals });
     approve(vaultAddress, amountBN);
-    repayBorrow(amountString, vault.tokenDecimals);
   };
 
   const handleMaxClick = () => {

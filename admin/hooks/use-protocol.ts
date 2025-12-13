@@ -4,6 +4,12 @@ import { useReadContract, useReadContracts, useWriteContract, useWaitForTransact
 import { CONTRACTS, PROTOCOL_ABI, FEE_COLLECTOR_ABI, VAULT_ABI, ERC20_ABI } from "@/lib/contracts";
 import { formatUnits } from "viem";
 
+type TokenMeta = { symbol: string; decimals: number };
+
+function isValidAddress(value: string | undefined): value is `0x${string}` {
+  return !!value && /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
 // Read global stats by aggregating from protocol and vaults
 export function useGlobalStats() {
   const { isConnected } = useAccount();
@@ -26,6 +32,7 @@ export function useGlobalStats() {
     address: CONTRACTS.feeCollector as `0x${string}`,
     abi: FEE_COLLECTOR_ABI,
     functionName: "getFeeStats",
+    args: [CONTRACTS.usdc],
     query: {
       enabled: isConnected,
       retry: 1,
@@ -122,8 +129,48 @@ export function useVaults(offset = 0, limit = 100) {
     },
   });
 
-  const isLoading = isLoadingAddresses || isLoadingVaults;
-  const error = addressError || vaultError;
+  // Build a list of unique token addresses from the vault token() calls
+  const tokenAddresses = (() => {
+    const unique = new Set<string>();
+    if (!vaultAddresses || !Array.isArray(vaultAddresses) || !vaultData) return [];
+    vaultAddresses.forEach((_addr: string, index: number) => {
+      const tokenResult = vaultData[index * 3 + 2];
+      const tokenAddress = tokenResult?.result as string | undefined;
+      if (isValidAddress(tokenAddress)) unique.add(tokenAddress.toLowerCase());
+    });
+    return Array.from(unique);
+  })();
+
+  const tokenContracts = tokenAddresses.flatMap((tokenAddress) => [
+    { address: tokenAddress as `0x${string}`, abi: ERC20_ABI, functionName: "symbol" as const },
+    { address: tokenAddress as `0x${string}`, abi: ERC20_ABI, functionName: "decimals" as const },
+  ]);
+
+  const { data: tokenMetaData, isLoading: isLoadingTokens, error: tokenError } = useReadContracts({
+    contracts: tokenContracts,
+    query: {
+      enabled: isConnected && tokenContracts.length > 0,
+      retry: 1,
+      staleTime: 30000,
+      gcTime: 60000,
+    },
+  });
+
+  const isLoading = isLoadingAddresses || isLoadingVaults || isLoadingTokens;
+  const error = addressError || vaultError || tokenError;
+
+  const tokenMetaMap = (() => {
+    const map = new Map<string, TokenMeta>();
+    if (!tokenMetaData || tokenAddresses.length === 0) return map;
+    tokenAddresses.forEach((tokenAddress, idx) => {
+      const symbolResult = tokenMetaData[idx * 2];
+      const decimalsResult = tokenMetaData[idx * 2 + 1];
+      const symbol = (symbolResult?.result as string | undefined) ?? "UNKNOWN";
+      const decimals = Number(decimalsResult?.result ?? 18);
+      map.set(tokenAddress.toLowerCase(), { symbol, decimals });
+    });
+    return map;
+  })();
 
   let vaults: any[] = [];
 
@@ -140,11 +187,9 @@ export function useVaults(offset = 0, limit = 100) {
 
         if (!info) return null;
 
-        // Determine token decimals based on token address
-        const isUSDC = tokenAddress?.toLowerCase() === "0x45f591c36b3506a881ed54638a9456607c2eed84" ||
-                       tokenAddress?.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-        const decimals = isUSDC ? 6 : 18;
-        const tokenSymbol = isUSDC ? "USDC" : "WETH";
+        const tokenMeta = tokenMetaMap.get(tokenAddress?.toLowerCase());
+        const decimals = tokenMeta?.decimals ?? 18;
+        const tokenSymbol = tokenMeta?.symbol ?? "UNKNOWN";
 
         return {
           id: Number(info[0] || index), // vaultId
@@ -224,8 +269,26 @@ export function useVaultData(vaultAddress: string) {
     },
   });
 
-  const isLoading = isLoadingInfo || isLoadingState || isLoadingToken;
-  const error = infoError || stateError;
+  const tokenAddress = (tokenData as string | undefined) ?? "";
+  const tokenContracts = isValidAddress(tokenAddress)
+    ? [
+        { address: tokenAddress as `0x${string}`, abi: ERC20_ABI, functionName: "symbol" as const },
+        { address: tokenAddress as `0x${string}`, abi: ERC20_ABI, functionName: "decimals" as const },
+      ]
+    : [];
+
+  const { data: tokenMetaData, isLoading: isLoadingTokenMeta, error: tokenMetaError } = useReadContracts({
+    contracts: tokenContracts,
+    query: {
+      enabled: isConnected && tokenContracts.length > 0,
+      retry: 1,
+      staleTime: 30000,
+      gcTime: 60000,
+    },
+  });
+
+  const isLoading = isLoadingInfo || isLoadingState || isLoadingToken || isLoadingTokenMeta;
+  const error = infoError || stateError || tokenMetaError;
   const refetch = () => {
     refetchInfo();
     refetchState();
@@ -236,13 +299,8 @@ export function useVaultData(vaultAddress: string) {
   try {
     const info = infoData as any;
     const state = stateData as any;
-    const tokenAddress = tokenData as string;
-
-    // Determine token decimals based on token address
-    const isUSDC = tokenAddress?.toLowerCase() === "0x45f591c36b3506a881ed54638a9456607c2eed84" ||
-                   tokenAddress?.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-    const decimals = isUSDC ? 6 : 18;
-    const tokenSymbol = isUSDC ? "USDC" : "WETH";
+    const tokenSymbol = (tokenMetaData?.[0]?.result as string | undefined) ?? "UNKNOWN";
+    const decimals = Number(tokenMetaData?.[1]?.result ?? 18);
 
     if (info) {
       vault = {
