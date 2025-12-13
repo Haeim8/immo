@@ -368,6 +368,7 @@ export interface Dictionary {
     flexibleDesc: string;
     loading: string;
     stakeCVT: string;
+    earnRewards: string;
     poolDescription: string;
     backToPools: string;
     poolStats: string;
@@ -784,6 +785,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       flexibleDesc: "Pas de période de blocage. Retirez à tout moment selon la liquidité.",
       loading: "Chargement des pools de staking...",
       stakeCVT: "Staker CVT",
+      earnRewards: "Gagnez",
       poolDescription: "Fournissez des tokens au vault, recevez des CVT, puis stakez vos CVT pour gagner des récompenses",
       backToPools: "Retour aux pools",
       poolStats: "Statistiques du pool",
@@ -1198,6 +1200,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       flexibleDesc: "No lock-up periods. Withdraw anytime subject to liquidity.",
       loading: "Loading staking pools...",
       stakeCVT: "Stake CVT",
+      earnRewards: "Earn",
       poolDescription: "Supply tokens to the vault, receive CVT, then stake CVT to earn rewards",
       backToPools: "Back to pools",
       poolStats: "Pool Statistics",
@@ -1612,6 +1615,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       flexibleDesc: "Sin períodos de bloqueo. Retira en cualquier momento según la liquidez.",
       loading: "Cargando pools de staking...",
       stakeCVT: "Stakear CVT",
+      earnRewards: "Gana",
       poolDescription: "Suministra tokens al vault, recibe CVT, luego stakea CVT para ganar recompensas",
       backToPools: "Volver a pools",
       poolStats: "Estadísticas del pool",

@@ -7,7 +7,7 @@
 'use client';
 
 const MEMORY_TTL = 30 * 1000; // 30 secondes
-const STORAGE_TTL = 5 * 60 * 1000; // 5 minutes
+const STORAGE_TTL = 60 * 1000; // 1 minute (réduit pour voir les nouveaux vaults plus vite)
 
 interface CacheEntry<T> {
   data: T;

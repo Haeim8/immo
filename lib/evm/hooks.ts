@@ -155,7 +155,12 @@ export function useAllVaults() {
   useEffect(() => {
     // Check cache first
     const cached = getFromCache<VaultData[]>('allVaults');
-    if (cached && cached.length > 0) {
+
+    // Si reader a plus de vaults que le cache, ignorer le cache
+    const readerVaultCount = readerData && Array.isArray(readerData) ? readerData.length : 0;
+    const cacheOutdated = cached && readerVaultCount > cached.length;
+
+    if (cached && cached.length > 0 && !cacheOutdated) {
       setVaults(cached);
       setIsLoading(false);
 

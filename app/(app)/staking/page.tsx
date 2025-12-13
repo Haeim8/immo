@@ -63,13 +63,13 @@ function StakingVaultCard({ vault, userSupplied, index }: { vault: VaultData; us
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {vault.tokenSymbol}
+                    {stakingT("stakeCVT") || "Stake CVT"} → {vault.tokenSymbol}
                   </h3>
                   {hasPosition && (
                     <span className="badge-success text-[10px]">{stakingT("active") || "Active"}</span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Vault #{vault.vaultId}</p>
+                <p className="text-xs text-muted-foreground">{stakingT("earnRewards") || "Earn"} {vault.tokenSymbol} • Vault #{vault.vaultId}</p>
               </div>
             </div>
 
