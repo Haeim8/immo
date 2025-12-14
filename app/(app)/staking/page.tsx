@@ -3,10 +3,12 @@
 import { motion } from "framer-motion";
 import { Coins, Lock, TrendingUp, Wallet, ArrowUpRight, Loader2, Shield, Percent } from "lucide-react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import Link from "next/link";
 import Image from "next/image";
-import { useAllVaults, useProtocolTotals, useUserPositions, VaultData } from "@/lib/evm/hooks";
+import { formatUnits } from "viem";
+import { STAKING_ADDRESS, CVT_TOKEN_ADDRESS } from "@/lib/evm/constants";
+import { STAKING_ABI, VAULT_ABI, ERC20_ABI } from "@/lib/evm/abis";
 import { useTranslations } from "@/components/providers/IntlProvider";
 
 function formatCurrency(value: string | number): string {
@@ -16,120 +18,87 @@ function formatCurrency(value: string | number): string {
   return `$${num.toFixed(2)}`;
 }
 
-// Token icon with fallback
-function TokenIcon({ symbol }: { symbol: string }) {
-  const tokenLogos: Record<string, string> = {
-    USDC: "/usc.png",
-    USDT: "/usdt.jpg",
-    ETH: "/eth white.png",
-    WETH: "/eth white.png",
-    WBTC: "/btc.png",
-    BTC: "/btc.png",
-  };
-
-  const logoPath = tokenLogos[symbol.toUpperCase()];
-
-  if (logoPath) {
-    return (
-      <div className="token-icon-lg overflow-hidden">
-        <Image src={logoPath} alt={symbol} width={40} height={40} className="w-full h-full object-contain" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="token-icon-lg">
-      {symbol.slice(0, 2).toUpperCase()}
-    </div>
-  );
-}
-
-function StakingVaultCard({ vault, userSupplied, index }: { vault: VaultData; userSupplied: string; index: number }) {
-  const hasPosition = parseFloat(userSupplied) > 0;
-  const stakingT = useTranslations("staking");
-
-  return (
-    <Link href={`/staking/${vault.vaultId}`}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.1 }}
-        className={`card-vault group ${hasPosition ? 'border-primary/30' : ''}`}
-      >
-        <div className="p-5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <TokenIcon symbol={vault.tokenSymbol} />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {stakingT("stakeCVT") || "Stake CVT"} → {vault.tokenSymbol}
-                  </h3>
-                  {hasPosition && (
-                    <span className="badge-success text-[10px]">{stakingT("active") || "Active"}</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">{stakingT("earnRewards") || "Earn"} {vault.tokenSymbol} • Vault #{vault.vaultId}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 md:gap-6 text-center md:text-right">
-              <div>
-                <div className="text-xs text-muted-foreground uppercase mb-1">{stakingT("supplyAPY") || "Supply APY"}</div>
-                <div className="text-lg font-bold text-success">{vault.supplyRate.toFixed(2)}%</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground uppercase mb-1">{stakingT("tvl") || "TVL"}</div>
-                <div className="text-lg font-bold text-foreground">{formatCurrency(vault.totalSupplied)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground uppercase mb-1">{stakingT("utilization") || "Util."}</div>
-                <div className="text-lg font-bold text-accent">{vault.utilizationRate.toFixed(1)}%</div>
-              </div>
-              {hasPosition && (
-                <div className="hidden md:block">
-                  <div className="text-xs text-muted-foreground uppercase mb-1">{stakingT("yourStake") || "Your Stake"}</div>
-                  <div className="text-lg font-bold text-primary">{formatCurrency(userSupplied)}</div>
-                </div>
-              )}
-            </div>
-
-            <button className="btn-primary whitespace-nowrap">
-              <ArrowUpRight className="w-4 h-4" />
-              {hasPosition ? (stakingT("manage") || 'Manage') : (stakingT("stake") || 'Stake')}
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </Link>
-  );
+function formatNumber(value: number): string {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  return value.toFixed(4);
 }
 
 export default function StakingPage() {
   const { address, isConnected } = useAccount();
-  const { vaults, isLoading: loadingVaults } = useAllVaults();
-  const { positions, totals } = useUserPositions(address);
-  const { totalTVL, vaultCount } = useProtocolTotals();
   const stakingT = useTranslations("staking");
   const commonT = useTranslations("common");
 
-  // Calculate average APY
-  const avgApy = vaults.length > 0
-    ? vaults.reduce((sum, v) => sum + v.supplyRate, 0) / vaults.length
-    : 0;
+  const stakingAddress = STAKING_ADDRESS as `0x${string}`;
 
-  // Get user's supplied amount for each vault
-  const getUserSupplied = (vaultId: number): string => {
-    const position = positions.find(p => p.vaultId === vaultId);
-    return position?.supplied || '0';
-  };
+  // Read staking contract data
+  const { data: totalStaked, isLoading: loadingTotalStaked } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'totalStaked',
+  });
 
-  if (loadingVaults) {
+  const { data: vaultAddress } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'vault',
+  });
+
+  const { data: cvtTokenAddress } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'cvtToken',
+  });
+
+  // Read vault info (to get underlying token)
+  const { data: underlyingToken } = useReadContract({
+    address: vaultAddress as `0x${string}`,
+    abi: VAULT_ABI,
+    functionName: 'token',
+    query: { enabled: !!vaultAddress },
+  });
+
+  // Read underlying token symbol
+  const { data: tokenSymbol } = useReadContract({
+    address: underlyingToken as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'symbol',
+    query: { enabled: !!underlyingToken },
+  });
+
+  // Read user's stake position
+  const { data: stakePosition } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'getStakePosition',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  // Read user's pending rewards
+  const { data: pendingRewards } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'getPendingRewards',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  // Parse values
+  const totalStakedAmount = totalStaked ? parseFloat(formatUnits(totalStaked as bigint, 18)) : 0;
+  const userStakedAmount = stakePosition ? parseFloat(formatUnits((stakePosition as any).amount, 18)) : 0;
+  const userPendingRewards = pendingRewards ? parseFloat(formatUnits(pendingRewards as bigint, 18)) : 0;
+  const hasPosition = userStakedAmount > 0;
+  const symbol = (tokenSymbol as string) || 'USDC';
+
+  const isLoading = loadingTotalStaked;
+
+  if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">{stakingT("loading") || "Loading staking pools..."}</p>
+          <p className="text-muted-foreground">{stakingT("loading") || "Loading staking..."}</p>
         </div>
       </div>
     );
@@ -146,11 +115,11 @@ export default function StakingPage() {
           </div>
 
           <h1 className="mb-3">
-            {stakingT("title") || "Stake"} & <span className="text-primary">{stakingT("earn") || "Earn"}</span>
+            Stake CVT & <span className="text-primary">{stakingT("earn") || "Earn"}</span>
           </h1>
 
           <p className="text-muted-foreground max-w-xl mx-auto">
-            {stakingT("subtitle") || "Supply your assets to lending vaults and earn passive yield. Withdraw anytime."}
+            Stake your CVT tokens to earn {symbol} rewards from protocol fees.
           </p>
         </motion.div>
 
@@ -166,17 +135,17 @@ export default function StakingPage() {
               <TrendingUp className="w-4 h-4" />
               <span className="text-xs font-medium uppercase tracking-wide">{stakingT("totalStaked") || "Total Staked"}</span>
             </div>
-            <div className="stat-value">{formatCurrency(totalTVL)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{vaultCount} vaults</p>
+            <div className="stat-value">{formatNumber(totalStakedAmount)} CVT</div>
+            <p className="text-xs text-muted-foreground mt-1">1 pool</p>
           </div>
 
           <div className="card-vault p-4 md:p-5">
             <div className="flex items-center gap-2 text-success mb-2">
               <Percent className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase tracking-wide">{stakingT("avgAPY") || "Avg. APY"}</span>
+              <span className="text-xs font-medium uppercase tracking-wide">Reward Token</span>
             </div>
-            <div className="stat-value">{avgApy.toFixed(2)}%</div>
-            <p className="text-xs text-muted-foreground mt-1">{stakingT("variableRate") || "Variable rate"}</p>
+            <div className="stat-value">{symbol}</div>
+            <p className="text-xs text-muted-foreground mt-1">From protocol fees</p>
           </div>
 
           {isConnected ? (
@@ -186,8 +155,8 @@ export default function StakingPage() {
                   <Wallet className="w-4 h-4" />
                   <span className="text-xs font-medium uppercase tracking-wide">{stakingT("yourStake") || "Your Stake"}</span>
                 </div>
-                <div className="stat-value">{formatCurrency(totals.totalSupplied)}</div>
-                <p className="text-xs text-muted-foreground mt-1">{positions.length} {stakingT("positions") || "positions"}</p>
+                <div className="stat-value">{formatNumber(userStakedAmount)} CVT</div>
+                <p className="text-xs text-muted-foreground mt-1">{hasPosition ? "Active" : "No position"}</p>
               </div>
 
               <div className="card-vault p-4 md:p-5 border-success/20 bg-success/5">
@@ -195,7 +164,7 @@ export default function StakingPage() {
                   <Coins className="w-4 h-4" />
                   <span className="text-xs font-medium uppercase tracking-wide">{stakingT("pendingRewards") || "Pending"}</span>
                 </div>
-                <div className="stat-value text-success">+{formatCurrency(totals.totalInterestPending)}</div>
+                <div className="stat-value text-success">+{formatNumber(userPendingRewards)} {symbol}</div>
                 <p className="text-xs text-muted-foreground mt-1">{stakingT("claimable") || "Claimable"}</p>
               </div>
             </>
@@ -231,9 +200,9 @@ export default function StakingPage() {
             className="card-vault p-8 flex flex-col items-center justify-center border-primary/20 relative z-10"
           >
             <Wallet className="w-10 h-10 mb-4 text-primary" />
-            <h3 className="text-lg font-semibold mb-2 text-center">{stakingT("connectTitle")}</h3>
+            <h3 className="text-lg font-semibold mb-2 text-center">{stakingT("connectTitle") || "Connect Wallet"}</h3>
             <p className="text-muted-foreground mb-6 text-center max-w-sm">
-              {stakingT("connectDescription")}
+              {stakingT("connectDescription") || "Connect your wallet to stake CVT and earn rewards."}
             </p>
             <ConnectButton.Custom>
               {({ account, chain, openConnectModal, mounted }) => {
@@ -247,7 +216,7 @@ export default function StakingPage() {
                         className="btn-primary text-sm relative z-30"
                       >
                         <Wallet className="w-4 h-4" />
-                        {commonT("connectWallet")}
+                        {commonT("connectWallet") || "Connect Wallet"}
                       </button>
                     )}
                   </div>
@@ -257,41 +226,69 @@ export default function StakingPage() {
           </motion.div>
         )}
 
-        {/* Staking Pools */}
+        {/* Single Staking Pool Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
           <div className="flex items-center justify-between mb-4">
-            <h2>{stakingT("availablePools") || "Available Pools"}</h2>
-            <span className="text-sm text-muted-foreground">
-              {vaults.filter(v => v.isActive).length} {stakingT("active") || "active"}
-            </span>
+            <h2>{stakingT("availablePools") || "CVT Staking Pool"}</h2>
+            <span className="text-sm text-muted-foreground">1 {stakingT("active") || "active"}</span>
           </div>
 
-          {vaults.length === 0 ? (
-            <div className="card-vault p-12 text-center">
-              <Coins className="w-10 h-10 mx-auto mb-4 text-muted-foreground/30" />
-              <p className="font-medium mb-2">{stakingT("noPools") || "No pools available yet"}</p>
-              <p className="text-sm text-muted-foreground">
-                {stakingT("noPoolsDesc") || "New staking pools will be added soon."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {vaults
-                .filter(v => v.isActive)
-                .map((vault, index) => (
-                  <StakingVaultCard
-                    key={vault.vaultAddress}
-                    vault={vault}
-                    userSupplied={getUserSupplied(vault.vaultId)}
-                    index={index}
-                  />
-                ))}
-            </div>
-          )}
+          <Link href="/staking/cvt">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`card-vault group ${hasPosition ? 'border-primary/30' : ''}`}
+            >
+              <div className="p-5">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="token-icon-lg bg-primary/20 text-primary font-bold">
+                      CVT
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                          Stake CVT → Earn {symbol}
+                        </h3>
+                        {hasPosition && (
+                          <span className="badge-success text-[10px]">{stakingT("active") || "Active"}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Earn {symbol} rewards from protocol fees
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 text-center md:text-right">
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase mb-1">Total Staked</div>
+                      <div className="text-lg font-bold text-foreground">{formatNumber(totalStakedAmount)} CVT</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase mb-1">Reward Token</div>
+                      <div className="text-lg font-bold text-success">{symbol}</div>
+                    </div>
+                    {hasPosition && (
+                      <div className="hidden md:block">
+                        <div className="text-xs text-muted-foreground uppercase mb-1">{stakingT("yourStake") || "Your Stake"}</div>
+                        <div className="text-lg font-bold text-primary">{formatNumber(userStakedAmount)} CVT</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <button className="btn-primary whitespace-nowrap">
+                    <ArrowUpRight className="w-4 h-4" />
+                    {hasPosition ? (stakingT("manage") || 'Manage') : (stakingT("stake") || 'Stake')}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </Link>
         </motion.div>
 
         {/* Info Section */}
@@ -303,9 +300,9 @@ export default function StakingPage() {
         >
           <div className="card-vault p-5">
             <TrendingUp className="w-6 h-6 text-primary mb-3" />
-            <h4 className="font-semibold mb-2">{stakingT("earnYield") || "Earn Yield"}</h4>
+            <h4 className="font-semibold mb-2">Earn Protocol Fees</h4>
             <p className="text-sm text-muted-foreground">
-              {stakingT("earnYieldDesc") || "Supply assets to earn interest from borrowers."}
+              Stake CVT tokens to receive a share of protocol borrowing fees.
             </p>
           </div>
 
@@ -313,7 +310,7 @@ export default function StakingPage() {
             <Shield className="w-6 h-6 text-accent mb-3" />
             <h4 className="font-semibold mb-2">{stakingT("collateralized") || "Collateralized"}</h4>
             <p className="text-sm text-muted-foreground">
-              {stakingT("collateralizedDesc") || "All loans are over-collateralized and liquidatable."}
+              {stakingT("collateralizedDesc") || "Your staked CVT backs protocol liquidity."}
             </p>
           </div>
 
