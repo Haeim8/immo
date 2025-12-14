@@ -378,6 +378,97 @@ export const READER_ABI = [
   },
 ] as const;
 
+// Staking ABI (CVTStaking.sol)
+export const STAKING_ABI = [
+  // stake(uint256 amount, uint256 lockDuration)
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'amount', type: 'uint256' },
+      { internalType: 'uint256', name: 'lockDuration', type: 'uint256' },
+    ],
+    name: 'stake',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  // unstake()
+  {
+    inputs: [],
+    name: 'unstake',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  // claimRewards()
+  {
+    inputs: [],
+    name: 'claimRewards',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  // getStakePosition(address user)
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'getStakePosition',
+    outputs: [
+      {
+        components: [
+          { internalType: 'uint256', name: 'amount', type: 'uint256' },
+          { internalType: 'uint256', name: 'lockEndTime', type: 'uint256' },
+          { internalType: 'uint256', name: 'rewardIndexSnapshot', type: 'uint256' },
+          { internalType: 'uint256', name: 'pendingRewards', type: 'uint256' },
+        ],
+        internalType: 'struct CVTStaking.StakePosition',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // getPendingRewards(address user)
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'getPendingRewards',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // isLockExpired(address user)
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'isLockExpired',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // totalStaked
+  {
+    inputs: [],
+    name: 'totalStaked',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // cvtToken
+  {
+    inputs: [],
+    name: 'cvtToken',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // vault
+  {
+    inputs: [],
+    name: 'vault',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
+
 // ERC20 ABI
 export const ERC20_ABI = [
   {

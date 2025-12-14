@@ -10,10 +10,15 @@ import {
 import { useAccount, useBalance } from "wagmi";
 import Image from "next/image";
 import Link from "next/link";
-import { formatUnits } from "viem";
+import { formatUnits, parseUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
+import { useStakeCVT, useUnstakeCVT, useClaimStakingRewards, useApproveToken } from "@/lib/evm/write-hooks.js";
+import { STAKING_ADDRESS } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTranslations } from "@/components/providers/IntlProvider";
+import { useToast } from "@/components/ui/toast-notification";
+import { useReadContract } from "wagmi";
+import { STAKING_ABI } from "@/lib/evm/abis";
 
 const tokenLogos: Record<string, string> = {
   USDC: "/usc.png",
@@ -163,7 +168,42 @@ export default function StakingDetailPage() {
     : 0;
   const [amount, setAmount] = useState('');
   const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
-  const [txError, setTxError] = useState<string | null>(null);
+  const [pendingApprove, setPendingApprove] = useState(false);
+  const { showToast } = useToast();
+
+  // Staking hooks
+  const stakingAddress = STAKING_ADDRESS as `0x${string}`;
+  const { stake, isPending: isStakePending, error: stakeError, isSuccess: stakeSuccess } = useStakeCVT(stakingAddress);
+  const { unstake, isPending: isUnstakePending, error: unstakeError, isSuccess: unstakeSuccess } = useUnstakeCVT(stakingAddress);
+  const { claimRewards, isPending: isClaimPending, error: claimError, isSuccess: claimSuccess } = useClaimStakingRewards(stakingAddress);
+  const { approve, isPending: isApprovePending, error: approveError, isSuccess: approveSuccess } = useApproveToken(vault?.cvtTokenAddress);
+
+  // Read staking position from contract
+  const { data: stakePosition } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'getStakePosition',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  // Read pending rewards
+  const { data: pendingRewardsData } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'getPendingRewards',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  // Read if lock expired
+  const { data: lockExpired } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'isLockExpired',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
 
   useEffect(() => {
     if (!vaultId || loadingVaults) return;
@@ -174,9 +214,38 @@ export default function StakingDetailPage() {
     setVault(found || null);
   }, [vaults, loadingVaults, vaultId]);
 
+  // Toast pour erreurs
+  useEffect(() => {
+    if (stakeError) showToast({ type: 'error', title: 'Erreur Stake', message: stakeError.message?.slice(0, 100) });
+    if (unstakeError) showToast({ type: 'error', title: 'Erreur Unstake', message: unstakeError.message?.slice(0, 100) });
+    if (claimError) showToast({ type: 'error', title: 'Erreur Claim', message: claimError.message?.slice(0, 100) });
+    if (approveError) showToast({ type: 'error', title: 'Erreur Approve', message: approveError.message?.slice(0, 100) });
+  }, [stakeError, unstakeError, claimError, approveError, showToast]);
+
+  // Toast pour succès
+  useEffect(() => {
+    if (stakeSuccess) showToast({ type: 'success', title: 'Stake réussi!' });
+    if (unstakeSuccess) showToast({ type: 'success', title: 'Unstake réussi!' });
+    if (claimSuccess) showToast({ type: 'success', title: 'Rewards réclamés!' });
+  }, [stakeSuccess, unstakeSuccess, claimSuccess, showToast]);
+
+  // Quand approve réussit, lancer le stake
+  useEffect(() => {
+    if (approveSuccess && pendingApprove) {
+      const numericAmount = parseFloat(amount);
+      if (numericAmount > 0) {
+        stake(amount, 0); // lockDuration = 0 pour l'instant
+      }
+      setPendingApprove(false);
+    }
+  }, [approveSuccess, pendingApprove, amount, stake]);
+
   const userPosition = positions.find(p => p.vaultId.toString() === vaultId);
-  const userStaked = userPosition ? parseFloat(userPosition.supplied) : 0;
-  const userRewards = userPosition ? parseFloat(userPosition.interestPending) : 0;
+
+  // Staking position réelle depuis le contrat
+  const userStaked = stakePosition ? parseFloat(formatUnits(stakePosition.amount, 18)) : 0;
+  const userRewards = pendingRewardsData ? parseFloat(formatUnits(pendingRewardsData, 18)) : 0;
+  const canUnstake = lockExpired === true;
 
   if (loadingVaults) {
     return (
@@ -228,26 +297,41 @@ export default function StakingDetailPage() {
     }
   };
 
+  const actionLoading = isStakePending || isUnstakePending || isClaimPending || isApprovePending;
+
   const handleStakeAction = () => {
-    setTxError(null);
+    if (!vault) return;
     const numericAmount = parseFloat(amount);
     if (!numericAmount || numericAmount <= 0) {
-      setTxError("Montant invalide");
+      showToast({ type: 'error', title: 'Montant invalide' });
       return;
     }
 
-    if (mode === 'stake' && numericAmount > cvtWalletBalance) {
-      setTxError(`Solde insuffisant. Vous avez ${formatNumber(cvtWalletBalance)} CVT`);
+    if (mode === 'stake') {
+      if (numericAmount > cvtWalletBalance) {
+        showToast({ type: 'error', title: 'Solde CVT insuffisant', message: `Vous avez ${formatNumber(cvtWalletBalance)} CVT` });
+        return;
+      }
+      // Approve puis stake
+      const amountBN = parseUnits(amount, 18);
+      setPendingApprove(true);
+      approve(stakingAddress, amountBN);
+    } else {
+      // Unstake - pas besoin de montant, ça retire tout
+      if (!canUnstake) {
+        showToast({ type: 'error', title: 'Lock non expiré', message: 'Attendez la fin du lock pour unstake' });
+        return;
+      }
+      unstake();
+    }
+  };
+
+  const handleClaimRewards = () => {
+    if (userRewards <= 0) {
+      showToast({ type: 'error', title: 'Pas de rewards', message: 'Aucun reward à réclamer' });
       return;
     }
-
-    if (mode === 'unstake' && numericAmount > userStaked) {
-      setTxError(`Vous n'avez que ${formatNumber(userStaked)} CVT en stake`);
-      return;
-    }
-
-    console.log(`${mode} ${amount} CVT`);
-    // TODO: Call actual stake/unstake contract function
+    claimRewards();
   };
 
   const estimatedYearlyRewards = amount ? (parseFloat(amount) || 0) * vault.supplyRate / 100 : 0;
@@ -605,8 +689,20 @@ export default function StakingDetailPage() {
                         }
                       </button>
 
-                      {txError && (
-                        <p className="text-sm text-destructive mt-2">{txError}</p>
+                      {/* Claim Rewards Button */}
+                      {userRewards > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClaimRewards}
+                          disabled={actionLoading}
+                          className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer mt-2 ${
+                            actionLoading
+                              ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                              : 'bg-success text-white hover:bg-success/90'
+                          }`}
+                        >
+                          {actionLoading ? 'Transaction...' : `Claim ${formatNumber(userRewards)} Rewards`}
+                        </button>
                       )}
 
                       {/* Pool Info */}

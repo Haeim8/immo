@@ -446,7 +446,10 @@ export default function VaultPage() {
   // Check if user has sufficient balance for lend/repay operations
   const numericAmount = parseFloat(amount) || 0;
   const hasInsufficientBalance = mode === 'lend' && numericAmount > walletBalance;
+  const userSuppliedAmount = userPosition ? parseFloat(userPosition.supplied) : 0;
+  const hasInsufficientPosition = numericAmount > userSuppliedAmount;
   const isActionDisabled = !vault || !isAmountValid || actionLoading || hasInsufficientBalance;
+  const isWithdrawDisabled = !vault || !isAmountValid || actionLoading || hasInsufficientPosition;
 
   const handleAction = () => {
     if (!vault) return;
@@ -975,19 +978,19 @@ export default function VaultPage() {
                       {mode === 'lend' && userPosition && parseFloat(userPosition.supplied) > 0 && (
                         <button
                           type="button"
-                          disabled={isActionDisabled}
+                          disabled={isWithdrawDisabled}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             handleWithdraw();
                           }}
                           className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 mt-2 ${
-                            isActionDisabled
+                            isWithdrawDisabled
                               ? 'bg-secondary text-muted-foreground cursor-not-allowed'
                               : 'bg-accent text-white hover:bg-accent/90'
                           }`}
                         >
-                          {actionLoading ? 'Transaction...' : 'Withdraw'}
+                          {actionLoading ? 'Transaction...' : `Withdraw (Max: ${formatNumber(userSuppliedAmount)})`}
                         </button>
                       )}
 
