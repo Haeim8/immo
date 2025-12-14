@@ -1,18 +1,18 @@
 // Contract addresses sur Base Sepolia (alignés avec lib/evm/constants.ts)
-// Mise à jour : 2025-12-14 (global CVT deployment)
+// Mise à jour : 2025-12-14
 export const CONTRACTS = {
   network: "baseSepolia",
   chainId: 84532,
   deployer: "0x222fD66bbfc6808e123aB51f5FB21644731dFDE2",
-  usdc: "0x45f591C36B3506a881eD54638a9456607c2Eed84", // USDC testnet
-  protocol: "0x471aB7d398dfD0958Cc8be0fFF1B4B9DCe5658e7",
-  feeCollector: "0xE443F7Dd56961deBE0a99eCcD1f065790Efe44EE",
-  priceOracle: "0xB1708B155724b3CCa64E19467f339727F0cB3607",
-  collateralManager: "0x7546F4EcdcA6b7DA5873f8812D11f1a0157A5c6C",
-  vaultImplementation: "0x08279b996C6dc448Cc161089DEaC16846035b77d",
-  factory: "0x749478BEF2FF373eb689B97E0C1F714eeEe1e5B8",
-  reader: "0xF65699EF3473A002645d19A44cC39E6e1D94168B",
-  cvtToken: "0x966F3b781A8a1A523bBBD5081fa784e72155A76e", // Global CVT token
+  usdc: "0x45f591C36B3506a881eD54638a9456607c2Eed84",
+  protocol: "0x6b6F54EF45A2c2bcbED9B7070E37082b78FADE57",
+  feeCollector: "0x0111a3e4A9c25F677C1a49B60664b5cDbbD75B63",
+  priceOracle: "0xd79d53a623660b598b1349a090Ea364A12Fb51E4",
+  collateralManager: "0x450e0CDF04521260857301225Ea6Ec812E51C0b7",
+  vaultImplementation: "0x2da321bB07B1eCB7FA6FB81c376375627D194821",
+  factory: "0x0B5acAD1fb27FbF87C9e307dE15FC840011d0C51",
+  reader: "0x595294dF1Ac2a60E954CBE421d1628077865bc07",
+  cvtToken: "0x4A539C79C9cB592F545Bb5b09296929a46898dfc",
   // staking: fetched dynamically from vault.stakingContract()
 } as const;
 
