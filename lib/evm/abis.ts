@@ -229,6 +229,13 @@ export const VAULT_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
+  {
+    inputs: [],
+    name: 'stakingContract',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const;
 
 // Reader ABI (CantorVaultReader.sol) - Aggregates data for frontend

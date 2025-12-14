@@ -33,6 +33,8 @@ describe("CantorFi Protocol", function () {
     liquidationBonus: 500 // 5%
   };
 
+  let cvt;
+
   beforeEach(async function () {
     this.timeout(120000); // 2 minutes for deployment
 
@@ -59,6 +61,11 @@ describe("CantorFi Protocol", function () {
     await weth.mint(user1.address, WETH_INITIAL_SUPPLY);
     await weth.mint(user2.address, WETH_INITIAL_SUPPLY);
     await weth.mint(user3.address, WETH_INITIAL_SUPPLY);
+
+    // Deploy global CVT token
+    const CVT = await ethers.getContractFactory("CVT");
+    cvt = await CVT.deploy(admin.address);
+    await cvt.waitForDeployment();
 
     // Deploy CantorFiProtocol via UUPS proxy
     const CantorFiProtocol = await ethers.getContractFactory("CantorFiProtocol");
@@ -93,12 +100,16 @@ describe("CantorFi Protocol", function () {
       [
         await vaultImplementation.getAddress(),
         await protocol.getAddress(),
+        await cvt.getAddress(),
         admin.address,
         treasury.address
       ],
       { kind: "uups", unsafeAllow: ["delegatecall"] }
     );
     await factory.waitForDeployment();
+
+    // Grant factory ADMIN_ROLE on CVT so it can addMinter for new vaults
+    await cvt.connect(admin).grantRole(await cvt.ADMIN_ROLE(), await factory.getAddress());
 
     // Grant FACTORY_ROLE to factory in protocol
     await protocol.connect(admin).addFactory(await factory.getAddress());

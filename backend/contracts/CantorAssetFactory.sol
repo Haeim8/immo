@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./CantorVault.sol";
 import "./CantorFiProtocol.sol";
+import "./CVT.sol";
 import "./interfaces/IFeeCollector.sol";
 
 /**
@@ -36,6 +37,7 @@ contract CantorAssetFactory is
     address public vaultImplementation;
     CantorFiProtocol public protocol;
     address public treasury;
+    CVT public cvtToken;
 
     // ============== STORAGE GAP ==============
 
@@ -57,6 +59,7 @@ contract CantorAssetFactory is
 
     event VaultImplementationUpdated(address indexed oldImpl, address indexed newImpl);
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
+    event CVTUpdated(address indexed oldCVT, address indexed newCVT);
 
     // ============== ERRORS ==============
 
@@ -88,11 +91,13 @@ contract CantorAssetFactory is
     function initialize(
         address _vaultImplementation,
         address _protocol,
+        address _cvtToken,
         address _admin,
         address _treasury
     ) external initializer {
         if (_vaultImplementation == address(0)) revert InvalidAddress();
         if (_protocol == address(0)) revert InvalidAddress();
+        if (_cvtToken == address(0)) revert InvalidAddress();
         if (_admin == address(0)) revert InvalidAddress();
         if (_treasury == address(0)) revert InvalidAddress();
 
@@ -107,6 +112,7 @@ contract CantorAssetFactory is
 
         vaultImplementation = _vaultImplementation;
         protocol = CantorFiProtocol(_protocol);
+        cvtToken = CVT(_cvtToken);
         treasury = _treasury;
     }
 
@@ -152,10 +158,11 @@ contract CantorAssetFactory is
 
         vaultId = protocol.vaultCount();
 
-        // Initialize vault with the token chosen by creator
+        // Initialize vault with the token chosen by creator and global CVT
         CantorVault(vaultAddress).initialize(
             address(protocol),
             params.token,
+            address(cvtToken),
             msg.sender, // vault admin = creator
             treasury,
             feeCollector,
@@ -169,6 +176,9 @@ contract CantorAssetFactory is
             performanceFee,
             borrowFeeRate
         );
+
+        // Grant minter role to vault so it can mint/burn CVT
+        cvtToken.addMinter(vaultAddress);
 
         // Register in protocol
         protocol.registerVault(vaultAddress);
@@ -204,6 +214,19 @@ contract CantorAssetFactory is
         treasury = newTreasury;
 
         emit TreasuryUpdated(oldTreasury, newTreasury);
+    }
+
+    /**
+     * @notice Update the global CVT token address
+     * @param newCVT New CVT address
+     */
+    function setCVT(address newCVT) external onlyAdmin {
+        if (newCVT == address(0)) revert InvalidAddress();
+
+        address oldCVT = address(cvtToken);
+        cvtToken = CVT(newCVT);
+
+        emit CVTUpdated(oldCVT, newCVT);
     }
 
     /**

@@ -29,9 +29,43 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { CONTRACTS, STAKING_ABI } from "@/lib/contracts"
+import { CONTRACTS, STAKING_ABI, VAULT_ABI } from "@/lib/contracts"
 
-const STAKING_ADDRESS = CONTRACTS.staking
+// Reader ABI for getting vaults
+const READER_ABI = [
+  {
+    inputs: [
+      { internalType: "uint256", name: "offset", type: "uint256" },
+      { internalType: "uint256", name: "limit", type: "uint256" },
+    ],
+    name: "getVaults",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint256", name: "vaultId", type: "uint256" },
+          { internalType: "address", name: "vaultAddress", type: "address" },
+          { internalType: "address", name: "tokenAddress", type: "address" },
+          { internalType: "string", name: "tokenSymbol", type: "string" },
+          { internalType: "uint8", name: "tokenDecimals", type: "uint8" },
+          { internalType: "uint256", name: "totalSupplied", type: "uint256" },
+          { internalType: "uint256", name: "totalBorrowed", type: "uint256" },
+          { internalType: "uint256", name: "availableLiquidity", type: "uint256" },
+          { internalType: "uint256", name: "utilizationRate", type: "uint256" },
+          { internalType: "uint256", name: "borrowRate", type: "uint256" },
+          { internalType: "uint256", name: "supplyRate", type: "uint256" },
+          { internalType: "uint256", name: "maxLiquidity", type: "uint256" },
+          { internalType: "bool", name: "isActive", type: "bool" },
+          { internalType: "address", name: "cvtTokenAddress", type: "address" },
+        ],
+        internalType: "struct CantorReader.VaultInfo[]",
+        name: "",
+        type: "tuple[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const
 
 function formatAmount(value: string | number | undefined): string {
   if (!value) return "0"
@@ -49,76 +83,91 @@ export default function StakingPage() {
   const { isConnected } = useAccount()
   const [newBorrowRatio, setNewBorrowRatio] = useState("")
 
+  // 1. Get vaults from reader
+  const { data: vaultsData, isLoading: isLoadingVaults } = useReadContract({
+    address: CONTRACTS.reader as `0x${string}`,
+    abi: READER_ABI,
+    functionName: "getVaults",
+    args: [BigInt(0), BigInt(100)],
+    query: { enabled: isConnected },
+  })
+
+  // 2. Get first vault address
+  const firstVault = (vaultsData as any[])?.[0]
+  const vaultAddress = firstVault?.vaultAddress as `0x${string}` | undefined
+
+  // 3. Get staking address from vault
+  const { data: stakingAddressData } = useReadContract({
+    address: vaultAddress,
+    abi: VAULT_ABI,
+    functionName: "stakingContract",
+    query: { enabled: !!vaultAddress },
+  })
+
+  const STAKING_ADDRESS = stakingAddressData as `0x${string}` | undefined
+  const hasStaking = STAKING_ADDRESS && STAKING_ADDRESS !== '0x0000000000000000000000000000000000000000'
+
   // Read staking stats
   const { data: totalStaked, isLoading: isLoadingStaked, refetch: refetchStaked } = useReadContract({
-    address: STAKING_ADDRESS as `0x${string}`,
+    address: STAKING_ADDRESS,
     abi: STAKING_ABI,
     functionName: "totalStaked",
     query: {
-      enabled: isConnected && !!STAKING_ADDRESS,
+      enabled: isConnected && !!hasStaking,
     },
   })
 
   const { data: maxBorrowRatio, isLoading: isLoadingRatio, refetch: refetchRatio } = useReadContract({
-    address: STAKING_ADDRESS as `0x${string}`,
+    address: STAKING_ADDRESS,
     abi: STAKING_ABI,
     functionName: "maxProtocolBorrowRatio",
     query: {
-      enabled: isConnected && !!STAKING_ADDRESS,
+      enabled: isConnected && !!hasStaking,
     },
   })
 
   const { data: maxProtocolBorrow, isLoading: isLoadingMaxBorrow, refetch: refetchMaxBorrow } = useReadContract({
-    address: STAKING_ADDRESS as `0x${string}`,
+    address: STAKING_ADDRESS,
     abi: STAKING_ABI,
     functionName: "getMaxProtocolBorrow",
     query: {
-      enabled: isConnected && !!STAKING_ADDRESS,
+      enabled: isConnected && !!hasStaking,
     },
   })
 
   const { data: stakersCount, isLoading: isLoadingStakers, refetch: refetchStakers } = useReadContract({
-    address: STAKING_ADDRESS as `0x${string}`,
+    address: STAKING_ADDRESS,
     abi: STAKING_ABI,
     functionName: "getStakersCount",
     query: {
-      enabled: isConnected && !!STAKING_ADDRESS,
+      enabled: isConnected && !!hasStaking,
     },
   })
 
-  const { data: rewardIndex, isLoading: isLoadingRewards } = useReadContract({
-    address: STAKING_ADDRESS as `0x${string}`,
+  const { data: rewardIndex } = useReadContract({
+    address: STAKING_ADDRESS,
     abi: STAKING_ABI,
     functionName: "rewardIndex",
     query: {
-      enabled: isConnected && !!STAKING_ADDRESS,
+      enabled: isConnected && !!hasStaking,
     },
   })
 
-  const { data: isPaused, isLoading: isLoadingPaused, refetch: refetchPaused } = useReadContract({
-    address: STAKING_ADDRESS as `0x${string}`,
+  const { data: isPaused, refetch: refetchPaused } = useReadContract({
+    address: STAKING_ADDRESS,
     abi: STAKING_ABI,
     functionName: "paused",
     query: {
-      enabled: isConnected && !!STAKING_ADDRESS,
-    },
-  })
-
-  const { data: vaultAddress } = useReadContract({
-    address: STAKING_ADDRESS as `0x${string}`,
-    abi: STAKING_ABI,
-    functionName: "vault",
-    query: {
-      enabled: isConnected && !!STAKING_ADDRESS,
+      enabled: isConnected && !!hasStaking,
     },
   })
 
   const { data: cvtTokenAddress } = useReadContract({
-    address: STAKING_ADDRESS as `0x${string}`,
+    address: STAKING_ADDRESS,
     abi: STAKING_ABI,
     functionName: "cvtToken",
     query: {
-      enabled: isConnected && !!STAKING_ADDRESS,
+      enabled: isConnected && !!hasStaking,
     },
   })
 
@@ -135,38 +184,38 @@ export default function StakingPage() {
   }
 
   const handlePause = () => {
-    if (!STAKING_ADDRESS) return
+    if (!hasStaking || !STAKING_ADDRESS) return
     reset()
     writeContract({
-      address: STAKING_ADDRESS as `0x${string}`,
+      address: STAKING_ADDRESS,
       abi: STAKING_ABI,
       functionName: "pause",
     })
   }
 
   const handleUnpause = () => {
-    if (!STAKING_ADDRESS) return
+    if (!hasStaking || !STAKING_ADDRESS) return
     reset()
     writeContract({
-      address: STAKING_ADDRESS as `0x${string}`,
+      address: STAKING_ADDRESS,
       abi: STAKING_ABI,
       functionName: "unpause",
     })
   }
 
   const handleUpdateBorrowRatio = () => {
-    if (!newBorrowRatio || !STAKING_ADDRESS) return
+    if (!newBorrowRatio || !hasStaking || !STAKING_ADDRESS) return
     // Convert percentage to basis points (1% = 100 bps)
     const bps = BigInt(Math.round(Number(newBorrowRatio) * 100))
     writeContract({
-      address: STAKING_ADDRESS as `0x${string}`,
+      address: STAKING_ADDRESS,
       abi: STAKING_ABI,
       functionName: "setMaxProtocolBorrowRatio",
       args: [bps],
     })
   }
 
-  const isLoading = isLoadingStaked || isLoadingRatio || isLoadingMaxBorrow || isLoadingStakers
+  const isLoading = isLoadingVaults || isLoadingStaked || isLoadingRatio || isLoadingMaxBorrow || isLoadingStakers
 
   // Format values
   const totalStakedFormatted = totalStaked ? formatUnits(totalStaked as bigint, 6) : "0"
@@ -175,7 +224,7 @@ export default function StakingPage() {
   const stakersCountNum = stakersCount ? Number(stakersCount) : 0
   const rewardIndexFormatted = rewardIndex ? formatUnits(rewardIndex as bigint, 18) : "0"
 
-  if (!STAKING_ADDRESS) {
+  if (!hasStaking && !isLoadingVaults) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
         <div className="flex items-center justify-between">
@@ -190,9 +239,11 @@ export default function StakingPage() {
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
             <IconInfoCircle className="h-12 w-12 text-amber-500 mb-4" />
-            <h3 className="text-lg font-medium">Staking Contract Not Configured</h3>
+            <h3 className="text-lg font-medium">No Staking Contract Found</h3>
             <p className="text-muted-foreground text-sm mt-1 max-w-md">
-              The CVTStaking contract address is not set. Add <code className="bg-muted px-1 rounded">NEXT_PUBLIC_STAKING_ADDRESS</code> to your environment variables.
+              {vaultAddress
+                ? "No staking contract is deployed for this vault yet. Deploy a CVTStaking contract and link it to the vault."
+                : "No vaults found. Create a vault first, then deploy a staking contract."}
             </p>
           </CardContent>
         </Card>
@@ -416,17 +467,19 @@ export default function StakingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Staking Contract</span>
-                <a
-                  href={`https://sepolia.basescan.org/address/${STAKING_ADDRESS}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono text-xs text-primary hover:underline"
-                >
-                  {STAKING_ADDRESS.slice(0, 6)}...{STAKING_ADDRESS.slice(-4)}
-                </a>
-              </div>
+              {STAKING_ADDRESS && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Staking Contract</span>
+                  <a
+                    href={`https://sepolia.basescan.org/address/${STAKING_ADDRESS}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-xs text-primary hover:underline"
+                  >
+                    {STAKING_ADDRESS.slice(0, 6)}...{STAKING_ADDRESS.slice(-4)}
+                  </a>
+                </div>
+              )}
               {vaultAddress && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Linked Vault</span>

@@ -13,12 +13,11 @@ import Link from "next/link";
 import { formatUnits, parseUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
 import { useStakeCVT, useUnstakeCVT, useClaimStakingRewards, useApproveToken } from "@/lib/evm/write-hooks.js";
-import { STAKING_ADDRESS } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTranslations } from "@/components/providers/IntlProvider";
 import { useToast } from "@/components/ui/toast-notification";
 import { useReadContract } from "wagmi";
-import { STAKING_ABI } from "@/lib/evm/abis";
+import { STAKING_ABI, VAULT_ABI } from "@/lib/evm/abis";
 
 const tokenLogos: Record<string, string> = {
   USDC: "/usc.png",
@@ -147,11 +146,22 @@ export default function StakingDetailPage() {
   const vaultId = params?.id;
   const { address, isConnected } = useAccount();
   const { vaults, isLoading: loadingVaults } = useAllVaults();
-  const { positions } = useUserPositions(address);
+  useUserPositions(address); // Keep hook for potential refetch
   const stakingT = useTranslations("staking");
   const commonT = useTranslations("common");
 
   const [vault, setVault] = useState<VaultData | null>(null);
+
+  // Get staking address from vault
+  const { data: stakingAddressData } = useReadContract({
+    address: vault?.vaultAddress as `0x${string}`,
+    abi: VAULT_ABI,
+    functionName: 'stakingContract',
+    query: { enabled: !!vault?.vaultAddress },
+  });
+
+  const stakingAddress = stakingAddressData as `0x${string}` | undefined;
+  const hasStaking = stakingAddress && stakingAddress !== '0x0000000000000000000000000000000000000000';
 
   // Fetch CVT token balance from wallet (for staking)
   const { data: cvtBalance } = useBalance({
@@ -171,38 +181,38 @@ export default function StakingDetailPage() {
   const [pendingApprove, setPendingApprove] = useState(false);
   const { showToast } = useToast();
 
-  // Staking hooks
-  const stakingAddress = STAKING_ADDRESS as `0x${string}`;
-  const { stake, isPending: isStakePending, error: stakeError, isSuccess: stakeSuccess } = useStakeCVT(stakingAddress);
-  const { unstake, isPending: isUnstakePending, error: unstakeError, isSuccess: unstakeSuccess } = useUnstakeCVT(stakingAddress);
-  const { claimRewards, isPending: isClaimPending, error: claimError, isSuccess: claimSuccess } = useClaimStakingRewards(stakingAddress);
+  // Staking hooks (use stakingAddress if available, otherwise empty address)
+  const safeStakingAddress = (hasStaking ? stakingAddress : '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  const { stake, isPending: isStakePending, error: stakeError, isSuccess: stakeSuccess } = useStakeCVT(safeStakingAddress);
+  const { unstake, isPending: isUnstakePending, error: unstakeError, isSuccess: unstakeSuccess } = useUnstakeCVT(safeStakingAddress);
+  const { claimRewards, isPending: isClaimPending, error: claimError, isSuccess: claimSuccess } = useClaimStakingRewards(safeStakingAddress);
   const { approve, isPending: isApprovePending, error: approveError, isSuccess: approveSuccess } = useApproveToken(vault?.cvtTokenAddress);
 
   // Read staking position from contract
   const { data: stakePosition } = useReadContract({
-    address: stakingAddress,
+    address: safeStakingAddress,
     abi: STAKING_ABI,
     functionName: 'getStakePosition',
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!hasStaking },
   });
 
   // Read pending rewards
   const { data: pendingRewardsData } = useReadContract({
-    address: stakingAddress,
+    address: safeStakingAddress,
     abi: STAKING_ABI,
     functionName: 'getPendingRewards',
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!hasStaking },
   });
 
   // Read if lock expired
   const { data: lockExpired } = useReadContract({
-    address: stakingAddress,
+    address: safeStakingAddress,
     abi: STAKING_ABI,
     functionName: 'isLockExpired',
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!hasStaking },
   });
 
   useEffect(() => {
@@ -239,8 +249,6 @@ export default function StakingDetailPage() {
       setPendingApprove(false);
     }
   }, [approveSuccess, pendingApprove, amount, stake]);
-
-  const userPosition = positions.find(p => p.vaultId.toString() === vaultId);
 
   // Staking position réelle depuis le contrat
   const userStaked = stakePosition ? parseFloat(formatUnits(stakePosition.amount, 18)) : 0;

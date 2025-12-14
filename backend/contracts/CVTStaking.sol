@@ -96,10 +96,14 @@ contract CVTStaking is
     }
 
     function initialize(
+        address _cvtToken,
+        address _underlyingToken,
         address _vault,
         address _admin,
         uint256 _maxProtocolBorrowRatio
     ) external initializer {
+        if (_cvtToken == address(0)) revert InvalidAddress();
+        if (_underlyingToken == address(0)) revert InvalidAddress();
         if (_vault == address(0)) revert InvalidAddress();
         if (_admin == address(0)) revert InvalidAddress();
         if (_maxProtocolBorrowRatio > 10000) revert InvalidAmount();
@@ -112,9 +116,9 @@ contract CVTStaking is
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ADMIN_ROLE, _admin);
 
+        cvtToken = IERC20(_cvtToken);
+        underlyingToken = IERC20(_underlyingToken);
         vault = ICantorVault(_vault);
-        cvtToken = IERC20(vault.cvtToken());
-        underlyingToken = IERC20(vault.token());
         maxProtocolBorrowRatio = _maxProtocolBorrowRatio;
     }
 

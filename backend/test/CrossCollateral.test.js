@@ -35,6 +35,8 @@ describe("Cross-Collateral System", function () {
     liquidationBonus: 500 // 5%
   };
 
+  let cvt;
+
   beforeEach(async function () {
     this.timeout(120000);
 
@@ -62,6 +64,11 @@ describe("Cross-Collateral System", function () {
 
     wethPriceFeed = await MockPriceFeed.deploy(WETH_PRICE, 8, "ETH / USD");
     await wethPriceFeed.waitForDeployment();
+
+    // Deploy global CVT token
+    const CVT = await ethers.getContractFactory("CVT");
+    cvt = await CVT.deploy(admin.address);
+    await cvt.waitForDeployment();
 
     // Deploy CantorFiProtocol
     const CantorFiProtocol = await ethers.getContractFactory("CantorFiProtocol");
@@ -124,12 +131,16 @@ describe("Cross-Collateral System", function () {
       [
         await vaultImplementation.getAddress(),
         await protocol.getAddress(),
+        await cvt.getAddress(),
         admin.address,
         treasury.address
       ],
       { kind: "uups", unsafeAllow: ["delegatecall"] }
     );
     await factory.waitForDeployment();
+
+    // Grant factory ADMIN_ROLE on CVT
+    await cvt.connect(admin).grantRole(await cvt.ADMIN_ROLE(), await factory.getAddress());
 
     // Grant roles
     await protocol.connect(admin).addFactory(await factory.getAddress());

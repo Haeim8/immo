@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Loader2, ArrowLeft, TrendingUp, Wallet,
+  Loader2, ArrowLeft, Wallet,
   ExternalLink, Coins, Lock, Shield, Clock, Percent
 } from "lucide-react";
 import { useAccount, useBalance, useReadContract } from "wagmi";
@@ -12,18 +12,11 @@ import Link from "next/link";
 import { formatUnits, parseUnits } from "viem";
 import { BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
 import { useStakeCVT, useUnstakeCVT, useClaimStakingRewards, useApproveToken } from "@/lib/evm/write-hooks.js";
-import { STAKING_ADDRESS, CVT_TOKEN_ADDRESS } from "@/lib/evm/constants";
+import { CVT_TOKEN_ADDRESS, READER_ADDRESS } from "@/lib/evm/constants";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTranslations } from "@/components/providers/IntlProvider";
 import { useToast } from "@/components/ui/toast-notification";
-import { STAKING_ABI, VAULT_ABI, ERC20_ABI } from "@/lib/evm/abis";
-
-function formatCurrency(value: string | number): string {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (num >= 1000000) return `$${(num / 1000000).toFixed(2)}M`;
-  if (num >= 1000) return `$${(num / 1000).toFixed(1)}K`;
-  return `$${num.toFixed(2)}`;
-}
+import { STAKING_ABI, VAULT_ABI, ERC20_ABI, READER_ABI } from "@/lib/evm/abis";
 
 function formatNumber(value: string | number): string {
   const num = typeof value === 'string' ? parseFloat(value) : value;
@@ -111,30 +104,47 @@ export default function CVTStakingPage() {
   const commonT = useTranslations("common");
   const { showToast } = useToast();
 
-  const stakingAddress = STAKING_ADDRESS as `0x${string}`;
+  // Get all vaults from reader
+  const { data: vaultsData, isLoading: loadingVaults } = useReadContract({
+    address: READER_ADDRESS as `0x${string}`,
+    abi: READER_ABI,
+    functionName: 'getVaults',
+    args: [BigInt(0), BigInt(100)],
+  });
+
+  // Get first vault's staking contract
+  const firstVault = (vaultsData as any[])?.[0];
+  const vaultAddress = firstVault?.vaultAddress as `0x${string}` | undefined;
+
+  // Read staking address from vault
+  const { data: stakingAddressData } = useReadContract({
+    address: vaultAddress,
+    abi: VAULT_ABI,
+    functionName: 'stakingContract',
+    query: { enabled: !!vaultAddress },
+  });
+
+  const stakingAddress = stakingAddressData as `0x${string}` | undefined;
+  const hasStaking = stakingAddress && stakingAddress !== '0x0000000000000000000000000000000000000000';
 
   // Read staking contract data
   const { data: totalStaked, isLoading: loadingTotalStaked } = useReadContract({
     address: stakingAddress,
     abi: STAKING_ABI,
     functionName: 'totalStaked',
-  });
-
-  const { data: vaultAddress } = useReadContract({
-    address: stakingAddress,
-    abi: STAKING_ABI,
-    functionName: 'vault',
+    query: { enabled: !!hasStaking },
   });
 
   const { data: cvtTokenAddress } = useReadContract({
     address: stakingAddress,
     abi: STAKING_ABI,
     functionName: 'cvtToken',
+    query: { enabled: !!hasStaking },
   });
 
   // Read vault info (to get underlying token)
   const { data: underlyingToken } = useReadContract({
-    address: vaultAddress as `0x${string}`,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: 'token',
     query: { enabled: !!vaultAddress },
@@ -154,7 +164,7 @@ export default function CVTStakingPage() {
     abi: STAKING_ABI,
     functionName: 'getStakePosition',
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!hasStaking },
   });
 
   // Read user's pending rewards
@@ -163,7 +173,7 @@ export default function CVTStakingPage() {
     abi: STAKING_ABI,
     functionName: 'getPendingRewards',
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!hasStaking },
   });
 
   // Read if lock expired
@@ -172,7 +182,7 @@ export default function CVTStakingPage() {
     abi: STAKING_ABI,
     functionName: 'isLockExpired',
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!hasStaking },
   });
 
   // Fetch CVT token balance from wallet
@@ -184,10 +194,11 @@ export default function CVTStakingPage() {
     },
   });
 
-  // Staking hooks
-  const { stake, isPending: isStakePending, error: stakeError, isSuccess: stakeSuccess } = useStakeCVT(stakingAddress);
-  const { unstake, isPending: isUnstakePending, error: unstakeError, isSuccess: unstakeSuccess } = useUnstakeCVT(stakingAddress);
-  const { claimRewards, isPending: isClaimPending, error: claimError, isSuccess: claimSuccess } = useClaimStakingRewards(stakingAddress);
+  // Staking hooks (use stakingAddress if available, otherwise empty address)
+  const safeStakingAddress = (hasStaking ? stakingAddress : '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  const { stake, isPending: isStakePending, error: stakeError, isSuccess: stakeSuccess } = useStakeCVT(safeStakingAddress);
+  const { unstake, isPending: isUnstakePending, error: unstakeError, isSuccess: unstakeSuccess } = useUnstakeCVT(safeStakingAddress);
+  const { claimRewards, isPending: isClaimPending, error: claimError, isSuccess: claimSuccess } = useClaimStakingRewards(safeStakingAddress);
   const { approve, isPending: isApprovePending, error: approveError, isSuccess: approveSuccess } = useApproveToken((cvtTokenAddress as `0x${string}`) || CVT_TOKEN_ADDRESS);
 
   const [amount, setAmount] = useState('');
@@ -228,7 +239,7 @@ export default function CVTStakingPage() {
     }
   }, [approveSuccess, pendingApprove, amount, stake]);
 
-  const isLoading = loadingTotalStaked;
+  const isLoading = loadingVaults || loadingTotalStaked;
 
   if (isLoading) {
     return (
@@ -236,6 +247,25 @@ export default function CVTStakingPage() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">{stakingT("loading") || "Loading staking..."}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No staking contract deployed yet
+  if (!hasStaking) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Coins className="w-12 h-12 mx-auto text-muted-foreground/30" />
+          <p className="text-lg font-semibold">No Staking Pool Available</p>
+          <p className="text-sm text-muted-foreground">
+            {vaultAddress ? "No staking contract deployed for this vault yet." : "No vaults found."}
+          </p>
+          <button onClick={() => router.push('/vaults')} className="btn-primary">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Vaults
+          </button>
         </div>
       </div>
     );

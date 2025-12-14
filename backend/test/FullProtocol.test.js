@@ -40,6 +40,8 @@ describe("CantorFi Full Protocol Tests", function () {
     earlyWithdrawalFee: 0
   };
 
+  let cvt;
+
   beforeEach(async function () {
     this.timeout(180000);
 
@@ -78,6 +80,11 @@ describe("CantorFi Full Protocol Tests", function () {
       }
     }
 
+    // Deploy global CVT token
+    const CVT = await ethers.getContractFactory("CVT");
+    cvt = await CVT.deploy(admin.address);
+    await cvt.waitForDeployment();
+
     // Deploy Protocol
     const CantorFiProtocol = await ethers.getContractFactory("CantorFiProtocol");
     protocol = await upgrades.deployProxy(
@@ -110,12 +117,16 @@ describe("CantorFi Full Protocol Tests", function () {
       [
         await vaultImplementation.getAddress(),
         await protocol.getAddress(),
+        await cvt.getAddress(),
         admin.address,
         treasury.address
       ],
       { kind: "uups", unsafeAllow: ["delegatecall"] }
     );
     await factory.waitForDeployment();
+
+    // Grant factory ADMIN_ROLE on CVT
+    await cvt.connect(admin).grantRole(await cvt.ADMIN_ROLE(), await factory.getAddress());
 
     await protocol.connect(admin).addFactory(await factory.getAddress());
     await feeCollector.connect(admin).addNotifier(await factory.getAddress());
@@ -157,12 +168,13 @@ describe("CantorFi Full Protocol Tests", function () {
     return { vault, vaultAddress, vaultId: parsedEvent.args.vaultId };
   }
 
-  // Helper: Deploy staking for a vault
+  // Helper: Deploy staking for a vault (using global CVT)
   async function deployStaking(vault, maxBorrowRatio = MAX_PROTOCOL_BORROW_RATIO) {
     const CVTStaking = await ethers.getContractFactory("CVTStaking");
+    const underlyingToken = await vault.token();
     const staking = await upgrades.deployProxy(
       CVTStaking,
-      [await vault.getAddress(), admin.address, maxBorrowRatio],
+      [await cvt.getAddress(), underlyingToken, await vault.getAddress(), admin.address, maxBorrowRatio],
       { kind: "uups" }
     );
     await staking.waitForDeployment();

@@ -18,6 +18,8 @@ describe("Admin Functions, Data Interface & Treasury Tests", function () {
     earlyWithdrawalFee: 0
   };
 
+  let cvt;
+
   beforeEach(async function () {
     this.timeout(180000);
 
@@ -36,6 +38,11 @@ describe("Admin Functions, Data Interface & Treasury Tests", function () {
       await usdc.mint(user.address, ethers.parseUnits("1000000", 6));
       await weth.mint(user.address, ethers.parseUnits("10000", 18));
     }
+
+    // Deploy global CVT token
+    const CVT = await ethers.getContractFactory("CVT");
+    cvt = await CVT.deploy(admin.address);
+    await cvt.waitForDeployment();
 
     // Deploy Protocol
     const CantorFiProtocol = await ethers.getContractFactory("CantorFiProtocol");
@@ -69,12 +76,16 @@ describe("Admin Functions, Data Interface & Treasury Tests", function () {
       [
         await vaultImplementation.getAddress(),
         await protocol.getAddress(),
+        await cvt.getAddress(),
         admin.address,
         treasury.address
       ],
       { kind: "uups", unsafeAllow: ["delegatecall"] }
     );
     await factory.waitForDeployment();
+
+    // Grant factory ADMIN_ROLE on CVT
+    await cvt.connect(admin).grantRole(await cvt.ADMIN_ROLE(), await factory.getAddress());
 
     await protocol.connect(admin).addFactory(await factory.getAddress());
     await feeCollector.connect(admin).addNotifier(await factory.getAddress());
@@ -381,11 +392,11 @@ describe("Admin Functions, Data Interface & Treasury Tests", function () {
     let staking;
 
     beforeEach(async function () {
-      // Deploy staking
+      // Deploy staking with global CVT
       const CVTStaking = await ethers.getContractFactory("CVTStaking");
       staking = await upgrades.deployProxy(
         CVTStaking,
-        [vaultAddress, admin.address, 6000],
+        [await cvt.getAddress(), await weth.getAddress(), vaultAddress, admin.address, 6000],
         { kind: "uups" }
       );
       await staking.waitForDeployment();

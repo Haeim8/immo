@@ -54,7 +54,18 @@ async function main() {
   }
 
   // ============================================
-  // 2. Deploy CantorFiProtocol
+  // 2. Deploy Global CVT Token
+  // ============================================
+  console.log("\n--- Deploying Global CVT Token ---");
+
+  const CVT = await ethers.getContractFactory("CVT");
+  const cvt = await CVT.deploy(deployer.address);
+  await cvt.waitForDeployment();
+  const cvtAddress = await cvt.getAddress();
+  console.log("CVT Token:", cvtAddress);
+
+  // ============================================
+  // 3. Deploy CantorFiProtocol
   // ============================================
   console.log("\n--- Deploying CantorFiProtocol ---");
 
@@ -75,7 +86,7 @@ async function main() {
   console.log("CantorFiProtocol:", protocolAddress);
 
   // ============================================
-  // 3. Deploy FeeCollector
+  // 4. Deploy FeeCollector
   // ============================================
   console.log("\n--- Deploying FeeCollector ---");
 
@@ -90,7 +101,7 @@ async function main() {
   console.log("FeeCollector:", feeCollectorAddress);
 
   // ============================================
-  // 4. Deploy PriceOracle
+  // 5. Deploy PriceOracle
   // ============================================
   console.log("\n--- Deploying PriceOracle ---");
 
@@ -105,7 +116,7 @@ async function main() {
   console.log("PriceOracle:", priceOracleAddress);
 
   // ============================================
-  // 5. Deploy CollateralManager
+  // 6. Deploy CollateralManager
   // ============================================
   console.log("\n--- Deploying CollateralManager ---");
 
@@ -127,7 +138,7 @@ async function main() {
   console.log("CollateralManager:", collateralManagerAddress);
 
   // ============================================
-  // 6. Deploy CantorVault Implementation
+  // 7. Deploy CantorVault Implementation
   // ============================================
   console.log("\n--- Deploying CantorVault Implementation ---");
 
@@ -138,22 +149,26 @@ async function main() {
   console.log("CantorVault Implementation:", vaultImplAddress);
 
   // ============================================
-  // 7. Deploy CantorAssetFactory
+  // 8. Deploy CantorAssetFactory (with global CVT)
   // ============================================
   console.log("\n--- Deploying CantorAssetFactory ---");
 
   const CantorAssetFactory = await ethers.getContractFactory("CantorAssetFactory");
   const factory = await upgrades.deployProxy(
     CantorAssetFactory,
-    [vaultImplAddress, protocolAddress, deployer.address, deployer.address],
+    [vaultImplAddress, protocolAddress, cvtAddress, deployer.address, deployer.address],
     { initializer: "initialize", kind: "uups" }
   );
   await factory.waitForDeployment();
   const factoryAddress = await factory.getAddress();
   console.log("CantorAssetFactory:", factoryAddress);
 
+  // Grant factory ADMIN_ROLE on CVT so it can addMinter for new vaults
+  await cvt.grantRole(await cvt.ADMIN_ROLE(), factoryAddress);
+  console.log("  Granted ADMIN_ROLE on CVT to Factory");
+
   // ============================================
-  // 8. Deploy CantorVaultReader
+  // 9. Deploy CantorVaultReader
   // ============================================
   console.log("\n--- Deploying CantorVaultReader ---");
 
@@ -164,7 +179,7 @@ async function main() {
   console.log("CantorVaultReader:", readerAddress);
 
   // ============================================
-  // 9. Configure Contracts
+  // 10. Configure Contracts
   // ============================================
   console.log("\n--- Configuring Contracts ---");
 
@@ -189,11 +204,13 @@ async function main() {
   }
 
   // ============================================
-  // 10. Create Test Vault (localhost only)
+  // 11. Create Test Vault + Staking
   // ============================================
   let testVaultAddress;
-  if (isLocalhost && usdcAddress) {
-    console.log("\n--- Creating Test USDC Vault ---");
+  let stakingAddress;
+
+  if (usdcAddress) {
+    console.log("\n--- Creating USDC Vault ---");
 
     const createVaultTx = await factory.createVault({
       token: usdcAddress,
@@ -211,7 +228,7 @@ async function main() {
 
     if (vaultCreatedEvent) {
       testVaultAddress = vaultCreatedEvent.args.vaultAddress;
-      console.log("Test USDC Vault:", testVaultAddress);
+      console.log("USDC Vault:", testVaultAddress);
 
       await collateralManager.addVault(testVaultAddress);
       await feeCollector.addNotifier(testVaultAddress);
@@ -220,6 +237,29 @@ async function main() {
       await vault.setCollateralManager(collateralManagerAddress);
       await vault.setCrossCollateralEnabled(true);
       console.log("  Vault configured");
+
+      // Deploy CVTStaking with global CVT
+      console.log("\n--- Deploying CVTStaking ---");
+
+      const CVTStaking = await ethers.getContractFactory("CVTStaking");
+      const staking = await upgrades.deployProxy(
+        CVTStaking,
+        [
+          cvtAddress,           // Global CVT
+          usdcAddress,          // Underlying token for rewards
+          testVaultAddress,     // Vault for protocol borrowing
+          deployer.address,     // Admin
+          6000                  // maxProtocolBorrowRatio: 60%
+        ],
+        { initializer: "initialize", kind: "uups" }
+      );
+      await staking.waitForDeployment();
+      stakingAddress = await staking.getAddress();
+      console.log("CVTStaking:", stakingAddress);
+
+      // Configure vault to know about staking contract
+      await vault.setStakingContract(stakingAddress);
+      console.log("  Vault: Staking contract set");
     }
   }
 
@@ -231,6 +271,7 @@ async function main() {
     network: isLocalhost ? "localhost" : isBaseSepolia ? "baseSepolia" : "unknown",
     chainId: Number(chainId),
     deployer: deployer.address,
+    cvt: cvtAddress,
     protocol: protocolAddress,
     feeCollector: feeCollectorAddress,
     priceOracle: priceOracleAddress,
@@ -243,6 +284,7 @@ async function main() {
 
   if (wethAddress) deployment.weth = wethAddress;
   if (testVaultAddress) deployment.testVault = testVaultAddress;
+  if (stakingAddress) deployment.staking = stakingAddress;
 
   const deploymentPath = isLocalhost
     ? "./deployments-localhost.json"
@@ -258,6 +300,7 @@ async function main() {
   console.log("DEPLOYMENT COMPLETE");
   console.log("=".repeat(60));
   console.log("\nAddresses:");
+  console.log("  CVT:               ", cvtAddress);
   console.log("  Protocol:          ", protocolAddress);
   console.log("  FeeCollector:      ", feeCollectorAddress);
   console.log("  PriceOracle:       ", priceOracleAddress);
@@ -266,6 +309,7 @@ async function main() {
   console.log("  Factory:           ", factoryAddress);
   console.log("  Reader:            ", readerAddress);
   if (usdcAddress) console.log("  USDC:              ", usdcAddress);
+  if (stakingAddress) console.log("  Staking:           ", stakingAddress);
 
   if (!isLocalhost) {
     console.log("\n" + "=".repeat(60));
@@ -273,6 +317,7 @@ async function main() {
     console.log("=".repeat(60));
     console.log(`
 export const PROTOCOL_ADDRESS = '${protocolAddress}' as const;
+export const CVT_TOKEN_ADDRESS = '${cvtAddress}' as const;
 export const USDC_ADDRESS = '${usdcAddress}' as const;
 export const FACTORY_ADDRESS = '${factoryAddress}' as const;
 export const FEE_COLLECTOR_ADDRESS = '${feeCollectorAddress}' as const;
@@ -280,6 +325,7 @@ export const VAULT_IMPLEMENTATION_ADDRESS = '${vaultImplAddress}' as const;
 export const PRICE_ORACLE_ADDRESS = '${priceOracleAddress}' as const;
 export const COLLATERAL_MANAGER_ADDRESS = '${collateralManagerAddress}' as const;
 export const READER_ADDRESS = '${readerAddress}' as const;
+${stakingAddress ? `export const STAKING_ADDRESS = '${stakingAddress}' as const;` : ''}
 `);
   }
 }

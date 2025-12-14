@@ -5,18 +5,10 @@ import { Coins, Lock, TrendingUp, Wallet, ArrowUpRight, Loader2, Shield, Percent
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useReadContract } from "wagmi";
 import Link from "next/link";
-import Image from "next/image";
 import { formatUnits } from "viem";
-import { STAKING_ADDRESS, CVT_TOKEN_ADDRESS } from "@/lib/evm/constants";
-import { STAKING_ABI, VAULT_ABI, ERC20_ABI } from "@/lib/evm/abis";
+import { READER_ADDRESS } from "@/lib/evm/constants";
+import { STAKING_ABI, VAULT_ABI, ERC20_ABI, READER_ABI } from "@/lib/evm/abis";
 import { useTranslations } from "@/components/providers/IntlProvider";
-
-function formatCurrency(value: string | number): string {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (num >= 1000000) return `$${(num / 1000000).toFixed(2)}M`;
-  if (num >= 1000) return `$${(num / 1000).toFixed(1)}K`;
-  return `$${num.toFixed(2)}`;
-}
 
 function formatNumber(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
@@ -29,33 +21,42 @@ export default function StakingPage() {
   const stakingT = useTranslations("staking");
   const commonT = useTranslations("common");
 
-  const stakingAddress = STAKING_ADDRESS as `0x${string}`;
+  // Get all vaults from reader
+  const { data: vaultsData, isLoading: loadingVaults } = useReadContract({
+    address: READER_ADDRESS as `0x${string}`,
+    abi: READER_ABI,
+    functionName: 'getVaults',
+    args: [BigInt(0), BigInt(100)],
+  });
 
-  // Read staking contract data
+  // Get first vault's staking contract (if exists)
+  const firstVault = (vaultsData as any[])?.[0];
+  const firstVaultAddress = firstVault?.vaultAddress as `0x${string}` | undefined;
+
+  // Read staking address from first vault
+  const { data: stakingAddress } = useReadContract({
+    address: firstVaultAddress,
+    abi: VAULT_ABI,
+    functionName: 'stakingContract',
+    query: { enabled: !!firstVaultAddress },
+  });
+
+  const hasStaking = stakingAddress && stakingAddress !== '0x0000000000000000000000000000000000000000';
+
+  // Read staking contract data (only if staking exists)
   const { data: totalStaked, isLoading: loadingTotalStaked } = useReadContract({
-    address: stakingAddress,
+    address: stakingAddress as `0x${string}`,
     abi: STAKING_ABI,
     functionName: 'totalStaked',
+    query: { enabled: !!hasStaking },
   });
 
-  const { data: vaultAddress } = useReadContract({
-    address: stakingAddress,
-    abi: STAKING_ABI,
-    functionName: 'vault',
-  });
-
-  const { data: cvtTokenAddress } = useReadContract({
-    address: stakingAddress,
-    abi: STAKING_ABI,
-    functionName: 'cvtToken',
-  });
-
-  // Read vault info (to get underlying token)
+  // Read underlying token from vault
   const { data: underlyingToken } = useReadContract({
-    address: vaultAddress as `0x${string}`,
+    address: firstVaultAddress,
     abi: VAULT_ABI,
     functionName: 'token',
-    query: { enabled: !!vaultAddress },
+    query: { enabled: !!firstVaultAddress },
   });
 
   // Read underlying token symbol
@@ -68,20 +69,20 @@ export default function StakingPage() {
 
   // Read user's stake position
   const { data: stakePosition } = useReadContract({
-    address: stakingAddress,
+    address: stakingAddress as `0x${string}`,
     abi: STAKING_ABI,
     functionName: 'getStakePosition',
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!hasStaking },
   });
 
   // Read user's pending rewards
   const { data: pendingRewards } = useReadContract({
-    address: stakingAddress,
+    address: stakingAddress as `0x${string}`,
     abi: STAKING_ABI,
     functionName: 'getPendingRewards',
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!hasStaking },
   });
 
   // Parse values
@@ -91,7 +92,7 @@ export default function StakingPage() {
   const hasPosition = userStakedAmount > 0;
   const symbol = (tokenSymbol as string) || 'USDC';
 
-  const isLoading = loadingTotalStaked;
+  const isLoading = loadingVaults || loadingTotalStaked;
 
   if (isLoading) {
     return (

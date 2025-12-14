@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
 import "./CantorVaultInterestModel.sol";
 import "./CVT.sol";
 import "./interfaces/IFeeCollector.sol";
@@ -248,6 +247,7 @@ contract CantorVault is
     function initialize(
         address _protocol,
         address _token,
+        address _cvtToken,
         address _admin,
         address _treasury,
         address _feeCollector,
@@ -265,7 +265,7 @@ contract CantorVault is
         __Pausable_init();
         __ReentrancyGuard_init();
 
-        if (_protocol == address(0) || _token == address(0) || _admin == address(0)) {
+        if (_protocol == address(0) || _token == address(0) || _admin == address(0) || _cvtToken == address(0)) {
             revert InvalidAddress();
         }
 
@@ -275,6 +275,7 @@ contract CantorVault is
 
         protocol = _protocol;
         token = IERC20(_token);
+        cvtToken = CVT(_cvtToken);
         feeCollector = _feeCollector;
         setupFee = _setupFee;
         performanceFee = _performanceFee;
@@ -301,11 +302,6 @@ contract CantorVault is
             lastInterestUpdate: block.timestamp,
             totalBadDebt: 0
         });
-
-        // Create CVT token for this vault
-        string memory cvtName = string(abi.encodePacked("Cantor Vault Token #", Strings.toString(_vaultId)));
-        string memory cvtSymbol = string(abi.encodePacked("cvt", Strings.toString(_vaultId)));
-        cvtToken = new CVT(cvtName, cvtSymbol, address(this));
     }
 
     // ============== SUPPLY / WITHDRAW ==============
