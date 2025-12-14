@@ -162,6 +162,8 @@ export interface Dictionary {
     viewExplorer: string;
     seeTransactions: string;
     connectDescription: string;
+    portfolioOverview: string;
+    lendingPositions: string;
     metrics: {
       invested: string;
       dividendsEarned: string;
@@ -400,6 +402,9 @@ export interface Dictionary {
     connectToStake: string;
     poolSize: string;
     capacity: string;
+    stakingPositions: string;
+    noPoolAvailable: string;
+    noPoolDescription: string;
   };
 }
 
@@ -576,6 +581,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       viewExplorer: "Voir sur l'explorateur",
       seeTransactions: "Voir toutes les transactions",
       connectDescription: "Connectez votre wallet pour voir votre portfolio, vos positions et vos gains sur tous les vaults.",
+      portfolioOverview: "Aperçu du portfolio",
+      lendingPositions: "Positions de prêt",
       metrics: {
         invested: "Total en puzzles",
         dividendsEarned: "Récompenses gagnées",
@@ -817,6 +824,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectToStake: "Connectez votre wallet pour staker des tokens",
       poolSize: "Taille du pool",
       capacity: "Capacité",
+      stakingPositions: "Positions de staking",
+      noPoolAvailable: "Aucun pool de staking disponible",
+      noPoolDescription: "Aucun vault avec staking n'est disponible pour le moment.",
     },
   },
   en: {
@@ -991,6 +1001,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       viewExplorer: "View on Explorer",
       seeTransactions: "See all transactions",
       connectDescription: "Connect your wallet to view your portfolio, positions, and earnings across all vaults.",
+      portfolioOverview: "Portfolio Overview",
+      lendingPositions: "Lending Positions",
       metrics: {
         invested: "Total in puzzles",
         dividendsEarned: "Rewards earned",
@@ -1232,6 +1244,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectToStake: "Connect your wallet to stake tokens",
       poolSize: "Pool size",
       capacity: "Capacity",
+      stakingPositions: "Staking Positions",
+      noPoolAvailable: "No Staking Pool Available",
+      noPoolDescription: "No vaults with staking are available yet.",
     },
   },
   es: {
@@ -1406,6 +1421,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       viewExplorer: "Ver en el explorador",
       seeTransactions: "Ver todas las transacciones",
       connectDescription: "Conecta tu wallet para ver tu portafolio, posiciones y ganancias en todos los vaults.",
+      portfolioOverview: "Resumen del portafolio",
+      lendingPositions: "Posiciones de préstamo",
       metrics: {
         invested: "Total en puzzles",
         dividendsEarned: "Recompensas cobradas",
@@ -1647,6 +1664,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       connectToStake: "Conecta tu wallet para stakear tokens",
       poolSize: "Tamaño del pool",
       capacity: "Capacidad",
+      stakingPositions: "Posiciones de staking",
+      noPoolAvailable: "No hay pool de staking disponible",
+      noPoolDescription: "No hay vaults con staking disponibles todavía.",
     },
   },
 };

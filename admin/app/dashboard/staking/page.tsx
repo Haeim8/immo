@@ -31,7 +31,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { CONTRACTS, STAKING_ABI, VAULT_ABI } from "@/lib/contracts"
 
-// Reader ABI for getting vaults
+// Reader ABI for getting vaults (matches actual CantorVaultReader contract)
 const READER_ABI = [
   {
     inputs: [
@@ -44,20 +44,27 @@ const READER_ABI = [
         components: [
           { internalType: "uint256", name: "vaultId", type: "uint256" },
           { internalType: "address", name: "vaultAddress", type: "address" },
-          { internalType: "address", name: "tokenAddress", type: "address" },
-          { internalType: "string", name: "tokenSymbol", type: "string" },
-          { internalType: "uint8", name: "tokenDecimals", type: "uint8" },
+          { internalType: "uint256", name: "maxLiquidity", type: "uint256" },
+          { internalType: "uint256", name: "borrowBaseRate", type: "uint256" },
+          { internalType: "uint256", name: "borrowSlope", type: "uint256" },
+          { internalType: "uint256", name: "maxBorrowRatio", type: "uint256" },
+          { internalType: "uint256", name: "liquidationBonus", type: "uint256" },
+          { internalType: "uint256", name: "expectedReturn", type: "uint256" },
+          { internalType: "bool", name: "isActive", type: "bool" },
+          { internalType: "uint256", name: "createdAt", type: "uint256" },
           { internalType: "uint256", name: "totalSupplied", type: "uint256" },
           { internalType: "uint256", name: "totalBorrowed", type: "uint256" },
           { internalType: "uint256", name: "availableLiquidity", type: "uint256" },
           { internalType: "uint256", name: "utilizationRate", type: "uint256" },
-          { internalType: "uint256", name: "borrowRate", type: "uint256" },
-          { internalType: "uint256", name: "supplyRate", type: "uint256" },
-          { internalType: "uint256", name: "maxLiquidity", type: "uint256" },
-          { internalType: "bool", name: "isActive", type: "bool" },
-          { internalType: "address", name: "cvtTokenAddress", type: "address" },
+          { internalType: "uint256", name: "fundingProgress", type: "uint256" },
+          { internalType: "uint256", name: "totalInterestCollected", type: "uint256" },
+          { internalType: "uint256", name: "totalBadDebt", type: "uint256" },
+          { internalType: "address", name: "cvtToken", type: "address" },
+          { internalType: "uint256", name: "cvtTotalSupply", type: "uint256" },
+          { internalType: "bool", name: "isPaused", type: "bool" },
+          { internalType: "address", name: "underlyingToken", type: "address" },
         ],
-        internalType: "struct CantorReader.VaultInfo[]",
+        internalType: "struct CantorVaultReader.VaultData[]",
         name: "",
         type: "tuple[]",
       },
