@@ -137,7 +137,7 @@ export default function StakingPage() {
               <span className="text-xs font-medium uppercase tracking-wide">{stakingT("totalStaked") || "Total Staked"}</span>
             </div>
             <div className="stat-value">{formatNumber(totalStakedAmount)} CVT</div>
-            <p className="text-xs text-muted-foreground mt-1">1 pool</p>
+            <p className="text-xs text-muted-foreground mt-1">{hasStaking ? "1 pool" : "0 pools"}</p>
           </div>
 
           <div className="card-vault p-4 md:p-5">
@@ -227,70 +227,85 @@ export default function StakingPage() {
           </motion.div>
         )}
 
-        {/* Single Staking Pool Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2>{stakingT("availablePools") || "CVT Staking Pool"}</h2>
-            <span className="text-sm text-muted-foreground">1 {stakingT("active") || "active"}</span>
-          </div>
+        {/* Single Staking Pool Card - only show if staking exists */}
+        {hasStaking ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2>{stakingT("availablePools") || "CVT Staking Pool"}</h2>
+              <span className="text-sm text-muted-foreground">1 {stakingT("active") || "active"}</span>
+            </div>
 
-          <Link href="/staking/cvt">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`card-vault group ${hasPosition ? 'border-primary/30' : ''}`}
-            >
-              <div className="p-5">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="token-icon-lg bg-primary/20 text-primary font-bold">
-                      CVT
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                          Stake CVT → Earn {symbol}
-                        </h3>
-                        {hasPosition && (
-                          <span className="badge-success text-[10px]">{stakingT("active") || "Active"}</span>
-                        )}
+            <Link href="/staking/cvt">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`card-vault group ${hasPosition ? 'border-primary/30' : ''}`}
+              >
+                <div className="p-5">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="token-icon-lg bg-primary/20 text-primary font-bold">
+                        CVT
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Earn {symbol} rewards from protocol fees
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 text-center md:text-right">
-                    <div>
-                      <div className="text-xs text-muted-foreground uppercase mb-1">Total Staked</div>
-                      <div className="text-lg font-bold text-foreground">{formatNumber(totalStakedAmount)} CVT</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground uppercase mb-1">Reward Token</div>
-                      <div className="text-lg font-bold text-success">{symbol}</div>
-                    </div>
-                    {hasPosition && (
-                      <div className="hidden md:block">
-                        <div className="text-xs text-muted-foreground uppercase mb-1">{stakingT("yourStake") || "Your Stake"}</div>
-                        <div className="text-lg font-bold text-primary">{formatNumber(userStakedAmount)} CVT</div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                            Stake CVT → Earn {symbol}
+                          </h3>
+                          {hasPosition && (
+                            <span className="badge-success text-[10px]">{stakingT("active") || "Active"}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Earn {symbol} rewards from protocol fees
+                        </p>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <button className="btn-primary whitespace-nowrap">
-                    <ArrowUpRight className="w-4 h-4" />
-                    {hasPosition ? (stakingT("manage") || 'Manage') : (stakingT("stake") || 'Stake')}
-                  </button>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 text-center md:text-right">
+                      <div>
+                        <div className="text-xs text-muted-foreground uppercase mb-1">Total Staked</div>
+                        <div className="text-lg font-bold text-foreground">{formatNumber(totalStakedAmount)} CVT</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground uppercase mb-1">Reward Token</div>
+                        <div className="text-lg font-bold text-success">{symbol}</div>
+                      </div>
+                      {hasPosition && (
+                        <div className="hidden md:block">
+                          <div className="text-xs text-muted-foreground uppercase mb-1">{stakingT("yourStake") || "Your Stake"}</div>
+                          <div className="text-lg font-bold text-primary">{formatNumber(userStakedAmount)} CVT</div>
+                        </div>
+                      )}
+                    </div>
+
+                    <button className="btn-primary whitespace-nowrap">
+                      <ArrowUpRight className="w-4 h-4" />
+                      {hasPosition ? (stakingT("manage") || 'Manage') : (stakingT("stake") || 'Stake')}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          </Link>
-        </motion.div>
+              </motion.div>
+            </Link>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="card-vault p-8 text-center"
+          >
+            <Coins className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold mb-2">{stakingT("noPoolAvailable") || "No Staking Pool Available"}</h3>
+            <p className="text-muted-foreground text-sm">
+              {stakingT("noPoolDescription") || "No vaults with staking are available yet."}
+            </p>
+          </motion.div>
+        )}
 
         {/* Info Section */}
         <motion.div
