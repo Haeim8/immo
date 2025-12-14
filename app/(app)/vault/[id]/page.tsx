@@ -12,9 +12,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { parseUnits, formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
-import { useSupply, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
+import { useSupply, useWithdraw, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { BuyCryptoButton } from "@/components/buy-crypto-button";
+import { useToast } from "@/components/ui/toast-notification";
 
 const tokenLogos: Record<string, string> = {
   USDC: "/usc.png",
@@ -345,14 +346,32 @@ export default function VaultPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
   const [deadline, setDeadline] = useState('30');
-  const [txError, setTxError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<{ type: 'supply' | 'repay'; amount: string; decimals: number } | null>(null);
+  const { showToast } = useToast();
 
   const vaultAddress = (vault?.vaultAddress || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-  const { supply, isPending: isSupplyPending, error: supplyError } = useSupply(vaultAddress);
-  const { borrow, isPending: isBorrowPending, error: borrowError } = useBorrow(vaultAddress);
-  const { repayBorrow, isPending: isRepayPending, error: repayError } = useRepayBorrow(vaultAddress);
+  const { supply, isPending: isSupplyPending, error: supplyError, isSuccess: supplySuccess } = useSupply(vaultAddress);
+  const { withdraw, isPending: isWithdrawPending, error: withdrawError, isSuccess: withdrawSuccess } = useWithdraw(vaultAddress);
+  const { borrow, isPending: isBorrowPending, error: borrowError, isSuccess: borrowSuccess } = useBorrow(vaultAddress);
+  const { repayBorrow, isPending: isRepayPending, error: repayError, isSuccess: repaySuccess } = useRepayBorrow(vaultAddress);
   const { approve, isPending: isApprovePending, error: approveError, isSuccess: approveSuccess } = useApproveToken(vault?.tokenAddress);
+
+  // Toast erreurs
+  useEffect(() => {
+    if (supplyError) showToast({ type: 'error', title: 'Erreur Supply', message: supplyError.message?.slice(0, 100) });
+    if (withdrawError) showToast({ type: 'error', title: 'Erreur Withdraw', message: withdrawError.message?.slice(0, 100) });
+    if (borrowError) showToast({ type: 'error', title: 'Erreur Borrow', message: borrowError.message?.slice(0, 100) });
+    if (repayError) showToast({ type: 'error', title: 'Erreur Repay', message: repayError.message?.slice(0, 100) });
+    if (approveError) showToast({ type: 'error', title: 'Erreur Approve', message: approveError.message?.slice(0, 100) });
+  }, [supplyError, withdrawError, borrowError, repayError, approveError, showToast]);
+
+  // Toast succès
+  useEffect(() => {
+    if (supplySuccess) showToast({ type: 'success', title: 'Supply réussi!' });
+    if (withdrawSuccess) showToast({ type: 'success', title: 'Withdraw réussi!' });
+    if (borrowSuccess) showToast({ type: 'success', title: 'Borrow réussi!' });
+    if (repaySuccess) showToast({ type: 'success', title: 'Remboursement réussi!' });
+  }, [supplySuccess, withdrawSuccess, borrowSuccess, repaySuccess, showToast]);
 
   // Quand l'approve est confirmé, lancer le supply ou repay
   useEffect(() => {
@@ -385,13 +404,6 @@ export default function VaultPage() {
     symbol: v.tokenSymbol,
     balance: '0.00' // Would come from wallet balance
   }));
-
-  useEffect(() => {
-    const firstError = supplyError || borrowError || repayError || approveError;
-    if (firstError) {
-      setTxError(firstError.message);
-    }
-  }, [supplyError, borrowError, repayError, approveError]);
 
   if (loadingVaults) {
     return (
@@ -428,7 +440,7 @@ export default function VaultPage() {
   const supplyPercent = maxCapacity > 0 ? (totalDeposits / maxCapacity) * 100 : 0;
   const borrowPercent = totalDeposits > 0 ? (totalBorrows / totalDeposits) * 100 : 0;
 
-  const actionLoading = isSupplyPending || isBorrowPending || isRepayPending || isApprovePending;
+  const actionLoading = isSupplyPending || isWithdrawPending || isBorrowPending || isRepayPending || isApprovePending;
   const isAmountValid = amount && parseFloat(amount) > 0;
 
   // Check if user has sufficient balance for lend/repay operations
@@ -438,16 +450,15 @@ export default function VaultPage() {
 
   const handleAction = () => {
     if (!vault) return;
-    setTxError(null);
     const numericAmount = parseFloat(amount);
     if (!numericAmount || numericAmount <= 0) {
-      setTxError("Montant invalide");
+      showToast({ type: 'error', title: 'Montant invalide' });
       return;
     }
 
     // Check wallet balance for lend mode
     if (mode === 'lend' && numericAmount > walletBalance) {
-      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} ${vault?.tokenSymbol || ''}`);
+      showToast({ type: 'error', title: 'Solde insuffisant', message: `Vous avez ${formatNumber(walletBalance)} ${vault?.tokenSymbol || ''}` });
       return;
     }
 
@@ -465,23 +476,42 @@ export default function VaultPage() {
 
   const handleRepay = () => {
     if (!vault) return;
-    setTxError(null);
     const numericAmount = parseFloat(amount);
     if (!numericAmount || numericAmount <= 0) {
-      setTxError("Montant invalide");
+      showToast({ type: 'error', title: 'Montant invalide' });
       return;
     }
 
     // Check wallet balance for repay
     if (numericAmount > walletBalance) {
-      setTxError(`Solde insuffisant. Vous avez ${formatNumber(walletBalance)} ${vault.tokenSymbol}`);
+      showToast({ type: 'error', title: 'Solde insuffisant', message: `Vous avez ${formatNumber(walletBalance)} ${vault.tokenSymbol}` });
       return;
     }
 
     const amountString = numericAmount.toString();
     const amountBN = parseUnits(amountString, vault.tokenDecimals);
+    // Stocker l'action en attente puis lancer approve
+    setPendingAction({ type: 'repay', amount: amountString, decimals: vault.tokenDecimals });
     approve(vaultAddress, amountBN);
-    repayBorrow(amountString, vault.tokenDecimals);
+  };
+
+  const handleWithdraw = () => {
+    if (!vault || !userPosition) return;
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      showToast({ type: 'error', title: 'Montant invalide' });
+      return;
+    }
+
+    // Vérifier que l'utilisateur a assez de CVT (position supply)
+    const userSupplied = parseFloat(userPosition.supplied);
+    if (numericAmount > userSupplied) {
+      showToast({ type: 'error', title: 'Montant trop élevé', message: `Position: ${formatNumber(userSupplied)} ${vault.tokenSymbol}` });
+      return;
+    }
+
+    const amountString = numericAmount.toString();
+    withdraw(amountString, vault.tokenDecimals);
   };
 
   const handleMaxClick = () => {
@@ -941,8 +971,24 @@ export default function VaultPage() {
                         </button>
                       )}
 
-                      {txError && (
-                        <p className="text-sm text-destructive mt-2">{txError}</p>
+                      {/* Withdraw Button - quand l'utilisateur a une position */}
+                      {mode === 'lend' && userPosition && parseFloat(userPosition.supplied) > 0 && (
+                        <button
+                          type="button"
+                          disabled={isActionDisabled}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleWithdraw();
+                          }}
+                          className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 mt-2 ${
+                            isActionDisabled
+                              ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                              : 'bg-accent text-white hover:bg-accent/90'
+                          }`}
+                        >
+                          {actionLoading ? 'Transaction...' : 'Withdraw'}
+                        </button>
                       )}
 
                       {/* Settings Button */}
