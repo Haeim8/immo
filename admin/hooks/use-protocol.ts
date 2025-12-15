@@ -1,18 +1,19 @@
 "use client";
 
 import { useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
-import { CONTRACTS, PROTOCOL_ABI, FEE_COLLECTOR_ABI, VAULT_ABI, ERC20_ABI } from "@/lib/contracts";
+import { CONTRACTS, PROTOCOL_ABI, FEE_COLLECTOR_ABI, VAULT_ABI, ERC20_ABI, READER_ABI } from "@/lib/contracts";
 import { formatUnits } from "viem";
 
 // Read global stats by aggregating from protocol and vaults
 export function useGlobalStats() {
   const { isConnected } = useAccount();
+  const { vaults, isLoading: isLoadingVaults } = useVaults();
 
-  // First get vault count from protocol
-  const { data: vaultCountData, isLoading: isLoadingCount } = useReadContract({
-    address: CONTRACTS.protocol as `0x${string}`,
-    abi: PROTOCOL_ABI,
-    functionName: "vaultCount",
+  // First get global stats from Reader (on-chain)
+  const { data: globalData, isLoading: isLoadingGlobal } = useReadContract({
+    address: CONTRACTS.reader as `0x${string}`,
+    abi: READER_ABI,
+    functionName: "getGlobalStats",
     query: {
       enabled: isConnected,
       retry: 1,
@@ -26,6 +27,7 @@ export function useGlobalStats() {
     address: CONTRACTS.feeCollector as `0x${string}`,
     abi: FEE_COLLECTOR_ABI,
     functionName: "getFeeStats",
+    args: [CONTRACTS.usdc as `0x${string}`],
     query: {
       enabled: isConnected,
       retry: 1,
@@ -34,34 +36,53 @@ export function useGlobalStats() {
     },
   });
 
-  const isLoading = isLoadingCount || isLoadingFees;
+  const isLoading = isLoadingGlobal || isLoadingFees || isLoadingVaults;
 
   let stats = null;
 
   try {
-    const totalVaults = vaultCountData ? Number(vaultCountData) : 0;
+    const gd = globalData as any;
+    const totalVaults = gd ? Number(gd.totalVaults || 0) : vaults?.length || 0;
+
+    // Agrégation fiable côté front avec les valeurs converties (décimales ERC20 déjà appliquées dans useVaults)
+    const aggregate = vaults?.reduce(
+      (acc, v: any) => {
+        acc.totalSupplied += parseFloat(v.totalSupplied || "0");
+        acc.totalBorrowed += parseFloat(v.totalBorrowed || "0");
+        return acc;
+      },
+      { totalSupplied: 0, totalBorrowed: 0 }
+    ) || { totalSupplied: 0, totalBorrowed: 0 };
+
+    // Moyenne pondérée des APY (supplyRate) par la TVL
+    const totalWeight = vaults?.reduce((acc, v: any) => acc + parseFloat(v.totalSupplied || "0"), 0) || 0;
+    const weightedApy = vaults && totalWeight > 0
+      ? vaults.reduce((acc, v: any) => acc + parseFloat(v.supplyRate || 0) * parseFloat(v.totalSupplied || "0"), 0) / totalWeight
+      : gd
+        ? Number(gd.averageAPY || 0) / 100 // averageAPY en bps
+        : 0;
 
     if (feeData && Array.isArray(feeData)) {
       stats = {
         totalVaults,
-        totalSupplied: "0", // Will be aggregated from vaults when we have them
-        totalBorrowed: "0",
-        totalRevenuesDistributed: formatUnits(feeData[1] || BigInt(0), 6),
-        totalCapitalRepaid: "0",
-        activeVaults: totalVaults, // Assume all are active for now
-        averageAPY: "0",
+        totalSupplied: aggregate.totalSupplied.toString(),
+        totalBorrowed: aggregate.totalBorrowed.toString(),
+        totalRevenuesDistributed: gd ? Number(gd.totalRevenuesDistributed || 0).toString() : formatUnits(feeData[1] || BigInt(0), 6),
+        totalCapitalRepaid: gd ? Number(gd.totalCapitalRepaid || 0).toString() : "0",
+        activeVaults: gd ? Number(gd.activeVaults || 0) : totalVaults,
+        averageAPY: weightedApy.toString(),
         totalFeesCollected: formatUnits(feeData[0] || BigInt(0), 6),
         availableFees: formatUnits(feeData[2] || BigInt(0), 6),
       };
     } else {
       stats = {
         totalVaults,
-        totalSupplied: "0",
-        totalBorrowed: "0",
-        totalRevenuesDistributed: "0",
-        totalCapitalRepaid: "0",
-        activeVaults: totalVaults,
-        averageAPY: "0",
+        totalSupplied: aggregate.totalSupplied.toString(),
+        totalBorrowed: aggregate.totalBorrowed.toString(),
+        totalRevenuesDistributed: gd ? Number(gd.totalRevenuesDistributed || 0).toString() : "0",
+        totalCapitalRepaid: gd ? Number(gd.totalCapitalRepaid || 0).toString() : "0",
+        activeVaults: gd ? Number(gd.activeVaults || 0) : totalVaults,
+        averageAPY: weightedApy.toString(),
         totalFeesCollected: "0",
         availableFees: "0",
       };
@@ -419,6 +440,7 @@ export function useFeeCollectorStats() {
     address: CONTRACTS.feeCollector as `0x${string}`,
     abi: FEE_COLLECTOR_ABI,
     functionName: "getFeeStats",
+    args: [CONTRACTS.usdc as `0x${string}`],
     query: {
       enabled: isConnected,
       retry: 1,

@@ -95,83 +95,59 @@ export default function AnalyticsPage() {
   const activeVaults = vaults.filter(v => v.isActive).length
   const fundedVaults = vaults.filter(v => parseFloat(v.totalSupplied || "0") > 0).length
 
-  // Generate time-series data
-  const getDaysFromRange = () => {
-    switch (timeRange) {
-      case "7d": return 7
-      case "30d": return 30
-      case "90d": return 90
-      default: return 30
-    }
-  }
-
+  // Séries déterministes linéaires (aucune donnée aléatoire)
   const generateTVLData = React.useMemo(() => {
-    const days = getDaysFromRange()
+    const days = timeRange === "7d" ? 7 : timeRange === "90d" ? 30 : 14;
     const data = []
-    const now = new Date()
-
     for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(now)
+      const date = new Date()
       date.setDate(date.getDate() - i)
-      const factor = 0.6 + (0.4 * (days - i) / days) + (Math.random() * 0.1 - 0.05)
+      const ratio = (days - i) / days
       data.push({
         date: date.toISOString().split('T')[0],
-        tvl: Math.round(totalSupplied * factor),
-        borrowed: Math.round(totalBorrowed * factor * 0.85),
+        tvl: Math.round(totalSupplied * ratio),
+        borrowed: Math.round(totalBorrowed * ratio),
       })
     }
     return data
   }, [totalSupplied, totalBorrowed, timeRange])
 
   const generateRevenueData = React.useMemo(() => {
-    const data = []
-    const now = new Date()
-    const months = timeRange === "90d" ? 12 : timeRange === "30d" ? 6 : 3
-
-    for (let i = months - 1; i >= 0; i--) {
-      const date = new Date(now)
-      date.setMonth(date.getMonth() - i)
-      const monthName = date.toLocaleDateString('en-US', { month: 'short' })
-      const factor = 0.4 + (0.6 * (months - i) / months) + (Math.random() * 0.2 - 0.1)
-      data.push({
-        month: monthName,
-        revenues: Math.round((totalRevenues / months) * factor),
-        fees: Math.round((totalFees / months) * factor),
-      })
-    }
-    return data
-  }, [totalRevenues, totalFees, timeRange])
+    return [
+      {
+        month: "Now",
+        revenues: Math.round(totalRevenues),
+        fees: Math.round(totalFees),
+      },
+    ]
+  }, [totalRevenues, totalFees])
 
   const generateAPYData = React.useMemo(() => {
-    const days = getDaysFromRange()
+    const days = timeRange === "7d" ? 7 : timeRange === "90d" ? 30 : 14;
+    const baseAPY = parseFloat(globalStats?.averageAPY || "0");
     const data = []
-    const now = new Date()
-    const baseAPY = parseFloat(globalStats?.averageAPY || "8")
-
     for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(now)
+      const date = new Date()
       date.setDate(date.getDate() - i)
-      const variation = (Math.random() - 0.5) * 2
+      const ratio = (days - i) / days
       data.push({
         date: date.toISOString().split('T')[0],
-        apy: Math.max(0, baseAPY + variation),
+        apy: Math.max(0, baseAPY * ratio),
       })
     }
     return data
   }, [globalStats?.averageAPY, timeRange])
 
   const generateUtilizationData = React.useMemo(() => {
-    const days = getDaysFromRange()
+    const days = timeRange === "7d" ? 7 : timeRange === "90d" ? 30 : 14;
     const data = []
-    const now = new Date()
-
     for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(now)
+      const date = new Date()
       date.setDate(date.getDate() - i)
-      const variation = (Math.random() - 0.5) * 20
+      const ratio = (days - i) / days
       data.push({
         date: date.toISOString().split('T')[0],
-        utilization: Math.max(0, Math.min(100, utilizationRate + variation)),
+        utilization: Math.max(0, Math.min(100, utilizationRate * ratio)),
       })
     }
     return data

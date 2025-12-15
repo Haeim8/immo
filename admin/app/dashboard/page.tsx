@@ -104,48 +104,33 @@ export default function DashboardPage() {
     { name: "Closed", value: closedVaults, fill: "hsl(var(--muted-foreground))" },
   ].filter(d => d.value > 0)
 
-  // Generate mock historical data based on real current values (for demo - replace with real data later)
-  const generateHistoricalData = () => {
-    const data = []
-    const now = new Date()
-    const currentTVL = totalSupplied
-    const currentBorrowed = totalBorrowed
-
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(now)
+  // Séries déterministes (linéaires) basées sur les valeurs courantes
+  const tvlData = React.useMemo(() => {
+    const points = []
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date()
       date.setDate(date.getDate() - i)
-      const factor = 0.7 + (0.3 * (30 - i) / 30) + (Math.random() * 0.1 - 0.05)
-      data.push({
+      const ratio = (7 - i) / 7
+      points.push({
         date: date.toISOString().split('T')[0],
-        tvl: Math.round(currentTVL * factor),
-        borrowed: Math.round(currentBorrowed * factor * 0.9),
+        tvl: Math.round(totalSupplied * ratio),
+        borrowed: Math.round(totalBorrowed * ratio),
       })
     }
-    return data
-  }
+    return points
+  }, [totalSupplied, totalBorrowed])
 
-  const generateRevenueData = () => {
-    const data = []
-    const now = new Date()
+  const revenueData = React.useMemo(() => {
     const totalRevenues = parseFloat(globalStats?.totalRevenuesDistributed || "0")
     const totalFees = parseFloat(feeStats?.totalCollected || "0")
-
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(now)
-      date.setMonth(date.getMonth() - i)
-      const monthName = date.toLocaleDateString('en-US', { month: 'short' })
-      const factor = 0.5 + (0.5 * (12 - i) / 12) + (Math.random() * 0.2 - 0.1)
-      data.push({
-        month: monthName,
-        revenues: Math.round((totalRevenues / 12) * factor),
-        fees: Math.round((totalFees / 12) * factor),
-      })
-    }
-    return data
-  }
-
-  const tvlData = React.useMemo(() => generateHistoricalData(), [totalSupplied, totalBorrowed])
-  const revenueData = React.useMemo(() => generateRevenueData(), [globalStats?.totalRevenuesDistributed, feeStats?.totalCollected])
+    return [
+      {
+        month: "Now",
+        revenues: Math.round(totalRevenues),
+        fees: Math.round(totalFees),
+      },
+    ]
+  }, [globalStats?.totalRevenuesDistributed, feeStats?.totalCollected])
 
   // Top vaults by TVL
   const topVaults = React.useMemo(() => {

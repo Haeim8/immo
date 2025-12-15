@@ -8,8 +8,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
-import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, CHAIN_ID } from './constants';
-import { PROTOCOL_ABI, READER_ABI, ERC20_ABI, VAULT_EXTENDED_ABI } from './abis';
+import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, CHAIN_ID, PRICE_ORACLE_ADDRESS } from './constants';
+import { PROTOCOL_ABI, READER_ABI, ERC20_ABI, VAULT_EXTENDED_ABI, PRICE_ORACLE_ABI, STAKING_ABI } from './abis';
 import { getFromCache, setInCache } from './cache';
 import { getFallbackPrice, formatUsd, formatTokenAmount, toUsdValue } from './prices';
 
@@ -27,6 +27,7 @@ export interface VaultData {
   cvtTokenAddress: `0x${string}`;
   tokenSymbol: string;
   tokenDecimals: number;
+  tokenPrice?: number;
   maxLiquidity: string;
   borrowBaseRate: number;
   borrowSlope: number;
@@ -154,6 +155,17 @@ export function useAllVaults() {
     return contracts;
   }, [tokenAddresses]);
 
+  // Build price oracle calls (one per token)
+  const priceContracts = useMemo(() => {
+    return tokenAddresses.map((tokenAddr) => ({
+      address: PRICE_ORACLE_ADDRESS as `0x${string}`,
+      abi: PRICE_ORACLE_ABI,
+      functionName: 'getPrice' as const,
+      args: [tokenAddr as `0x${string}`],
+      chainId: CHAIN_ID,
+    }));
+  }, [tokenAddresses]);
+
   // Multicall to read all token symbols and decimals.
   // NOTE: wagmi types can explode on dynamic contract arrays; cast to `any` to keep TS fast & stable.
   const tokenRead = useReadContracts({
@@ -164,6 +176,14 @@ export function useAllVaults() {
   } as any) as { data?: any[]; isLoading: boolean };
   const tokenData = tokenRead.data;
   const tokenLoading = tokenRead.isLoading;
+
+  // Read oracle prices
+  const priceRead = useReadContracts({
+    contracts: priceContracts as any,
+    query: { enabled: priceContracts.length > 0 },
+  } as any) as { data?: any[]; isLoading: boolean };
+  const priceData = priceRead.data;
+  const priceLoading = priceRead.isLoading;
 
   useEffect(() => {
     // Check cache first
@@ -183,7 +203,7 @@ export function useAllVaults() {
       }
     }
 
-    if (readerLoading || tokenLoading) {
+    if (readerLoading || tokenLoading || priceLoading) {
       if (!cached || cached.length === 0) {
         setIsLoading(true);
       }
@@ -220,6 +240,20 @@ export function useAllVaults() {
       });
     }
 
+    // Build price map (Chainlink-style 8 decimals)
+    const priceMap = new Map<string, number>();
+    if (priceData && tokenAddresses.length > 0) {
+      for (let i = 0; i < tokenAddresses.length; i++) {
+        const entry = priceData[i];
+        const priceRaw = entry?.result as bigint | undefined;
+        if (priceRaw !== undefined) {
+          const tokenAddr = tokenAddresses[i];
+          const price = Number(priceRaw) / 1e8;
+          priceMap.set(tokenAddr.toLowerCase(), price);
+        }
+      }
+    }
+
     // Update last fetch time
     lastFetch.current = Date.now();
 
@@ -228,6 +262,7 @@ export function useAllVaults() {
       const tokenAddress = v.underlyingToken as `0x${string}`;
       const cvtTokenAddress = v.cvtToken as `0x${string}`;
       const tokenInfo = tokenInfoMap.get(tokenAddress.toLowerCase()) || { symbol: 'UNKNOWN', decimals: 18 };
+      const tokenPrice = priceMap.get(tokenAddress.toLowerCase());
       const decimals = tokenInfo.decimals;
 
       const utilizationBps = Number(v.utilizationRate || 0);
@@ -235,11 +270,9 @@ export function useAllVaults() {
       const expectedReturnBps = Number(v.expectedReturn || 0); // supply APY in bps
       const supplyRate = expectedReturnBps / 100; // %
 
-      // Approximate borrow APY from supply APY and utilization when available
-      const borrowRateBps =
-        utilizationBps > 0 ? Math.floor((expectedReturnBps * 10000) / utilizationBps) : 0;
-      const borrowRate =
-        borrowRateBps > 0 ? borrowRateBps / 100 : Number(v.borrowBaseRate || 0) / 100;
+      // Use currentBorrowRate from Reader (calculated by contract)
+      const currentBorrowRateBps = Number(v.currentBorrowRate || 0);
+      const borrowRate = currentBorrowRateBps / 100; // bps -> %
 
       return {
         vaultId: Number(v.vaultId),
@@ -248,6 +281,7 @@ export function useAllVaults() {
         cvtTokenAddress,
         tokenSymbol: tokenInfo.symbol,
         tokenDecimals: decimals,
+        tokenPrice,
         maxLiquidity: formatUnits(BigInt(v.maxLiquidity || 0), decimals),
         borrowBaseRate: Number(v.borrowBaseRate || 0) / 100,
         borrowSlope: Number(v.borrowSlope || 0) / 100,
@@ -268,7 +302,7 @@ export function useAllVaults() {
     setInCache('allVaults', transformedVaults);
     setIsLoading(false);
     setError(null);
-  }, [readerData, readerLoading, isError, tokenData, tokenLoading, tokenAddresses]);
+  }, [readerData, readerLoading, isError, tokenData, tokenLoading, tokenAddresses, priceData, priceLoading]);
 
   const refetch = useCallback(() => {
     lastFetch.current = 0;
@@ -425,6 +459,7 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
       const supplied = parseFloat(formatUnits(BigInt(p.supplyAmount || 0), decimals));
       const borrowed = parseFloat(formatUnits(BigInt(p.borrowedAmount || 0), decimals));
       const interestPending = parseFloat(formatUnits(BigInt(p.interestPending || 0), decimals));
+      const borrowInterestAcc = parseFloat(formatUnits(BigInt(p.borrowInterestAccumulated || 0), decimals));
 
       // Get maxBorrow and withdrawable from contract (staking-aware!)
       const vaultValues = vaultValuesMap.get((p.vaultAddress as string).toLowerCase());
@@ -435,19 +470,20 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
         ? parseFloat(formatUnits(vaultValues.withdrawable, decimals))
         : supplied;
 
-      // Calculate health factor using contract's logic
+      // Calculate health factor using dette totale (principal + intérêts)
+      const totalDebt = borrowed + borrowInterestAcc;
       let healthFactor = 10000; // Infinite if no borrow
-      if (borrowed > 0) {
+      if (totalDebt > 0) {
         const maxBorrowValue = supplied * (maxBorrowRatio / 100);
-        healthFactor = maxBorrowValue > 0 ? (maxBorrowValue / borrowed) * 100 : 0;
+        healthFactor = maxBorrowValue > 0 ? (maxBorrowValue / totalDebt) * 100 : 0;
       }
 
-      // Get token price (fallback for now, oracle integration can be added)
-      const tokenPrice = getFallbackPrice(tokenSymbol);
+      // Get token price (oracle si dispo sinon fallback)
+      const tokenPrice = vault?.tokenPrice ?? getFallbackPrice(tokenSymbol);
 
       // Calculate USD values
       const suppliedUsd = supplied * tokenPrice;
-      const borrowedUsd = borrowed * tokenPrice;
+      const borrowedUsd = totalDebt * tokenPrice;
       const interestPendingUsd = interestPending * tokenPrice;
       const maxBorrowUsd = maxBorrowFromContract * tokenPrice;
 
@@ -561,4 +597,68 @@ export function useTeamMembers() {
 
 export function useLeaderboardData() {
   return { leaderboardData: [], isLoading: false };
+}
+
+/**
+ * Hook pour récupérer l'APY du staking depuis le contrat CVTStaking
+ * @param stakingAddress Adresse du contrat CVTStaking
+ */
+export function useStakingAPY(stakingAddress: `0x${string}` | undefined) {
+  // Read APY from contract
+  const { data: apyData, isLoading: apyLoading } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'getStakingAPY',
+    chainId: CHAIN_ID,
+    query: {
+      enabled: !!stakingAddress,
+    },
+  });
+
+  // Read reward rate info for additional details
+  const { data: rateInfo, isLoading: rateLoading } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'getRewardRateInfo',
+    chainId: CHAIN_ID,
+    query: {
+      enabled: !!stakingAddress,
+    },
+  });
+
+  // Read total staked
+  const { data: totalStaked, isLoading: stakedLoading } = useReadContract({
+    address: stakingAddress,
+    abi: STAKING_ABI,
+    functionName: 'totalStaked',
+    chainId: CHAIN_ID,
+    query: {
+      enabled: !!stakingAddress,
+    },
+  });
+
+  const isLoading = apyLoading || rateLoading || stakedLoading;
+
+  // APY in basis points (500 = 5%)
+  const apyBps = apyData ? Number(apyData) : 0;
+  const apyPercent = apyBps / 100; // Convert to percentage
+
+  // Rate info
+  const rewardRate = rateInfo ? Number((rateInfo as [bigint, bigint, bigint])[0]) : 0;
+  const lastRewardTime = rateInfo ? Number((rateInfo as [bigint, bigint, bigint])[1]) : 0;
+  const lastRewardAmount = rateInfo ? (rateInfo as [bigint, bigint, bigint])[2] : BigInt(0);
+
+  // Check if rate is stale (more than 7 days)
+  const isStale = lastRewardTime > 0 && (Date.now() / 1000 - lastRewardTime) > 7 * 24 * 60 * 60;
+
+  return {
+    apy: apyPercent,
+    apyBps,
+    rewardRate,
+    lastRewardTime,
+    lastRewardAmount,
+    totalStaked: totalStaked ? formatUnits(totalStaked as bigint, 18) : '0',
+    isStale,
+    isLoading,
+  };
 }

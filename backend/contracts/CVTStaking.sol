@@ -61,6 +61,11 @@ contract CVTStaking is
     uint256 public rewardIndex;
     uint256 private constant INDEX_PRECISION = 1e18;
 
+    // APY calculation tracking
+    uint256 public rewardRate;        // Rewards per second (scaled by 1e18)
+    uint256 public lastRewardTime;    // Last reward distribution timestamp
+    uint256 public lastRewardAmount;  // Last reward amount distributed
+
     // ============== STORAGE GAP ==============
 
     uint256[50] private __gap;
@@ -232,6 +237,20 @@ contract CVTStaking is
         // Update global reward index
         rewardIndex += (amount * INDEX_PRECISION) / totalStaked;
 
+        // Calculate reward rate for APY estimation
+        uint256 currentTime = block.timestamp;
+        if (lastRewardTime > 0 && currentTime > lastRewardTime) {
+            uint256 timeDelta = currentTime - lastRewardTime;
+            // Rate = amount per second, scaled by 1e18 for precision
+            rewardRate = (amount * 1e18) / timeDelta;
+        } else {
+            // First distribution or same block - estimate based on 1 day period
+            rewardRate = (amount * 1e18) / 1 days;
+        }
+
+        lastRewardTime = currentTime;
+        lastRewardAmount = amount;
+
         emit RewardsDistributed(amount);
     }
 
@@ -317,6 +336,42 @@ contract CVTStaking is
      */
     function getStakersCount() external view returns (uint256) {
         return stakers.length;
+    }
+
+    /**
+     * @notice Get current staking APY based on recent reward distribution
+     * @return apy Annual Percentage Yield in basis points (e.g., 500 = 5%)
+     * @dev Returns 0 if no rewards have been distributed or no tokens staked
+     */
+    function getStakingAPY() external view returns (uint256) {
+        if (totalStaked == 0 || rewardRate == 0) return 0;
+
+        // Check if reward rate is stale (more than 7 days old)
+        if (block.timestamp > lastRewardTime + 7 days) {
+            return 0; // Stale data, return 0
+        }
+
+        // rewardRate is rewards per second scaled by 1e18
+        // APY = (rewardRate * seconds_per_year / totalStaked) * 10000
+        // APY (basis points) = rewardRate * 365 days * 10000 / (totalStaked * 1e18)
+        uint256 yearlyRewards = (rewardRate * 365 days) / 1e18;
+        uint256 apyBps = (yearlyRewards * 10000) / totalStaked;
+
+        return apyBps;
+    }
+
+    /**
+     * @notice Get reward rate info for frontend
+     * @return rate Current reward rate (per second, scaled by 1e18)
+     * @return lastUpdate Timestamp of last reward distribution
+     * @return lastAmount Last reward amount distributed
+     */
+    function getRewardRateInfo() external view returns (
+        uint256 rate,
+        uint256 lastUpdate,
+        uint256 lastAmount
+    ) {
+        return (rewardRate, lastRewardTime, lastRewardAmount);
     }
 
     // ============== EMERGENCY ==============

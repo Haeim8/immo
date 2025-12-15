@@ -50,6 +50,7 @@ const READER_ABI = [
           { internalType: "uint256", name: "maxBorrowRatio", type: "uint256" },
           { internalType: "uint256", name: "liquidationBonus", type: "uint256" },
           { internalType: "uint256", name: "expectedReturn", type: "uint256" },
+          { internalType: "uint256", name: "currentBorrowRate", type: "uint256" },
           { internalType: "bool", name: "isActive", type: "bool" },
           { internalType: "uint256", name: "createdAt", type: "uint256" },
           { internalType: "uint256", name: "totalSupplied", type: "uint256" },

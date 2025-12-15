@@ -12,7 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { parseUnits, formatUnits } from "viem";
 import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL, formatUsd, formatTokenAmount, toUsdValue, getFallbackPrice } from "@/lib/evm/hooks";
-import { useSupply, useWithdraw, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
+import { useSupply, useWithdraw, useBorrow, useRepayBorrow, useApproveToken, useClaimInterest } from "@/lib/evm/write-hooks.js";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { BuyCryptoButton } from "@/components/buy-crypto-button";
 import { useToast } from "@/components/ui/toast-notification";
@@ -341,6 +341,7 @@ export default function VaultPage() {
   const { borrow, isPending: isBorrowPending, error: borrowError, isSuccess: borrowSuccess } = useBorrow(vaultAddress);
   const { repayBorrow, isPending: isRepayPending, error: repayError, isSuccess: repaySuccess } = useRepayBorrow(vaultAddress);
   const { approve, isPending: isApprovePending, error: approveError, isSuccess: approveSuccess } = useApproveToken(vault?.tokenAddress);
+  const { claimInterest, isPending: isClaimPending, error: claimError, isSuccess: claimSuccess } = useClaimInterest(vaultAddress);
 
   // Toast erreurs
   useEffect(() => {
@@ -349,7 +350,8 @@ export default function VaultPage() {
     if (borrowError) showToast({ type: 'error', title: 'Erreur Borrow', message: borrowError.message?.slice(0, 100) });
     if (repayError) showToast({ type: 'error', title: 'Erreur Repay', message: repayError.message?.slice(0, 100) });
     if (approveError) showToast({ type: 'error', title: 'Erreur Approve', message: approveError.message?.slice(0, 100) });
-  }, [supplyError, withdrawError, borrowError, repayError, approveError, showToast]);
+    if (claimError) showToast({ type: 'error', title: 'Erreur Claim', message: claimError.message?.slice(0, 100) });
+  }, [supplyError, withdrawError, borrowError, repayError, approveError, claimError, showToast]);
 
   // Toast succès
   useEffect(() => {
@@ -357,7 +359,8 @@ export default function VaultPage() {
     if (withdrawSuccess) showToast({ type: 'success', title: 'Withdraw réussi!' });
     if (borrowSuccess) showToast({ type: 'success', title: 'Borrow réussi!' });
     if (repaySuccess) showToast({ type: 'success', title: 'Remboursement réussi!' });
-  }, [supplySuccess, withdrawSuccess, borrowSuccess, repaySuccess, showToast]);
+    if (claimSuccess) showToast({ type: 'success', title: 'Intérêts réclamés' });
+  }, [supplySuccess, withdrawSuccess, borrowSuccess, repaySuccess, claimSuccess, showToast]);
 
   // Quand l'approve est confirmé, lancer le supply ou repay
   useEffect(() => {
@@ -988,6 +991,26 @@ export default function VaultPage() {
                           }`}
                         >
                           {actionLoading ? 'Transaction...' : `Withdraw (Max: ${formatTokenAmount(userWithdrawableAmount)})`}
+                        </button>
+                      )}
+
+                      {/* Claim interests */}
+                      {userPosition && parseFloat(userPosition.interestPending) > 0 && (
+                        <button
+                          type="button"
+                          disabled={isClaimPending || actionLoading}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            claimInterest();
+                          }}
+                          className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 mt-2 ${
+                            isClaimPending || actionLoading
+                              ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          }`}
+                        >
+                          {isClaimPending ? 'Claiming...' : `Claim interest (${formatTokenAmount(parseFloat(userPosition.interestPending))} ${vault.tokenSymbol})`}
                         </button>
                       )}
 

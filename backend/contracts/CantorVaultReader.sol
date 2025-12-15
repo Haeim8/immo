@@ -28,7 +28,8 @@ contract CantorVaultReader {
         uint256 borrowSlope;
         uint256 maxBorrowRatio;
         uint256 liquidationBonus;
-        uint256 expectedReturn;
+        uint256 expectedReturn;      // Supply APY (borrowRate * utilization)
+        uint256 currentBorrowRate;   // Current borrow APY (calculated from model)
         bool isActive;
         uint256 createdAt;
         // State
@@ -146,9 +147,10 @@ contract CantorVaultReader {
                 ? (totalSupplied * 10000) / data.maxLiquidity
                 : 0;
 
-            // Calculate expected APY
+            // Calculate APYs
             uint256 borrowRate = vault.calculateBorrowRate();
-            data.expectedReturn = (borrowRate * utilizationRate) / 10000;
+            data.currentBorrowRate = borrowRate;  // Borrow APY
+            data.expectedReturn = (borrowRate * utilizationRate) / 10000;  // Supply APY
         }
 
         // CVT, underlying token, and pause state

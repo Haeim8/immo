@@ -257,6 +257,7 @@ export const READER_ABI = [
           { internalType: 'uint256', name: 'maxBorrowRatio', type: 'uint256' },
           { internalType: 'uint256', name: 'liquidationBonus', type: 'uint256' },
           { internalType: 'uint256', name: 'expectedReturn', type: 'uint256' },
+          { internalType: 'uint256', name: 'currentBorrowRate', type: 'uint256' },
           { internalType: 'bool', name: 'isActive', type: 'bool' },
           { internalType: 'uint256', name: 'createdAt', type: 'uint256' },
           { internalType: 'uint256', name: 'totalSupplied', type: 'uint256' },
@@ -293,6 +294,7 @@ export const READER_ABI = [
           { internalType: 'uint256', name: 'maxBorrowRatio', type: 'uint256' },
           { internalType: 'uint256', name: 'liquidationBonus', type: 'uint256' },
           { internalType: 'uint256', name: 'expectedReturn', type: 'uint256' },
+          { internalType: 'uint256', name: 'currentBorrowRate', type: 'uint256' },
           { internalType: 'bool', name: 'isActive', type: 'bool' },
           { internalType: 'uint256', name: 'createdAt', type: 'uint256' },
           { internalType: 'uint256', name: 'totalSupplied', type: 'uint256' },
@@ -471,6 +473,42 @@ export const STAKING_ABI = [
     inputs: [],
     name: 'vault',
     outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // getStakingAPY() - returns APY in basis points (500 = 5%)
+  {
+    inputs: [],
+    name: 'getStakingAPY',
+    outputs: [{ internalType: 'uint256', name: 'apy', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // getRewardRateInfo() - returns rate details for frontend
+  {
+    inputs: [],
+    name: 'getRewardRateInfo',
+    outputs: [
+      { internalType: 'uint256', name: 'rate', type: 'uint256' },
+      { internalType: 'uint256', name: 'lastUpdate', type: 'uint256' },
+      { internalType: 'uint256', name: 'lastAmount', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // rewardRate - current reward rate per second
+  {
+    inputs: [],
+    name: 'rewardRate',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // lastRewardTime - timestamp of last distribution
+  {
+    inputs: [],
+    name: 'lastRewardTime',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function',
   },

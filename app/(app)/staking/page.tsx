@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Coins, Lock, TrendingUp, Wallet, ArrowUpRight, Loader2, Shield, Percent } from "lucide-react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import Link from "next/link";
 import { formatUnits } from "viem";
 import { READER_ADDRESS } from "@/lib/evm/constants";
@@ -29,8 +29,22 @@ export default function StakingPage() {
     args: [BigInt(0), BigInt(100)],
   });
 
-  // Get first vault's staking contract (if exists)
-  const firstVault = (vaultsData as any[])?.[0];
+  const vaultList = (vaultsData as any[]) || [];
+
+  // Fetch stakingContract for each vault to trouver le premier pool dispo
+  const stakingContracts = useReadContracts({
+    contracts: vaultList.map((v: any) => ({
+      address: v.vaultAddress as `0x${string}`,
+      abi: VAULT_ABI,
+      functionName: "stakingContract" as const,
+    })) as any,
+    query: { enabled: vaultList.length > 0 },
+  } as any) as { data?: any[]; isLoading: boolean };
+
+  const firstStakingIndex = (stakingContracts.data || []).findIndex(
+    (entry: any) => entry?.result && entry.result !== '0x0000000000000000000000000000000000000000'
+  );
+  const firstVault = firstStakingIndex >= 0 ? vaultList[firstStakingIndex] : undefined;
   const firstVaultAddress = firstVault?.vaultAddress as `0x${string}` | undefined;
 
   // Read staking address from first vault
@@ -92,7 +106,7 @@ export default function StakingPage() {
   const hasPosition = userStakedAmount > 0;
   const symbol = (tokenSymbol as string) || 'USDC';
 
-  const isLoading = loadingVaults || loadingTotalStaked;
+  const isLoading = loadingVaults || loadingTotalStaked || stakingContracts.isLoading;
 
   if (isLoading) {
     return (

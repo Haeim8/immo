@@ -11,7 +11,7 @@ import { useAccount, useBalance } from "wagmi";
 import Image from "next/image";
 import Link from "next/link";
 import { formatUnits, parseUnits } from "viem";
-import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
+import { useAllVaults, useUserPositions, useStakingAPY, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
 import { useStakeCVT, useUnstakeCVT, useClaimStakingRewards, useApproveToken } from "@/lib/evm/write-hooks.js";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTranslations } from "@/components/providers/IntlProvider";
@@ -162,6 +162,10 @@ export default function StakingDetailPage() {
 
   const stakingAddress = stakingAddressData as `0x${string}` | undefined;
   const hasStaking = stakingAddress && stakingAddress !== '0x0000000000000000000000000000000000000000';
+
+  // Fetch real APY from staking contract
+  const { apy: stakingAPY, isStale: apyIsStale, isLoading: apyLoading } = useStakingAPY(hasStaking ? stakingAddress : undefined);
+  const displayAPY = apyLoading ? '...' : apyIsStale ? 'N/A' : `${stakingAPY.toFixed(2)}%`;
 
   // Fetch CVT token balance from wallet (for staking)
   const { data: cvtBalance } = useBalance({
@@ -342,7 +346,7 @@ export default function StakingDetailPage() {
     claimRewards();
   };
 
-  const estimatedYearlyRewards = amount ? (parseFloat(amount) || 0) * vault.supplyRate / 100 : 0;
+  const estimatedYearlyRewards = userRewards;
 
   return (
     <div className="flex-1 py-6">
@@ -425,8 +429,8 @@ export default function StakingDetailPage() {
                   <StatCard
                     icon={<Percent className="w-4 h-4" />}
                     label={stakingT("currentAPY") || "Current APY"}
-                    value={`${vault.supplyRate.toFixed(2)}%`}
-                    subValue={stakingT("variableRate") || "Variable rate"}
+                    value={displayAPY}
+                    subValue={apyIsStale ? (stakingT("noRecentRewards") || "No recent rewards") : (stakingT("variableRate") || "Variable rate")}
                     color="text-success"
                   />
                   <StatCard
@@ -499,7 +503,7 @@ export default function StakingDetailPage() {
                   </div>
                   <div className="bg-card/60 rounded-lg p-4">
                     <p className="text-xs text-muted-foreground mb-1">{stakingT("earning") || "Earning"}</p>
-                    <p className="text-xl font-bold text-success">{vault.supplyRate.toFixed(2)}%</p>
+                    <p className="text-xl font-bold text-success">{displayAPY}</p>
                     <p className="text-xs text-muted-foreground">APY</p>
                   </div>
                 </div>
@@ -605,7 +609,7 @@ export default function StakingDetailPage() {
                           <span className="font-medium">{vault.tokenSymbol}</span>
                         </div>
                         <span className="font-bold text-success">
-                          {vault.supplyRate.toFixed(2)}% APY
+                          APY {displayAPY}
                         </span>
                       </div>
 
@@ -726,7 +730,7 @@ export default function StakingDetailPage() {
                         />
                         <InfoRow
                           label="APY"
-                          value={`${vault.supplyRate.toFixed(2)}%`}
+                          value={displayAPY}
                           valueColor="text-success"
                         />
                         <InfoRow
@@ -765,7 +769,7 @@ export default function StakingDetailPage() {
 
                       {/* Info when not connected */}
                       <div className="mt-6 pt-5 border-t border-border/50 space-y-1 text-left">
-                        <InfoRow label="APY" value={`${vault.supplyRate.toFixed(2)}%`} valueColor="text-success" />
+                        <InfoRow label="APY" value={displayAPY} valueColor="text-success" />
                         <InfoRow label={stakingT("poolSize") || "Pool size"} value={formatCurrency(totalStaked)} />
                         <InfoRow label={stakingT("capacity") || "Capacity"} value={`${fillPercent.toFixed(1)}%`} />
                         <InfoRow label={stakingT("lockPeriod") || "Lock period"} value={stakingT("none") || "None"} valueColor="text-success" />

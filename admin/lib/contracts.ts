@@ -1,17 +1,17 @@
 // Contract addresses sur Base Sepolia (alignés avec lib/evm/constants.ts)
-// Mise à jour : 2025-12-14
+// Mise à jour : 2025-12-15
 export const CONTRACTS = {
   network: "baseSepolia",
   chainId: 84532,
   deployer: "0x222fD66bbfc6808e123aB51f5FB21644731dFDE2",
   usdc: "0x45f591C36B3506a881eD54638a9456607c2Eed84",
-  protocol: "0x6b6F54EF45A2c2bcbED9B7070E37082b78FADE57",
-  feeCollector: "0x0111a3e4A9c25F677C1a49B60664b5cDbbD75B63",
-  priceOracle: "0xd79d53a623660b598b1349a090Ea364A12Fb51E4",
-  collateralManager: "0x450e0CDF04521260857301225Ea6Ec812E51C0b7",
-  vaultImplementation: "0x2da321bB07B1eCB7FA6FB81c376375627D194821",
-  factory: "0x0B5acAD1fb27FbF87C9e307dE15FC840011d0C51",
-  reader: "0x595294dF1Ac2a60E954CBE421d1628077865bc07",
+  protocol: "0x019A6562e7966Da17C1EE3ec4A3d0c79E079CeA5",
+  feeCollector: "0x677674bA37100898dd51BEE1c09ad8b23d526513",
+  priceOracle: "0xc77C80C64093c64a0E4f3a9096F54e55028A6D69",
+  collateralManager: "0x27d524D2f8f3373FF270F023941cdd1036175c49",
+  vaultImplementation: "0xe294753071FdCE1cf7C587160470818e1592aBAf",
+  factory: "0x2079Cd6B84b91dd23dcD412bA260f205d64601DE",
+  reader: "0x1b81A180802d61Ecf317e15EeF36691af39C468b",
   cvtToken: "0x4A539C79C9cB592F545Bb5b09296929a46898dfc",
   // staking: fetched dynamically from vault.stakingContract()
 } as const;
@@ -135,6 +135,107 @@ export const PROTOCOL_ABI = [
     name: "setTreasury",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "newCollector", type: "address" }],
+    name: "setFeeCollector",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "factory", type: "address" }],
+    name: "addFactory",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "factory", type: "address" }],
+    name: "removeFactory",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "pause",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "unpause",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+// ============== READER ABI (CantorVaultReader) ==============
+export const READER_ABI = [
+  {
+    inputs: [],
+    name: "getGlobalStats",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint256", name: "totalVaults", type: "uint256" },
+          { internalType: "uint256", name: "totalSupplied", type: "uint256" },
+          { internalType: "uint256", name: "totalBorrowed", type: "uint256" },
+          { internalType: "uint256", name: "totalRevenuesDistributed", type: "uint256" },
+          { internalType: "uint256", name: "totalCapitalRepaid", type: "uint256" },
+          { internalType: "uint256", name: "activeVaults", type: "uint256" },
+          { internalType: "uint256", name: "averageAPY", type: "uint256" },
+        ],
+        internalType: "struct CantorVaultReader.GlobalStats",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "offset", type: "uint256" },
+      { internalType: "uint256", name: "limit", type: "uint256" },
+    ],
+    name: "getVaults",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint256", name: "vaultId", type: "uint256" },
+          { internalType: "address", name: "vaultAddress", type: "address" },
+          { internalType: "uint256", name: "maxLiquidity", type: "uint256" },
+          { internalType: "uint256", name: "borrowBaseRate", type: "uint256" },
+          { internalType: "uint256", name: "borrowSlope", type: "uint256" },
+          { internalType: "uint256", name: "maxBorrowRatio", type: "uint256" },
+          { internalType: "uint256", name: "liquidationBonus", type: "uint256" },
+          { internalType: "uint256", name: "expectedReturn", type: "uint256" },
+          { internalType: "uint256", name: "currentBorrowRate", type: "uint256" },
+          { internalType: "bool", name: "isActive", type: "bool" },
+          { internalType: "uint256", name: "createdAt", type: "uint256" },
+          { internalType: "uint256", name: "totalSupplied", type: "uint256" },
+          { internalType: "uint256", name: "totalBorrowed", type: "uint256" },
+          { internalType: "uint256", name: "availableLiquidity", type: "uint256" },
+          { internalType: "uint256", name: "utilizationRate", type: "uint256" },
+          { internalType: "uint256", name: "fundingProgress", type: "uint256" },
+          { internalType: "uint256", name: "totalInterestCollected", type: "uint256" },
+          { internalType: "uint256", name: "totalBadDebt", type: "uint256" },
+          { internalType: "address", name: "cvtToken", type: "address" },
+          { internalType: "uint256", name: "cvtTotalSupply", type: "uint256" },
+          { internalType: "bool", name: "isPaused", type: "bool" },
+          { internalType: "address", name: "underlyingToken", type: "address" },
+        ],
+        internalType: "struct CantorVaultReader.VaultData[]",
+        name: "",
+        type: "tuple[]",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
 ] as const;
@@ -504,6 +605,41 @@ export const VAULT_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    name: "crossCollateralBorrow",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    name: "repayCrossCollateralBorrow",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_collateralManager", type: "address" }],
+    name: "setCollateralManager",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "bool", name: "enabled", type: "bool" }],
+    name: "setCrossCollateralEnabled",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "borrower", type: "address" }],
+    name: "liquidate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ] as const;
 
 // ============== STAKING ABI ==============
@@ -662,6 +798,85 @@ export const ACCESS_CONTROL_ABI = [
       { internalType: "address", name: "account", type: "address" },
     ],
     name: "revokeRole",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+// ============== COLLATERAL MANAGER ABI (admin actions) ==============
+export const COLLATERAL_MANAGER_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "vaultAddress", type: "address" }],
+    name: "addVault",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "vaultAddress", type: "address" }],
+    name: "removeVault",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "newMaxLTV", type: "uint256" }],
+    name: "setMaxLTV",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "newThreshold", type: "uint256" }],
+    name: "setLiquidationThreshold",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "newOracle", type: "address" }],
+    name: "setPriceOracle",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  { inputs: [], name: "pause", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "unpause", outputs: [], stateMutability: "nonpayable", type: "function" },
+] as const;
+
+// ============== PRICE ORACLE ABI ==============
+export const PRICE_ORACLE_MINI_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "token", type: "address" }],
+    name: "getPrice",
+    outputs: [{ internalType: "uint256", name: "price", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "token", type: "address" },
+      { internalType: "address", name: "feed", type: "address" },
+    ],
+    name: "setPriceFeed",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "token", type: "address" },
+      { internalType: "uint256", name: "price", type: "uint256" },
+    ],
+    name: "setManualPrice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "newThreshold", type: "uint256" }],
+    name: "setStalePriceThreshold",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
