@@ -520,6 +520,38 @@ export const VAULT_EXTENDED_ABI = [
   },
 ] as const;
 
+// PriceOracle ABI - for fetching USD prices
+export const PRICE_ORACLE_ABI = [
+  // getPrice(address token) - returns USD price with 8 decimals
+  {
+    inputs: [{ internalType: 'address', name: 'token', type: 'address' }],
+    name: 'getPrice',
+    outputs: [{ internalType: 'uint256', name: 'price', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // getUSDValue(address token, uint256 amount, uint8 tokenDecimals) - returns USD value with 8 decimals
+  {
+    inputs: [
+      { internalType: 'address', name: 'token', type: 'address' },
+      { internalType: 'uint256', name: 'amount', type: 'uint256' },
+      { internalType: 'uint8', name: 'tokenDecimals', type: 'uint8' },
+    ],
+    name: 'getUSDValue',
+    outputs: [{ internalType: 'uint256', name: 'value', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // hasPriceAvailable(address token) - check if price is available
+  {
+    inputs: [{ internalType: 'address', name: 'token', type: 'address' }],
+    name: 'hasPriceAvailable',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
+
 // ERC20 ABI
 export const ERC20_ABI = [
   {

@@ -11,7 +11,7 @@ import { useAccount, useBalance } from "wagmi";
 import Image from "next/image";
 import Link from "next/link";
 import { parseUnits, formatUnits } from "viem";
-import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
+import { useAllVaults, useUserPositions, VaultData, BLOCK_EXPLORER_URL, formatUsd, formatTokenAmount, toUsdValue, getFallbackPrice } from "@/lib/evm/hooks";
 import { useSupply, useWithdraw, useBorrow, useRepayBorrow, useApproveToken } from "@/lib/evm/write-hooks.js";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { BuyCryptoButton } from "@/components/buy-crypto-button";
@@ -25,20 +25,6 @@ const tokenLogos: Record<string, string> = {
   WBTC: "/btc.png",
   BTC: "/btc.png",
 };
-
-function formatCurrency(value: string | number): string {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (num >= 1000000) return `$${(num / 1000000).toFixed(2)}M`;
-  if (num >= 1000) return `$${(num / 1000).toFixed(1)}K`;
-  return `$${num.toFixed(2)}`;
-}
-
-function formatNumber(value: string | number): string {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (num >= 1000000) return `${(num / 1000000).toFixed(2)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toFixed(2);
-}
 
 // Stat Card Component
 function StatCard({ label, value, subValue }: {
@@ -440,6 +426,12 @@ export default function VaultPage() {
   const supplyPercent = maxCapacity > 0 ? (totalDeposits / maxCapacity) * 100 : 0;
   const borrowPercent = totalDeposits > 0 ? (totalBorrows / totalDeposits) * 100 : 0;
 
+  // Get token price for USD conversions
+  const tokenPrice = getFallbackPrice(vault.tokenSymbol);
+  const totalDepositsUsd = totalDeposits * tokenPrice;
+  const totalBorrowsUsd = totalBorrows * tokenPrice;
+  const availableLiquidityUsd = availableLiquidity * tokenPrice;
+
   const actionLoading = isSupplyPending || isWithdrawPending || isBorrowPending || isRepayPending || isApprovePending;
   const isAmountValid = amount && parseFloat(amount) > 0;
 
@@ -461,7 +453,7 @@ export default function VaultPage() {
 
     // Check wallet balance for lend mode
     if (mode === 'lend' && numericAmount > walletBalance) {
-      showToast({ type: 'error', title: 'Solde insuffisant', message: `Vous avez ${formatNumber(walletBalance)} ${vault?.tokenSymbol || ''}` });
+      showToast({ type: 'error', title: 'Solde insuffisant', message: `Vous avez ${formatTokenAmount(walletBalance)} ${vault?.tokenSymbol || ''}` });
       return;
     }
 
@@ -487,7 +479,7 @@ export default function VaultPage() {
 
     // Check wallet balance for repay
     if (numericAmount > walletBalance) {
-      showToast({ type: 'error', title: 'Solde insuffisant', message: `Vous avez ${formatNumber(walletBalance)} ${vault.tokenSymbol}` });
+      showToast({ type: 'error', title: 'Solde insuffisant', message: `Vous avez ${formatTokenAmount(walletBalance)} ${vault.tokenSymbol}` });
       return;
     }
 
@@ -509,7 +501,7 @@ export default function VaultPage() {
     // Vérifier que l'utilisateur a assez de CVT (position supply)
     const userSupplied = parseFloat(userPosition.supplied);
     if (numericAmount > userSupplied) {
-      showToast({ type: 'error', title: 'Montant trop élevé', message: `Position: ${formatNumber(userSupplied)} ${vault.tokenSymbol}` });
+      showToast({ type: 'error', title: 'Montant trop élevé', message: `Position: ${formatTokenAmount(userSupplied)} ${vault.tokenSymbol}` });
       return;
     }
 
@@ -525,7 +517,7 @@ export default function VaultPage() {
       // Set max borrowable (limited by available liquidity and user's max borrow capacity)
       const maxBorrowable = userPosition ? parseFloat(userPosition.maxBorrow) : 0;
       const maxAmount = Math.min(availableLiquidity, maxBorrowable > 0 ? maxBorrowable : availableLiquidity);
-      setAmount(formatNumber(maxAmount));
+      setAmount(formatTokenAmount(maxAmount));
     }
   };
 
@@ -579,13 +571,13 @@ export default function VaultPage() {
             <div className="flex flex-wrap gap-3">
               <StatCard
                 label="Total Deposits"
-                value={formatNumber(totalDeposits)}
-                subValue={formatCurrency(totalDeposits)}
+                value={formatTokenAmount(totalDeposits)}
+                subValue={formatUsd(totalDepositsUsd)}
               />
               <StatCard
                 label="Total Borrows"
-                value={formatNumber(totalBorrows)}
-                subValue={formatCurrency(totalBorrows)}
+                value={formatTokenAmount(totalBorrows)}
+                subValue={formatUsd(totalBorrowsUsd)}
               />
               <StatCard
                 label="Utilization"
@@ -623,10 +615,10 @@ export default function VaultPage() {
                 <div className="flex-1">
                   <span className="text-sm text-muted-foreground">Total supplied</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold">{formatNumber(totalDeposits)}</span>
-                    <span className="text-sm text-muted-foreground">of {formatNumber(maxCapacity)}</span>
+                    <span className="text-xl font-bold">{formatTokenAmount(totalDeposits)}</span>
+                    <span className="text-sm text-muted-foreground">of {formatTokenAmount(maxCapacity)}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{formatCurrency(totalDeposits)}</span>
+                  <span className="text-xs text-muted-foreground">{formatUsd(totalDepositsUsd)}</span>
                 </div>
                 <div className="text-right">
                   <span className="text-sm text-muted-foreground">APY</span>
@@ -671,10 +663,10 @@ export default function VaultPage() {
                 <div className="flex-1">
                   <span className="text-sm text-muted-foreground">Total borrowed</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold">{formatNumber(totalBorrows)}</span>
-                    <span className="text-sm text-muted-foreground">of {formatNumber(totalDeposits)}</span>
+                    <span className="text-xl font-bold">{formatTokenAmount(totalBorrows)}</span>
+                    <span className="text-sm text-muted-foreground">of {formatTokenAmount(totalDeposits)}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{formatCurrency(totalBorrows)}</span>
+                  <span className="text-xs text-muted-foreground">{formatUsd(totalBorrowsUsd)}</span>
                 </div>
                 <div className="text-right">
                   <span className="text-sm text-muted-foreground">APY, variable</span>
@@ -705,7 +697,7 @@ export default function VaultPage() {
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                       Available <Info className="w-3 h-3" />
                     </div>
-                    <span className="font-bold">{formatCurrency(availableLiquidity)}</span>
+                    <span className="font-bold">{formatUsd(availableLiquidityUsd)}</span>
                   </div>
                 </div>
               </div>
@@ -868,11 +860,11 @@ export default function VaultPage() {
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
-                            {amount ? formatCurrency(parseFloat(amount) || 0) : '$0.00'}
+                            {amount ? formatUsd(toUsdValue(parseFloat(amount) || 0, vault.tokenSymbol, tokenPrice)) : '$0.00'}
                           </span>
                           <div className="flex items-center gap-2">
                             <span className={`text-muted-foreground ${hasInsufficientBalance ? 'text-destructive' : ''}`}>
-                              {mode === 'lend' ? 'Wallet:' : 'Max:'} {mode === 'lend' ? formatNumber(walletBalance) : (userPosition ? formatNumber(parseFloat(userPosition.maxBorrow)) : '0.00')}
+                              {mode === 'lend' ? 'Wallet:' : 'Max:'} {mode === 'lend' ? formatTokenAmount(walletBalance) : (userPosition ? formatTokenAmount(parseFloat(userPosition.maxBorrow)) : '0.00')}
                             </span>
                             <button
                               type="button"
@@ -891,7 +883,7 @@ export default function VaultPage() {
                         {hasInsufficientBalance && (
                           <div className="mt-2">
                             <p className="text-xs text-destructive">
-                              Solde insuffisant ({formatNumber(walletBalance)} {vault.tokenSymbol} disponible)
+                              Solde insuffisant ({formatTokenAmount(walletBalance)} {vault.tokenSymbol} disponible)
                             </p>
                             <div className="mt-2">
                               <BuyCryptoButton />
@@ -906,7 +898,9 @@ export default function VaultPage() {
                           {mode === 'lend' ? 'Available to supply' : 'Available to borrow'}
                         </span>
                         <span className="font-medium">
-                          {mode === 'lend' ? formatCurrency(walletBalance) : formatCurrency(availableLiquidity)}
+                          {mode === 'lend'
+                            ? `${formatTokenAmount(walletBalance)} ${vault.tokenSymbol}`
+                            : `${formatTokenAmount(availableLiquidity)} ${vault.tokenSymbol}`}
                         </span>
                       </div>
 
@@ -923,8 +917,8 @@ export default function VaultPage() {
                             </span>
                             <span className={`font-medium ${mode === 'lend' ? 'text-success' : 'text-accent'}`}>
                               {mode === 'lend'
-                                ? `+${formatCurrency((parseFloat(amount) || 0) * vault.supplyRate / 100)}`
-                                : `-${formatCurrency((parseFloat(amount) || 0) * vault.borrowRate / 100)}`
+                                ? `+${formatUsd(toUsdValue((parseFloat(amount) || 0) * vault.supplyRate / 100, vault.tokenSymbol, tokenPrice))}`
+                                : `-${formatUsd(toUsdValue((parseFloat(amount) || 0) * vault.borrowRate / 100, vault.tokenSymbol, tokenPrice))}`
                               }
                             </span>
                           </div>
@@ -990,7 +984,7 @@ export default function VaultPage() {
                               : 'bg-accent text-white hover:bg-accent/90'
                           }`}
                         >
-                          {actionLoading ? 'Transaction...' : `Withdraw (Max: ${formatNumber(userSuppliedAmount)})`}
+                          {actionLoading ? 'Transaction...' : `Withdraw (Max: ${formatTokenAmount(userSuppliedAmount)})`}
                         </button>
                       )}
 
@@ -1012,11 +1006,11 @@ export default function VaultPage() {
                       <div className="mt-5 pt-5 border-t border-border/50 space-y-1">
                         <InfoRow
                           label="Your position"
-                          value={userPosition ? `${formatNumber(userPosition.supplied)} ${vault.tokenSymbol}` : `0 ${vault.tokenSymbol}`}
+                          value={userPosition ? `${formatTokenAmount(parseFloat(userPosition.supplied))} ${vault.tokenSymbol}` : `0 ${vault.tokenSymbol}`}
                         />
                         <InfoRow
                           label="USD Value"
-                          value={userPosition ? formatCurrency(userPosition.supplied) : '$0'}
+                          value={userPosition ? formatUsd(userPosition.suppliedUsd) : '$0'}
                         />
                         <InfoRow
                           label={mode === 'lend' ? 'Supply Rate' : 'Borrow Rate'}
@@ -1030,7 +1024,7 @@ export default function VaultPage() {
                             valueColor={userPosition.healthFactor >= 100 ? 'text-success' : 'text-warning'}
                           />
                         )}
-                        <InfoRow label="Pool size" value={formatCurrency(totalDeposits)} />
+                        <InfoRow label="Pool size" value={formatUsd(totalDepositsUsd)} />
                         <InfoRow label="Utilization" value={`${vault.utilizationRate.toFixed(1)}%`} />
                       </div>
                     </>
@@ -1077,7 +1071,7 @@ export default function VaultPage() {
                           value={`${mode === 'lend' ? vault.supplyRate.toFixed(2) : vault.borrowRate.toFixed(2)}%`}
                           valueColor={mode === 'lend' ? 'text-success' : 'text-accent'}
                         />
-                        <InfoRow label="Pool size" value={formatCurrency(totalDeposits)} />
+                        <InfoRow label="Pool size" value={formatUsd(totalDepositsUsd)} />
                         <InfoRow label="Utilization" value={`${vault.utilizationRate.toFixed(1)}%`} />
                       </div>
                     </div>

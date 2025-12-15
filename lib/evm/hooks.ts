@@ -11,6 +11,10 @@ import { formatUnits } from 'viem';
 import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, CHAIN_ID } from './constants';
 import { PROTOCOL_ABI, READER_ABI, ERC20_ABI, VAULT_EXTENDED_ABI } from './abis';
 import { getFromCache, setInCache } from './cache';
+import { getFallbackPrice, formatUsd, formatTokenAmount, toUsdValue } from './prices';
+
+// Re-export price utilities for convenience
+export { formatUsd, formatTokenAmount, toUsdValue, getFallbackPrice };
 
 // Re-exports
 export { BLOCK_EXPLORER_URL };
@@ -41,6 +45,9 @@ export interface VaultData {
 export interface UserPosition {
   vaultId: number;
   vaultAddress: `0x${string}`;
+  tokenAddress: `0x${string}`;
+  tokenSymbol: string;
+  tokenDecimals: number;
   supplied: string;
   borrowed: string;
   interest: string;
@@ -49,6 +56,12 @@ export interface UserPosition {
   withdrawable: string;
   cvtBalance: string;
   interestPending: string;
+  // USD values
+  suppliedUsd: number;
+  borrowedUsd: number;
+  interestPendingUsd: number;
+  maxBorrowUsd: number;
+  tokenPrice: number;
 }
 
 
@@ -406,6 +419,8 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
       const vault = vaults.find(v => v.vaultId === Number(p.vaultId));
       const decimals = vault?.tokenDecimals || 18;
       const maxBorrowRatio = vault?.maxBorrowRatio || 80;
+      const tokenSymbol = vault?.tokenSymbol || 'UNKNOWN';
+      const tokenAddress = vault?.tokenAddress || ('0x0' as `0x${string}`);
 
       const supplied = parseFloat(formatUnits(BigInt(p.supplyAmount || 0), decimals));
       const borrowed = parseFloat(formatUnits(BigInt(p.borrowedAmount || 0), decimals));
@@ -427,9 +442,21 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
         healthFactor = maxBorrowValue > 0 ? (maxBorrowValue / borrowed) * 100 : 0;
       }
 
+      // Get token price (fallback for now, oracle integration can be added)
+      const tokenPrice = getFallbackPrice(tokenSymbol);
+
+      // Calculate USD values
+      const suppliedUsd = supplied * tokenPrice;
+      const borrowedUsd = borrowed * tokenPrice;
+      const interestPendingUsd = interestPending * tokenPrice;
+      const maxBorrowUsd = maxBorrowFromContract * tokenPrice;
+
       return {
         vaultId: Number(p.vaultId),
         vaultAddress: p.vaultAddress as `0x${string}`,
+        tokenAddress,
+        tokenSymbol,
+        tokenDecimals: decimals,
         supplied: supplied.toString(),
         borrowed: borrowed.toString(),
         interest: formatUnits(BigInt(p.borrowInterestAccumulated || 0), decimals),
@@ -438,14 +465,20 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
         withdrawable: withdrawableFromContract.toString(), // From contract - borrow aware!
         cvtBalance: formatUnits(BigInt(p.cvtBalance || 0), 18), // CVT always has 18 decimals
         interestPending: interestPending.toString(),
+        // USD values
+        suppliedUsd,
+        borrowedUsd,
+        interestPendingUsd,
+        maxBorrowUsd,
+        tokenPrice,
       };
     });
 
-    // Calculate totals from transformed positions (more accurate for multi-token support)
+    // Calculate totals in USD (proper multi-token support!)
     const newTotals = {
-      totalSupplied: transformedPositions.reduce((sum, p) => sum + parseFloat(p.supplied), 0),
-      totalBorrowed: transformedPositions.reduce((sum, p) => sum + parseFloat(p.borrowed), 0),
-      totalInterestPending: transformedPositions.reduce((sum, p) => sum + parseFloat(p.interestPending), 0),
+      totalSupplied: transformedPositions.reduce((sum, p) => sum + p.suppliedUsd, 0),
+      totalBorrowed: transformedPositions.reduce((sum, p) => sum + p.borrowedUsd, 0),
+      totalInterestPending: transformedPositions.reduce((sum, p) => sum + p.interestPendingUsd, 0),
     };
 
     setPositions(transformedPositions);

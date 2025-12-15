@@ -6,7 +6,7 @@ import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import Link from "next/link";
 import Image from "next/image";
-import { useUserPositions, useAllVaults, BLOCK_EXPLORER_URL } from "@/lib/evm/hooks";
+import { useUserPositions, useAllVaults, BLOCK_EXPLORER_URL, formatUsd } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
 
 export const dynamic = 'force-dynamic';
@@ -19,13 +19,6 @@ const tokenLogos: Record<string, string> = {
   WBTC: "/btc.png",
   BTC: "/btc.png",
 };
-
-function formatCurrency(value: string | number): string {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (num >= 1000000) return `$${(num / 1000000).toFixed(2)}M`;
-  if (num >= 1000) return `$${(num / 1000).toFixed(1)}K`;
-  return `$${num.toFixed(2)}`;
-}
 
 
 
@@ -123,8 +116,8 @@ export default function PortfolioPage() {
   const lendingPositions = positionsWithVault.filter(pos => parseFloat(pos.borrowed) > 0);
   const stakingPositions = positionsWithVault.filter(pos => parseFloat(pos.borrowed) === 0 && parseFloat(pos.supplied) > 0);
 
-  // Calculate totals for staking
-  const stakingTotal = stakingPositions.reduce((sum, pos) => sum + parseFloat(pos.supplied), 0);
+  // Calculate totals for staking in USD
+  const stakingTotalUsd = stakingPositions.reduce((sum, pos) => sum + pos.suppliedUsd, 0);
 
   const netWorth = totals.totalSupplied - totals.totalBorrowed;
   const hasAnyPosition = positions.length > 0;
@@ -152,7 +145,7 @@ export default function PortfolioPage() {
               <TrendingUp className="w-4 h-4" />
               <span className="text-xs font-medium uppercase tracking-wide">{portfolioT("netWorth") || "Net Worth"}</span>
             </div>
-            <div className="stat-value">{formatCurrency(netWorth)}</div>
+            <div className="stat-value">{formatUsd(netWorth)}</div>
           </div>
 
           <div className="card-vault p-4 md:p-5">
@@ -160,7 +153,7 @@ export default function PortfolioPage() {
               <ArrowUpRight className="w-4 h-4" />
               <span className="text-xs font-medium uppercase tracking-wide">{portfolioT("supplied") || "Supplied"}</span>
             </div>
-            <div className="stat-value">{formatCurrency(totals.totalSupplied)}</div>
+            <div className="stat-value">{formatUsd(totals.totalSupplied)}</div>
           </div>
 
           <div className="card-vault p-4 md:p-5">
@@ -168,7 +161,7 @@ export default function PortfolioPage() {
               <ArrowDownRight className="w-4 h-4" />
               <span className="text-xs font-medium uppercase tracking-wide">{portfolioT("borrowed") || "Borrowed"}</span>
             </div>
-            <div className="stat-value">{formatCurrency(totals.totalBorrowed)}</div>
+            <div className="stat-value">{formatUsd(totals.totalBorrowed)}</div>
           </div>
 
           <div className="card-vault p-4 md:p-5">
@@ -176,7 +169,7 @@ export default function PortfolioPage() {
               <Activity className="w-4 h-4" />
               <span className="text-xs font-medium uppercase tracking-wide">{portfolioT("pending") || "Pending"}</span>
             </div>
-            <div className="stat-value text-success">+{formatCurrency(totals.totalInterestPending)}</div>
+            <div className="stat-value text-success">+{formatUsd(totals.totalInterestPending)}</div>
           </div>
         </motion.div>
 
@@ -258,8 +251,8 @@ export default function PortfolioPage() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-sm text-primary">{formatCurrency(position.supplied)}</p>
-                              <p className="text-[10px] text-success">+{formatCurrency(position.interestPending)}</p>
+                              <p className="font-bold text-sm text-primary">{formatUsd(position.suppliedUsd)}</p>
+                              <p className="text-[10px] text-success">+{formatUsd(position.interestPendingUsd)}</p>
                             </div>
                           </div>
                         </div>
@@ -309,8 +302,8 @@ export default function PortfolioPage() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-sm text-success">{formatCurrency(position.supplied)}</p>
-                              <p className="text-[10px] text-accent">-{formatCurrency(position.borrowed)}</p>
+                              <p className="font-bold text-sm text-success">{formatUsd(position.suppliedUsd)}</p>
+                              <p className="text-[10px] text-accent">-{formatUsd(position.borrowedUsd)}</p>
                             </div>
                           </div>
                           <div className="mt-2 flex items-center justify-between text-[10px]">
@@ -336,7 +329,7 @@ export default function PortfolioPage() {
                     <div>
                       <p className="font-semibold text-sm">{portfolioT("claimRewards") || "Claim Rewards"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatCurrency(totals.totalInterestPending)} {portfolioT("available") || "available"}
+                        {formatUsd(totals.totalInterestPending)} {portfolioT("available") || "available"}
                       </p>
                     </div>
                     <button className="btn-primary bg-success hover:bg-success/90 text-sm px-3 py-1.5">
@@ -358,14 +351,14 @@ export default function PortfolioPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ValueCard
                   title={portfolioT("supplied") || "Total Supply"}
-                  value={formatCurrency(totals.totalSupplied)}
+                  value={formatUsd(totals.totalSupplied)}
                   subtext={`${positions.filter(p => parseFloat(p.supplied) > 0).length} positions`}
                   color="#10b981"
                   icon={<ArrowUpRight className="w-4 h-4" />}
                 />
                 <ValueCard
                   title={portfolioT("borrowed") || "Total Borrow"}
-                  value={formatCurrency(totals.totalBorrowed)}
+                  value={formatUsd(totals.totalBorrowed)}
                   subtext={`${lendingPositions.length} active loans`}
                   color="#f97316"
                   icon={<ArrowDownRight className="w-4 h-4" />}
@@ -380,15 +373,15 @@ export default function PortfolioPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center p-4 rounded-lg bg-success/5 border border-success/10">
                     <p className="text-xs text-muted-foreground mb-1">Total Supply</p>
-                    <p className="text-xl font-bold text-success">{formatCurrency(totals.totalSupplied)}</p>
+                    <p className="text-xl font-bold text-success">{formatUsd(totals.totalSupplied)}</p>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-accent/5 border border-accent/10">
                     <p className="text-xs text-muted-foreground mb-1">Total Borrow</p>
-                    <p className="text-xl font-bold text-accent">{formatCurrency(totals.totalBorrowed)}</p>
+                    <p className="text-xl font-bold text-accent">{formatUsd(totals.totalBorrowed)}</p>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-primary/5 border border-primary/10">
                     <p className="text-xs text-muted-foreground mb-1">Staking</p>
-                    <p className="text-xl font-bold text-primary">{formatCurrency(stakingTotal)}</p>
+                    <p className="text-xl font-bold text-primary">{formatUsd(stakingTotalUsd)}</p>
                   </div>
                 </div>
 
