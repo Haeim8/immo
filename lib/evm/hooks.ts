@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
 import { PROTOCOL_ADDRESS, READER_ADDRESS, BLOCK_EXPLORER_URL, CHAIN_ID } from './constants';
-import { PROTOCOL_ABI, READER_ABI, ERC20_ABI } from './abis';
+import { PROTOCOL_ABI, READER_ABI, ERC20_ABI, VAULT_EXTENDED_ABI } from './abis';
 import { getFromCache, setInCache } from './cache';
 
 // Re-exports
@@ -268,6 +268,7 @@ export function useAllVaults() {
 
 /**
  * Hook pour les positions d'un utilisateur via Reader contract
+ * Uses vault contracts directly for maxBorrow/withdrawable (staking-aware)
  */
 export function useUserPositions(userAddress: `0x${string}` | undefined) {
   const { vaults, isLoading: isLoadingVaults } = useAllVaults();
@@ -298,6 +299,49 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
     },
   });
 
+  // Extract vault addresses from portfolio to fetch maxBorrow/withdrawable
+  const vaultAddressesForCalls = useMemo(() => {
+    if (!portfolioData) return [];
+    const [positionsData] = portfolioData as [any[], any];
+    if (!positionsData || positionsData.length === 0) return [];
+    return positionsData.map((p: any) => p.vaultAddress as `0x${string}`);
+  }, [portfolioData]);
+
+  // Build multicall contracts for getMaxBorrow and getWithdrawable on each vault
+  const vaultContracts = useMemo(() => {
+    if (!userAddress || vaultAddressesForCalls.length === 0) return [];
+    const contracts: any[] = [];
+    vaultAddressesForCalls.forEach((vaultAddr) => {
+      contracts.push(
+        {
+          address: vaultAddr,
+          abi: VAULT_EXTENDED_ABI,
+          functionName: 'getMaxBorrow',
+          args: [userAddress],
+          chainId: CHAIN_ID,
+        },
+        {
+          address: vaultAddr,
+          abi: VAULT_EXTENDED_ABI,
+          functionName: 'getWithdrawable',
+          args: [userAddress],
+          chainId: CHAIN_ID,
+        }
+      );
+    });
+    return contracts;
+  }, [userAddress, vaultAddressesForCalls]);
+
+  // Multicall to get maxBorrow and withdrawable from vault contracts
+  const vaultRead = useReadContracts({
+    contracts: vaultContracts as any,
+    query: {
+      enabled: vaultContracts.length > 0,
+    },
+  } as any) as { data?: any[]; isLoading: boolean };
+  const vaultData = vaultRead.data;
+  const vaultDataLoading = vaultRead.isLoading;
+
   useEffect(() => {
     if (!userAddress) {
       setPositions([]);
@@ -307,6 +351,12 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
     }
 
     if (portfolioLoading || isLoadingVaults) {
+      setIsLoading(true);
+      return;
+    }
+
+    // Wait for vault data if we have positions
+    if (vaultContracts.length > 0 && vaultDataLoading) {
       setIsLoading(true);
       return;
     }
@@ -336,7 +386,21 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
       return;
     }
 
-    // Transform positions
+    // Build map of vault address -> { maxBorrow, withdrawable } from multicall results
+    const vaultValuesMap = new Map<string, { maxBorrow: bigint; withdrawable: bigint }>();
+    if (vaultData && vaultAddressesForCalls.length > 0) {
+      vaultAddressesForCalls.forEach((vaultAddr, idx) => {
+        const maxBorrowResult = vaultData[idx * 2];
+        const withdrawableResult = vaultData[idx * 2 + 1];
+
+        const maxBorrow = maxBorrowResult?.result as bigint || BigInt(0);
+        const withdrawable = withdrawableResult?.result as bigint || BigInt(0);
+
+        vaultValuesMap.set(vaultAddr.toLowerCase(), { maxBorrow, withdrawable });
+      });
+    }
+
+    // Transform positions using contract values for maxBorrow/withdrawable
     const transformedPositions: UserPosition[] = positionsData.map((p: any) => {
       // Find vault info
       const vault = vaults.find(v => v.vaultId === Number(p.vaultId));
@@ -347,22 +411,20 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
       const borrowed = parseFloat(formatUnits(BigInt(p.borrowedAmount || 0), decimals));
       const interestPending = parseFloat(formatUnits(BigInt(p.interestPending || 0), decimals));
 
-      // Calculate health factor
+      // Get maxBorrow and withdrawable from contract (staking-aware!)
+      const vaultValues = vaultValuesMap.get((p.vaultAddress as string).toLowerCase());
+      const maxBorrowFromContract = vaultValues
+        ? parseFloat(formatUnits(vaultValues.maxBorrow, decimals))
+        : 0;
+      const withdrawableFromContract = vaultValues
+        ? parseFloat(formatUnits(vaultValues.withdrawable, decimals))
+        : supplied;
+
+      // Calculate health factor using contract's logic
       let healthFactor = 10000; // Infinite if no borrow
       if (borrowed > 0) {
-        const maxBorrow = supplied * (maxBorrowRatio / 100);
-        healthFactor = maxBorrow > 0 ? (maxBorrow / borrowed) * 100 : 0;
-      }
-
-      // Calculate max additional borrow
-      const maxBorrowValue = supplied * (maxBorrowRatio / 100);
-      const maxBorrow = Math.max(0, maxBorrowValue - borrowed);
-
-      // Calculate withdrawable (considering borrow)
-      let withdrawable = supplied;
-      if (borrowed > 0) {
-        const requiredCollateral = borrowed / (maxBorrowRatio / 100);
-        withdrawable = Math.max(0, supplied - requiredCollateral);
+        const maxBorrowValue = supplied * (maxBorrowRatio / 100);
+        healthFactor = maxBorrowValue > 0 ? (maxBorrowValue / borrowed) * 100 : 0;
       }
 
       return {
@@ -372,8 +434,8 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
         borrowed: borrowed.toString(),
         interest: formatUnits(BigInt(p.borrowInterestAccumulated || 0), decimals),
         healthFactor,
-        maxBorrow: maxBorrow.toString(),
-        withdrawable: withdrawable.toString(),
+        maxBorrow: maxBorrowFromContract.toString(), // From contract - staking aware!
+        withdrawable: withdrawableFromContract.toString(), // From contract - borrow aware!
         cvtBalance: formatUnits(BigInt(p.cvtBalance || 0), 18), // CVT always has 18 decimals
         interestPending: interestPending.toString(),
       };
@@ -391,7 +453,7 @@ export function useUserPositions(userAddress: `0x${string}` | undefined) {
     setInCache(`positions_${userAddress}`, transformedPositions);
     setInCache(`positions_${userAddress}_totals`, newTotals);
     setIsLoading(false);
-  }, [userAddress, portfolioData, portfolioLoading, vaults, isLoadingVaults]);
+  }, [userAddress, portfolioData, portfolioLoading, vaults, isLoadingVaults, vaultData, vaultDataLoading, vaultAddressesForCalls, vaultContracts.length]);
 
   return { positions, totals, isLoading: isLoading || isLoadingVaults };
 }

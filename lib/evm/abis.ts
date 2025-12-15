@@ -476,6 +476,50 @@ export const STAKING_ABI = [
   },
 ] as const;
 
+// Extended Vault ABI - includes getMaxBorrow and getUserSummary for accurate position data
+export const VAULT_EXTENDED_ABI = [
+  // getMaxBorrow(address user) - returns 0 if user has staked CVT
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'getMaxBorrow',
+    outputs: [{ internalType: 'uint256', name: 'maxBorrow', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // getWithdrawable(address user) - considers borrow obligations
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'getWithdrawable',
+    outputs: [{ internalType: 'uint256', name: 'withdrawable', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // getTotalDebt(address user) - principal + interest
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'getTotalDebt',
+    outputs: [{ internalType: 'uint256', name: 'totalDebt', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // getUserSummary(address user) - comprehensive user data
+  {
+    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
+    name: 'getUserSummary',
+    outputs: [
+      { internalType: 'uint256', name: 'supplied', type: 'uint256' },
+      { internalType: 'uint256', name: 'borrowed', type: 'uint256' },
+      { internalType: 'uint256', name: 'interest', type: 'uint256' },
+      { internalType: 'uint256', name: 'healthFactor', type: 'uint256' },
+      { internalType: 'uint256', name: 'maxBorrow', type: 'uint256' },
+      { internalType: 'uint256', name: 'withdrawable', type: 'uint256' },
+      { internalType: 'uint256', name: 'cvtBalance', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
+
 // ERC20 ABI
 export const ERC20_ABI = [
   {
