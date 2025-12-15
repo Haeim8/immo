@@ -190,6 +190,11 @@
       "address": "0x2079Cd6B84b91dd23dcD412bA260f205d64601DE",
       "txHash": "0x5021e5fc99ef5fd9cdaa1a64a42697faf5024350d04ce729d3a41f2e8721358e",
       "kind": "uups"
+    },
+    {
+      "address": "0xA904668d6C364Dfc19335E4458bd1B35557fadc5",
+      "txHash": "0x580b07c3d704bd7157bc79530d36a6fe7446c5af6d2365b610ece20eb3a9001d",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -2834,6 +2839,321 @@
             "numberOfBytes": "32"
           },
           "t_struct(StakePosition)4735_storage": {
+            "label": "struct CVTStaking.StakePosition",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "lockEndTime",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "rewardIndexSnapshot",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "pendingRewards",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:43",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+              "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:62",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "5966a269288dfe414b2b04dcf43977b5ed42a8d8df61061a9ade122906fee6ec": {
+      "address": "0x8361Ee796Ead3bB2d2e2216314170D3A2BC7D1b3",
+      "txHash": "0xa64749195c90ddd983634148779c8811321c8f80bc750cceffffe73e1fe5cf58",
+      "layout": {
+        "solcVersion": "0.8.26",
+        "storage": [
+          {
+            "label": "vault",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(ICantorVault)2971",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:49"
+          },
+          {
+            "label": "cvtToken",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IERC20)1775",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:50"
+          },
+          {
+            "label": "underlyingToken",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IERC20)1775",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:51"
+          },
+          {
+            "label": "stakes",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_address,t_struct(StakePosition)3000_storage)",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:53"
+          },
+          {
+            "label": "stakers",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:54"
+          },
+          {
+            "label": "isStaker",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:55"
+          },
+          {
+            "label": "totalStaked",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_uint256",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:57"
+          },
+          {
+            "label": "maxProtocolBorrowRatio",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_uint256",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:58"
+          },
+          {
+            "label": "rewardIndex",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_uint256",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:61"
+          },
+          {
+            "label": "rewardRate",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_uint256",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:65"
+          },
+          {
+            "label": "lastRewardTime",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_uint256",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:66"
+          },
+          {
+            "label": "lastRewardAmount",
+            "offset": 0,
+            "slot": "11",
+            "type": "t_uint256",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "12",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "CVTStaking",
+            "src": "contracts/CVTStaking.sol:71"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)26_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)36_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)26_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)147_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)298_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)362_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)26_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_contract(ICantorVault)2971": {
+            "label": "contract ICantorVault",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20)1775": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(StakePosition)3000_storage)": {
+            "label": "mapping(address => struct CVTStaking.StakePosition)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(StakePosition)3000_storage": {
             "label": "struct CVTStaking.StakePosition",
             "members": [
               {

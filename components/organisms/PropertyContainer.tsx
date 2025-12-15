@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Loader2, Vault } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useAllVaults, VaultData } from "@/lib/evm/hooks";
+import { useAllVaults, VaultData, useUserPositions, useWalletAddress, UserPosition } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
 import ErrorBubble from "@/components/molecules/ErrorBubble";
 
@@ -73,11 +73,15 @@ function ModeToggle({ mode, setMode }: { mode: 'lend' | 'borrow'; setMode: (m: '
 }
 
 // Vault Row - style tableau
-function VaultRow({ vault, index, mode }: { vault: VaultData; index: number; mode: 'lend' | 'borrow' }) {
+function VaultRow({ vault, index, mode, userPosition }: { vault: VaultData; index: number; mode: 'lend' | 'borrow'; userPosition?: UserPosition }) {
   // Calcul du pourcentage de remplissage
   const maxLiq = parseFloat(vault.maxLiquidity) || 1;
   const totalSupplied = parseFloat(vault.totalSupplied) || 0;
   const fillPercent = Math.min((totalSupplied / maxLiq) * 100, 100);
+
+  // User position amounts
+  const userSupplied = userPosition ? parseFloat(userPosition.supplied) : 0;
+  const userBorrowed = userPosition ? parseFloat(userPosition.borrowed) : 0;
 
   return (
     <Link href={`/vault/${vault.vaultId}`}>
@@ -135,8 +139,21 @@ function VaultRow({ vault, index, mode }: { vault: VaultData; index: number; mod
           <span className="text-sm text-muted-foreground">{vault.utilizationRate.toFixed(0)}%</span>
         </div>
 
-        {/* Action Button - 2 cols */}
-        <div className="col-span-2 flex justify-end">
+        {/* Action Buttons - 2 cols */}
+        <div className="col-span-2 flex justify-end gap-1">
+          {/* Withdraw button - si user a du supply */}
+          {userSupplied > 0 && (
+            <span className="bg-accent text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer hover:bg-accent/90">
+              Withdraw
+            </span>
+          )}
+          {/* Repay button - si user a une dette */}
+          {userBorrowed > 0 && (
+            <span className="bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-lg cursor-pointer hover:bg-primary/90">
+              Repay
+            </span>
+          )}
+          {/* Supply/Borrow button - toujours visible */}
           <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
             {mode === 'lend' ? 'Supply' : 'Borrow'}
           </span>
@@ -147,7 +164,11 @@ function VaultRow({ vault, index, mode }: { vault: VaultData; index: number; mod
 }
 
 // Mobile Vault Card
-function VaultCardMobile({ vault, index, mode }: { vault: VaultData; index: number; mode: 'lend' | 'borrow' }) {
+function VaultCardMobile({ vault, index, mode, userPosition }: { vault: VaultData; index: number; mode: 'lend' | 'borrow'; userPosition?: UserPosition }) {
+  // User position amounts
+  const userSupplied = userPosition ? parseFloat(userPosition.supplied) : 0;
+  const userBorrowed = userPosition ? parseFloat(userPosition.borrowed) : 0;
+
   return (
     <Link href={`/vault/${vault.vaultId}`}>
       <motion.div
@@ -179,9 +200,22 @@ function VaultCardMobile({ vault, index, mode }: { vault: VaultData; index: numb
             <p className="font-medium">{vault.utilizationRate.toFixed(0)}%</p>
           </div>
         </div>
-        <span className="btn-primary w-full text-sm py-2 block text-center cursor-pointer">
-          {mode === 'lend' ? 'Supply' : 'Borrow'}
-        </span>
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {userSupplied > 0 && (
+            <span className="bg-accent text-white text-sm py-2 px-4 rounded-lg cursor-pointer hover:bg-accent/90 flex-1 text-center">
+              Withdraw
+            </span>
+          )}
+          {userBorrowed > 0 && (
+            <span className="bg-primary text-primary-foreground text-sm py-2 px-4 rounded-lg cursor-pointer hover:bg-primary/90 flex-1 text-center">
+              Repay
+            </span>
+          )}
+          <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
+            {mode === 'lend' ? 'Supply' : 'Borrow'}
+          </span>
+        </div>
       </motion.div>
     </Link>
   );
@@ -190,7 +224,13 @@ function VaultCardMobile({ vault, index, mode }: { vault: VaultData; index: numb
 export default function PropertyContainer() {
   const [mode, setMode] = useState<'lend' | 'borrow'>('lend');
   const { vaults, isLoading, error, refetch } = useAllVaults();
+  const { address } = useWalletAddress();
+  const { positions } = useUserPositions(address);
   const vaultsT = useTranslations("vaults");
+
+  // Create a map of vaultAddress -> userPosition for quick lookup
+  const positionsByVault = new Map<string, UserPosition>();
+  positions.forEach(p => positionsByVault.set(p.vaultAddress.toLowerCase(), p));
 
   if (isLoading) {
     return (
@@ -252,14 +292,26 @@ export default function PropertyContainer() {
         {/* Desktop Rows */}
         <div className="hidden md:block">
           {vaults.map((vault, index) => (
-            <VaultRow key={vault.vaultAddress} vault={vault} index={index} mode={mode} />
+            <VaultRow
+              key={vault.vaultAddress}
+              vault={vault}
+              index={index}
+              mode={mode}
+              userPosition={positionsByVault.get(vault.vaultAddress.toLowerCase())}
+            />
           ))}
         </div>
 
         {/* Mobile Cards */}
         <div className="md:hidden">
           {vaults.map((vault, index) => (
-            <VaultCardMobile key={vault.vaultAddress} vault={vault} index={index} mode={mode} />
+            <VaultCardMobile
+              key={vault.vaultAddress}
+              vault={vault}
+              index={index}
+              mode={mode}
+              userPosition={positionsByVault.get(vault.vaultAddress.toLowerCase())}
+            />
           ))}
         </div>
       </div>
