@@ -439,7 +439,9 @@ export default function VaultPage() {
   const numericAmount = parseFloat(amount) || 0;
   const hasInsufficientBalance = mode === 'lend' && numericAmount > walletBalance;
   const userSuppliedAmount = userPosition ? parseFloat(userPosition.supplied) : 0;
-  const hasInsufficientPosition = numericAmount > userSuppliedAmount;
+  const userWithdrawableAmount = userPosition ? parseFloat(userPosition.withdrawable) : 0;
+  const userBorrowedAmount = userPosition ? parseFloat(userPosition.borrowed) : 0;
+  const hasInsufficientPosition = numericAmount > userWithdrawableAmount;
   const isActionDisabled = !vault || !isAmountValid || actionLoading || hasInsufficientBalance;
   const isWithdrawDisabled = !vault || !isAmountValid || actionLoading || hasInsufficientPosition;
 
@@ -498,10 +500,10 @@ export default function VaultPage() {
       return;
     }
 
-    // Vérifier que l'utilisateur a assez de CVT (position supply)
-    const userSupplied = parseFloat(userPosition.supplied);
-    if (numericAmount > userSupplied) {
-      showToast({ type: 'error', title: 'Montant trop élevé', message: `Position: ${formatTokenAmount(userSupplied)} ${vault.tokenSymbol}` });
+    // Vérifier contre le montant retirable (prend en compte dette/staking)
+    const maxWithdrawable = parseFloat(userPosition.withdrawable);
+    if (numericAmount > maxWithdrawable) {
+      showToast({ type: 'error', title: 'Montant trop élevé', message: `Max retirable: ${formatTokenAmount(maxWithdrawable)} ${vault.tokenSymbol}` });
       return;
     }
 
@@ -949,7 +951,8 @@ export default function VaultPage() {
                         {actionLoading ? 'Transaction...' : mode === 'lend' ? 'Supply' : 'Borrow'}
                       </button>
 
-                      {mode === 'borrow' && userPosition && parseFloat(userPosition.borrowed) > 0 && (
+                      {/* Repay Button - visible si l'utilisateur a une dette */}
+                      {userPosition && userBorrowedAmount > 0 && (
                         <button
                           type="button"
                           disabled={isActionDisabled}
@@ -968,8 +971,8 @@ export default function VaultPage() {
                         </button>
                       )}
 
-                      {/* Withdraw Button - quand l'utilisateur a une position */}
-                      {mode === 'lend' && userPosition && parseFloat(userPosition.supplied) > 0 && (
+                      {/* Withdraw Button - visible si l'utilisateur a du supply */}
+                      {userPosition && userSuppliedAmount > 0 && (
                         <button
                           type="button"
                           disabled={isWithdrawDisabled}
@@ -984,7 +987,7 @@ export default function VaultPage() {
                               : 'bg-accent text-white hover:bg-accent/90'
                           }`}
                         >
-                          {actionLoading ? 'Transaction...' : `Withdraw (Max: ${formatTokenAmount(userSuppliedAmount)})`}
+                          {actionLoading ? 'Transaction...' : `Withdraw (Max: ${formatTokenAmount(userWithdrawableAmount)})`}
                         </button>
                       )}
 
