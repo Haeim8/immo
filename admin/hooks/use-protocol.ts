@@ -122,7 +122,54 @@ export function useVaults(offset = 0, limit = 100) {
     },
   });
 
-  const isLoading = isLoadingAddresses || isLoadingVaults;
+  // Extract token addresses from vault data to fetch symbol/decimals dynamically
+  const tokenAddresses = vaultData && vaultAddresses && Array.isArray(vaultAddresses)
+    ? vaultAddresses.map((_, index: number) => {
+        const tokenResult = vaultData[index * 3 + 2];
+        return tokenResult?.result as string | undefined;
+      }).filter((addr): addr is string => !!addr)
+    : [];
+
+  // Get unique token addresses to avoid duplicate reads
+  const uniqueTokenAddresses = [...new Set(tokenAddresses)];
+
+  // Build contracts for reading token symbol and decimals from ERC20
+  const tokenContracts = uniqueTokenAddresses.flatMap((tokenAddr) => [
+    {
+      address: tokenAddr as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: "symbol" as const,
+    },
+    {
+      address: tokenAddr as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: "decimals" as const,
+    },
+  ]);
+
+  const { data: tokenInfoData, isLoading: isLoadingTokenInfo } = useReadContracts({
+    contracts: tokenContracts,
+    query: {
+      enabled: tokenContracts.length > 0,
+      retry: 1,
+      staleTime: 60000,
+      gcTime: 120000,
+    },
+  });
+
+  // Build a map from token address to {symbol, decimals}
+  const tokenInfoMap = new Map<string, { symbol: string; decimals: number }>();
+  if (tokenInfoData && uniqueTokenAddresses.length > 0) {
+    uniqueTokenAddresses.forEach((tokenAddr, index) => {
+      const symbolResult = tokenInfoData[index * 2];
+      const decimalsResult = tokenInfoData[index * 2 + 1];
+      const symbol = (symbolResult?.result as string) || "???";
+      const decimals = (decimalsResult?.result as number) || 18;
+      tokenInfoMap.set(tokenAddr.toLowerCase(), { symbol, decimals });
+    });
+  }
+
+  const isLoading = isLoadingAddresses || isLoadingVaults || isLoadingTokenInfo;
   const error = addressError || vaultError;
 
   let vaults: any[] = [];
@@ -140,11 +187,10 @@ export function useVaults(offset = 0, limit = 100) {
 
         if (!info) return null;
 
-        // Determine token decimals based on token address
-        const isUSDC = tokenAddress?.toLowerCase() === "0x45f591c36b3506a881ed54638a9456607c2eed84" ||
-                       tokenAddress?.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-        const decimals = isUSDC ? 6 : 18;
-        const tokenSymbol = isUSDC ? "USDC" : "WETH";
+        // Get token info from map (dynamically fetched from ERC20 contract)
+        const tokenInfo = tokenAddress ? tokenInfoMap.get(tokenAddress.toLowerCase()) : null;
+        const decimals = tokenInfo?.decimals ?? 18;
+        const tokenSymbol = tokenInfo?.symbol ?? "???";
 
         return {
           id: Number(info[0] || index), // vaultId
@@ -224,7 +270,35 @@ export function useVaultData(vaultAddress: string) {
     },
   });
 
-  const isLoading = isLoadingInfo || isLoadingState || isLoadingToken;
+  const tokenAddress = tokenData as string | undefined;
+
+  // Dynamically read token symbol from ERC20 contract
+  const { data: tokenSymbolData, isLoading: isLoadingSymbol } = useReadContract({
+    address: tokenAddress as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: "symbol",
+    query: {
+      enabled: !!tokenAddress,
+      retry: 1,
+      staleTime: 60000,
+      gcTime: 120000,
+    },
+  });
+
+  // Dynamically read token decimals from ERC20 contract
+  const { data: tokenDecimalsData, isLoading: isLoadingDecimals } = useReadContract({
+    address: tokenAddress as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: "decimals",
+    query: {
+      enabled: !!tokenAddress,
+      retry: 1,
+      staleTime: 60000,
+      gcTime: 120000,
+    },
+  });
+
+  const isLoading = isLoadingInfo || isLoadingState || isLoadingToken || isLoadingSymbol || isLoadingDecimals;
   const error = infoError || stateError;
   const refetch = () => {
     refetchInfo();
@@ -236,13 +310,10 @@ export function useVaultData(vaultAddress: string) {
   try {
     const info = infoData as any;
     const state = stateData as any;
-    const tokenAddress = tokenData as string;
 
-    // Determine token decimals based on token address
-    const isUSDC = tokenAddress?.toLowerCase() === "0x45f591c36b3506a881ed54638a9456607c2eed84" ||
-                   tokenAddress?.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-    const decimals = isUSDC ? 6 : 18;
-    const tokenSymbol = isUSDC ? "USDC" : "WETH";
+    // Get token info dynamically from ERC20 contract
+    const decimals = (tokenDecimalsData as number) ?? 18;
+    const tokenSymbol = (tokenSymbolData as string) ?? "???";
 
     if (info) {
       vault = {
