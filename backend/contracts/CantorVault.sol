@@ -1209,10 +1209,14 @@ contract CantorVault is
      * @notice Get maximum amount user can borrow
      * @param user User address
      * @return maxBorrow Maximum borrowable amount
+     * @dev Returns 0 if user has staked CVT (stakers cannot borrow)
      */
     function getMaxBorrow(address user) external view returns (uint256 maxBorrow) {
         Position storage pos = positions[user];
         if (pos.amount == 0) return 0;
+
+        // Users with staked CVT cannot borrow - their collateral backs the protocol
+        if (stakedAmounts[user] > 0) return 0;
 
         uint256 totalDebt = pos.borrowedAmount + pos.borrowInterestAccumulated;
         uint256 maxBorrowValue = (pos.amount * vaultInfo.maxBorrowRatio) / 10000;
@@ -1306,15 +1310,18 @@ contract CantorVault is
         uint256 totalDebt = borrowed + interest;
         uint256 maxBorrowValue = (supplied * vaultInfo.maxBorrowRatio) / 10000;
 
+        // Users with staked CVT cannot borrow - their collateral backs the protocol
+        bool hasStaked = stakedAmounts[user] > 0;
+
         if (totalDebt == 0) {
             healthFactor = type(uint256).max;
-            maxBorrow = maxBorrowValue;
+            maxBorrow = hasStaked ? 0 : maxBorrowValue;
             withdrawable = supplied;
         } else {
             // Fixed precision: (supplied * maxBorrowRatio) / totalDebt
             // No double division - direct calculation
             healthFactor = (supplied * vaultInfo.maxBorrowRatio) / totalDebt;
-            maxBorrow = totalDebt >= maxBorrowValue ? 0 : maxBorrowValue - totalDebt;
+            maxBorrow = hasStaked ? 0 : (totalDebt >= maxBorrowValue ? 0 : maxBorrowValue - totalDebt);
 
             uint256 requiredCollateral = (totalDebt * 10000) / vaultInfo.maxBorrowRatio;
             withdrawable = supplied <= requiredCollateral ? 0 : supplied - requiredCollateral;
