@@ -141,22 +141,22 @@ function VaultRow({ vault, index, mode, userPosition }: { vault: VaultData; inde
 
         {/* Action Buttons - 2 cols */}
         <div className="col-span-2 flex justify-end gap-1">
-          {/* Withdraw button - si user a du supply */}
-          {userSupplied > 0 && (
-            <span className="bg-accent text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer hover:bg-accent/90">
-              Withdraw
-            </span>
-          )}
+          {/* Supply/Borrow button - toujours visible */}
+          <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
+            {mode === 'lend' ? 'Supply' : 'Borrow'}
+          </span>
           {/* Repay button - si user a une dette */}
           {userBorrowed > 0 && (
             <span className="bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-lg cursor-pointer hover:bg-primary/90">
               Repay
             </span>
           )}
-          {/* Supply/Borrow button - toujours visible */}
-          <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
-            {mode === 'lend' ? 'Supply' : 'Borrow'}
-          </span>
+          {/* Withdraw button - si user a du supply */}
+          {userSupplied > 0 && (
+            <span className="bg-accent text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer hover:bg-accent/90">
+              Withdraw
+            </span>
+          )}
         </div>
       </motion.div>
     </Link>
@@ -202,19 +202,19 @@ function VaultCardMobile({ vault, index, mode, userPosition }: { vault: VaultDat
         </div>
         {/* Action Buttons */}
         <div className="flex gap-2">
-          {userSupplied > 0 && (
-            <span className="bg-accent text-white text-sm py-2 px-4 rounded-lg cursor-pointer hover:bg-accent/90 flex-1 text-center">
-              Withdraw
-            </span>
-          )}
+          <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
+            {mode === 'lend' ? 'Supply' : 'Borrow'}
+          </span>
           {userBorrowed > 0 && (
             <span className="bg-primary text-primary-foreground text-sm py-2 px-4 rounded-lg cursor-pointer hover:bg-primary/90 flex-1 text-center">
               Repay
             </span>
           )}
-          <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
-            {mode === 'lend' ? 'Supply' : 'Borrow'}
-          </span>
+          {userSupplied > 0 && (
+            <span className="bg-accent text-white text-sm py-2 px-4 rounded-lg cursor-pointer hover:bg-accent/90 flex-1 text-center">
+              Withdraw
+            </span>
+          )}
         </div>
       </motion.div>
     </Link>
