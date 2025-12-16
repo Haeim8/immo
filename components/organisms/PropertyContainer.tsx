@@ -141,21 +141,36 @@ function VaultRow({ vault, index, mode, userPosition }: { vault: VaultData; inde
 
         {/* Action Buttons - 2 cols */}
         <div className="col-span-2 flex justify-end gap-1">
-          {/* Supply/Borrow button - toujours visible */}
-          <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
-            {mode === 'lend' ? 'Supply' : 'Borrow'}
-          </span>
-          {/* Repay button - si user a une dette */}
-          {userBorrowed > 0 && (
-            <span className="bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-lg cursor-pointer hover:bg-primary/90">
-              Repay
-            </span>
-          )}
-          {/* Withdraw button - si user a du supply */}
-          {userSupplied > 0 && (
-            <span className="bg-accent text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer hover:bg-accent/90">
-              Withdraw
-            </span>
+          {mode === 'lend' ? (
+            <>
+              {/* Withdraw - toujours visible, enabled si supply > 0 */}
+              <span className={`text-xs px-3 py-1.5 rounded-lg ${
+                userSupplied > 0
+                  ? 'bg-accent text-white cursor-pointer hover:bg-accent/90'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+              }`}>
+                Withdraw
+              </span>
+              {/* Supply - toujours enabled */}
+              <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
+                Supply
+              </span>
+            </>
+          ) : (
+            <>
+              {/* Repay - toujours visible, enabled si borrowed > 0 */}
+              <span className={`text-xs px-3 py-1.5 rounded-lg ${
+                userBorrowed > 0
+                  ? 'bg-accent text-white cursor-pointer hover:bg-accent/90'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+              }`}>
+                Repay
+              </span>
+              {/* Borrow - toujours enabled */}
+              <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
+                Borrow
+              </span>
+            </>
           )}
         </div>
       </motion.div>
@@ -202,18 +217,32 @@ function VaultCardMobile({ vault, index, mode, userPosition }: { vault: VaultDat
         </div>
         {/* Action Buttons */}
         <div className="flex gap-2">
-          <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
-            {mode === 'lend' ? 'Supply' : 'Borrow'}
-          </span>
-          {userBorrowed > 0 && (
-            <span className="bg-primary text-primary-foreground text-sm py-2 px-4 rounded-lg cursor-pointer hover:bg-primary/90 flex-1 text-center">
-              Repay
-            </span>
-          )}
-          {userSupplied > 0 && (
-            <span className="bg-accent text-white text-sm py-2 px-4 rounded-lg cursor-pointer hover:bg-accent/90 flex-1 text-center">
-              Withdraw
-            </span>
+          {mode === 'lend' ? (
+            <>
+              <span className={`text-sm py-2 flex-1 text-center rounded-lg ${
+                userSupplied > 0
+                  ? 'bg-accent text-white cursor-pointer hover:bg-accent/90'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+              }`}>
+                Withdraw
+              </span>
+              <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
+                Supply
+              </span>
+            </>
+          ) : (
+            <>
+              <span className={`text-sm py-2 flex-1 text-center rounded-lg ${
+                userBorrowed > 0
+                  ? 'bg-accent text-white cursor-pointer hover:bg-accent/90'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+              }`}>
+                Repay
+              </span>
+              <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
+                Borrow
+              </span>
+            </>
           )}
         </div>
       </motion.div>

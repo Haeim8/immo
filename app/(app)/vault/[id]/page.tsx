@@ -475,42 +475,29 @@ export default function VaultPage() {
   };
 
   const handleRepay = () => {
-    if (!vault) return;
-    const numericAmount = parseFloat(amount);
-    if (!numericAmount || numericAmount <= 0) {
-      showToast({ type: 'error', title: 'Montant invalide' });
+    if (!vault || !userPosition) return;
+    // Auto-fill: min entre dette et solde wallet
+    const maxRepay = Math.min(userBorrowedAmount, walletBalance);
+    if (maxRepay <= 0) {
+      showToast({ type: 'error', title: 'Aucune dette à rembourser' });
       return;
     }
 
-    // Check wallet balance for repay
-    if (numericAmount > walletBalance) {
-      showToast({ type: 'error', title: 'Solde insuffisant', message: `Vous avez ${formatTokenAmount(walletBalance)} ${vault.tokenSymbol}` });
-      return;
-    }
-
-    const amountString = numericAmount.toString();
+    const amountString = maxRepay.toString();
     const amountBN = parseUnits(amountString, vault.tokenDecimals);
-    // Stocker l'action en attente puis lancer approve
     setPendingAction({ type: 'repay', amount: amountString, decimals: vault.tokenDecimals });
     approve(vaultAddress, amountBN);
   };
 
   const handleWithdraw = () => {
     if (!vault || !userPosition) return;
-    const numericAmount = parseFloat(amount);
-    if (!numericAmount || numericAmount <= 0) {
-      showToast({ type: 'error', title: 'Montant invalide' });
+    // Auto-fill avec le montant max retirable
+    if (userWithdrawableAmount <= 0) {
+      showToast({ type: 'error', title: 'Rien à retirer' });
       return;
     }
 
-    // Vérifier contre le montant retirable (prend en compte dette/staking)
-    const maxWithdrawable = parseFloat(userPosition.withdrawable);
-    if (numericAmount > maxWithdrawable) {
-      showToast({ type: 'error', title: 'Montant trop élevé', message: `Max retirable: ${formatTokenAmount(maxWithdrawable)} ${vault.tokenSymbol}` });
-      return;
-    }
-
-    const amountString = numericAmount.toString();
+    const amountString = userWithdrawableAmount.toString();
     withdraw(amountString, vault.tokenDecimals);
   };
 
@@ -954,45 +941,41 @@ export default function VaultPage() {
                         {actionLoading ? 'Transaction...' : mode === 'lend' ? 'Supply' : 'Borrow'}
                       </button>
 
-                      {/* Repay Button - visible si l'utilisateur a une dette */}
-                      {userPosition && userBorrowedAmount > 0 && (
-                        <button
-                          type="button"
-                          disabled={isActionDisabled}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleRepay();
-                          }}
-                          className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 mt-2 ${
-                            isActionDisabled
-                              ? 'bg-secondary text-muted-foreground cursor-not-allowed'
-                              : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                          }`}
-                        >
-                          {actionLoading ? 'Transaction...' : 'Repay borrow'}
-                        </button>
-                      )}
+                      {/* Repay Button - toujours visible, enabled si dette > 0 */}
+                      <button
+                        type="button"
+                        disabled={userBorrowedAmount <= 0 || actionLoading}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleRepay();
+                        }}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all relative z-10 mt-2 ${
+                          userBorrowedAmount <= 0 || actionLoading
+                            ? 'bg-secondary text-muted-foreground cursor-not-allowed opacity-50'
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
+                        }`}
+                      >
+                        {actionLoading ? 'Transaction...' : `Repay (${formatTokenAmount(userBorrowedAmount)} ${vault?.tokenSymbol || ''})`}
+                      </button>
 
-                      {/* Withdraw Button - visible si l'utilisateur a du supply */}
-                      {userPosition && userSuppliedAmount > 0 && (
-                        <button
-                          type="button"
-                          disabled={isWithdrawDisabled}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleWithdraw();
-                          }}
-                          className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 mt-2 ${
-                            isWithdrawDisabled
-                              ? 'bg-secondary text-muted-foreground cursor-not-allowed'
-                              : 'bg-accent text-white hover:bg-accent/90'
-                          }`}
-                        >
-                          {actionLoading ? 'Transaction...' : `Withdraw (Max: ${formatTokenAmount(userWithdrawableAmount)})`}
-                        </button>
-                      )}
+                      {/* Withdraw Button - toujours visible, enabled si supply > 0 */}
+                      <button
+                        type="button"
+                        disabled={userWithdrawableAmount <= 0 || actionLoading}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleWithdraw();
+                        }}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all relative z-10 mt-2 ${
+                          userWithdrawableAmount <= 0 || actionLoading
+                            ? 'bg-secondary text-muted-foreground cursor-not-allowed opacity-50'
+                            : 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
+                        }`}
+                      >
+                        {actionLoading ? 'Transaction...' : `Withdraw (${formatTokenAmount(userWithdrawableAmount)} ${vault?.tokenSymbol || ''})`}
+                      </button>
 
                       {/* Claim interests */}
                       {userPosition && parseFloat(userPosition.interestPending) > 0 && (
