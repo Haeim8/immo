@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { parseUnits } from "viem"
 import {
   IconBuildingBank,
   IconExternalLink,
@@ -10,7 +11,9 @@ import {
   IconCheck,
   IconX,
   IconCurrencyDollar,
-  IconPercentage
+  IconPercentage,
+  IconSettings,
+  IconLoader2
 } from "@tabler/icons-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +27,8 @@ import {
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Sheet,
   SheetContent,
@@ -74,6 +79,10 @@ interface VaultData {
 export default function VaultsPage() {
   const [selectedVault, setSelectedVault] = useState<VaultData | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [newMaxLiquidity, setNewMaxLiquidity] = useState("")
+  const [newBorrowBaseRate, setNewBorrowBaseRate] = useState("")
+  const [newBorrowSlope, setNewBorrowSlope] = useState("")
+  const [newMaxBorrowRatio, setNewMaxBorrowRatio] = useState("")
 
   // Read vaults using the updated hook
   const { vaults, isLoading, refetch } = useVaults()
@@ -84,6 +93,16 @@ export default function VaultsPage() {
 
   const { writeContract: unpauseVault, data: unpauseHash, isPending: isUnpausing } = useWriteContract()
   const { isLoading: isUnpauseConfirming, isSuccess: unpauseSuccess } = useWaitForTransactionReceipt({ hash: unpauseHash })
+
+  // Write functions for config updates
+  const { writeContract: setMaxLiquidityFn, data: maxLiqHash, isPending: isSettingMaxLiq } = useWriteContract()
+  const { isLoading: isMaxLiqConfirming, isSuccess: maxLiqSuccess } = useWaitForTransactionReceipt({ hash: maxLiqHash })
+
+  const { writeContract: setBorrowRatesFn, data: ratesHash, isPending: isSettingRates } = useWriteContract()
+  const { isLoading: isRatesConfirming, isSuccess: ratesSuccess } = useWaitForTransactionReceipt({ hash: ratesHash })
+
+  const { writeContract: setMaxBorrowRatioFn, data: ltvHash, isPending: isSettingLTV } = useWriteContract()
+  const { isLoading: isLTVConfirming, isSuccess: ltvSuccess } = useWaitForTransactionReceipt({ hash: ltvHash })
 
   const handleSelectVault = (vault: VaultData) => {
     setSelectedVault(vault)
@@ -105,6 +124,42 @@ export default function VaultsPage() {
       address: selectedVault.vaultAddress as `0x${string}`,
       abi: VAULT_ABI,
       functionName: "unpause",
+    })
+  }
+
+  const handleSetMaxLiquidity = () => {
+    if (!selectedVault || !newMaxLiquidity) return
+    const amount = parseUnits(newMaxLiquidity, selectedVault.decimals)
+    setMaxLiquidityFn({
+      address: selectedVault.vaultAddress as `0x${string}`,
+      abi: VAULT_ABI,
+      functionName: "setMaxLiquidity",
+      args: [amount],
+    })
+  }
+
+  const handleSetBorrowRates = () => {
+    if (!selectedVault || !newBorrowBaseRate || !newBorrowSlope) return
+    // Rates are in basis points (e.g., 500 = 5%)
+    const baseRate = BigInt(Math.round(parseFloat(newBorrowBaseRate) * 100))
+    const slope = BigInt(Math.round(parseFloat(newBorrowSlope) * 100))
+    setBorrowRatesFn({
+      address: selectedVault.vaultAddress as `0x${string}`,
+      abi: VAULT_ABI,
+      functionName: "setBorrowRates",
+      args: [baseRate, slope],
+    })
+  }
+
+  const handleSetMaxBorrowRatio = () => {
+    if (!selectedVault || !newMaxBorrowRatio) return
+    // Ratio in basis points (e.g., 7000 = 70%)
+    const ratio = BigInt(Math.round(parseFloat(newMaxBorrowRatio) * 100))
+    setMaxBorrowRatioFn({
+      address: selectedVault.vaultAddress as `0x${string}`,
+      abi: VAULT_ABI,
+      functionName: "setMaxBorrowRatio",
+      args: [ratio],
     })
   }
 
@@ -402,52 +457,150 @@ export default function VaultsPage() {
                   </CardContent>
                 </Card>
 
-                {/* Actions */}
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <IconPlayerPause className="h-4 w-4" />
-                        Vault Control
-                      </CardTitle>
-                      <CardDescription>
-                        Pause or unpause the vault.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+                {/* Vault Configuration */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <IconSettings className="h-4 w-4" />
+                      Vault Configuration
+                    </CardTitle>
+                    <CardDescription>
+                      Modify vault parameters
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Max Liquidity */}
+                    <div className="space-y-2">
+                      <Label htmlFor="maxLiquidity">Max Liquidity ({selectedVault.tokenSymbol})</Label>
                       <div className="flex gap-2">
+                        <Input
+                          id="maxLiquidity"
+                          type="number"
+                          placeholder={selectedVault.maxLiquidity}
+                          value={newMaxLiquidity}
+                          onChange={(e) => setNewMaxLiquidity(e.target.value)}
+                        />
                         <Button
-                          variant="outline"
-                          onClick={handlePauseVault}
-                          disabled={isPausing || isPauseConfirming || !selectedVault.isActive}
-                          className="flex-1 text-red-600 border-red-600/30 hover:bg-red-50"
+                          onClick={handleSetMaxLiquidity}
+                          disabled={isSettingMaxLiq || isMaxLiqConfirming || !newMaxLiquidity}
                         >
-                          <IconPlayerPause className="h-4 w-4 mr-2" />
-                          {isPausing || isPauseConfirming ? "..." : "Pause"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={handleUnpauseVault}
-                          disabled={isUnpausing || isUnpauseConfirming || selectedVault.isActive}
-                          className="flex-1 text-emerald-600 border-emerald-600/30 hover:bg-emerald-50"
-                        >
-                          <IconPlayerPlay className="h-4 w-4 mr-2" />
-                          {isUnpausing || isUnpauseConfirming ? "..." : "Unpause"}
+                          {isSettingMaxLiq || isMaxLiqConfirming ? (
+                            <IconLoader2 className="h-4 w-4 animate-spin" />
+                          ) : "Set"}
                         </Button>
                       </div>
-                      {pauseSuccess && (
-                        <p className="text-xs text-red-600 flex items-center gap-1">
-                          <IconX className="h-3 w-3" /> Vault paused
-                        </p>
-                      )}
-                      {unpauseSuccess && (
+                      {maxLiqSuccess && (
                         <p className="text-xs text-emerald-600 flex items-center gap-1">
-                          <IconCheck className="h-3 w-3" /> Vault unpaused
+                          <IconCheck className="h-3 w-3" /> Max liquidity updated
                         </p>
                       )}
-                    </CardContent>
-                  </Card>
-                </div>
+                    </div>
+
+                    {/* Borrow Rates */}
+                    <div className="space-y-2">
+                      <Label>Borrow Rates (%)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder={`Base: ${selectedVault.borrowBaseRate}`}
+                          value={newBorrowBaseRate}
+                          onChange={(e) => setNewBorrowBaseRate(e.target.value)}
+                        />
+                        <Input
+                          type="number"
+                          placeholder={`Slope: ${selectedVault.borrowSlope}`}
+                          value={newBorrowSlope}
+                          onChange={(e) => setNewBorrowSlope(e.target.value)}
+                        />
+                        <Button
+                          onClick={handleSetBorrowRates}
+                          disabled={isSettingRates || isRatesConfirming || !newBorrowBaseRate || !newBorrowSlope}
+                        >
+                          {isSettingRates || isRatesConfirming ? (
+                            <IconLoader2 className="h-4 w-4 animate-spin" />
+                          ) : "Set"}
+                        </Button>
+                      </div>
+                      {ratesSuccess && (
+                        <p className="text-xs text-emerald-600 flex items-center gap-1">
+                          <IconCheck className="h-3 w-3" /> Borrow rates updated
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Max LTV */}
+                    <div className="space-y-2">
+                      <Label htmlFor="maxLTV">Max LTV (%)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="maxLTV"
+                          type="number"
+                          placeholder={selectedVault.maxBorrowRatio}
+                          value={newMaxBorrowRatio}
+                          onChange={(e) => setNewMaxBorrowRatio(e.target.value)}
+                        />
+                        <Button
+                          onClick={handleSetMaxBorrowRatio}
+                          disabled={isSettingLTV || isLTVConfirming || !newMaxBorrowRatio}
+                        >
+                          {isSettingLTV || isLTVConfirming ? (
+                            <IconLoader2 className="h-4 w-4 animate-spin" />
+                          ) : "Set"}
+                        </Button>
+                      </div>
+                      {ltvSuccess && (
+                        <p className="text-xs text-emerald-600 flex items-center gap-1">
+                          <IconCheck className="h-3 w-3" /> Max LTV updated
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Vault Control */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <IconPlayerPause className="h-4 w-4" />
+                      Vault Control
+                    </CardTitle>
+                    <CardDescription>
+                      Pause or unpause the vault.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={handlePauseVault}
+                        disabled={isPausing || isPauseConfirming || !selectedVault.isActive}
+                        className="flex-1 text-red-600 border-red-600/30 hover:bg-red-50"
+                      >
+                        <IconPlayerPause className="h-4 w-4 mr-2" />
+                        {isPausing || isPauseConfirming ? "..." : "Pause"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleUnpauseVault}
+                        disabled={isUnpausing || isUnpauseConfirming || selectedVault.isActive}
+                        className="flex-1 text-emerald-600 border-emerald-600/30 hover:bg-emerald-50"
+                      >
+                        <IconPlayerPlay className="h-4 w-4 mr-2" />
+                        {isUnpausing || isUnpauseConfirming ? "..." : "Unpause"}
+                      </Button>
+                    </div>
+                    {pauseSuccess && (
+                      <p className="text-xs text-red-600 flex items-center gap-1">
+                        <IconX className="h-3 w-3" /> Vault paused
+                      </p>
+                    )}
+                    {unpauseSuccess && (
+                      <p className="text-xs text-emerald-600 flex items-center gap-1">
+                        <IconCheck className="h-3 w-3" /> Vault unpaused
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </>
           )}

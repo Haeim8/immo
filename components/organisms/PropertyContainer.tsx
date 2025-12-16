@@ -79,8 +79,8 @@ function VaultRow({ vault, index, mode, userPosition }: { vault: VaultData; inde
   const totalSupplied = parseFloat(vault.totalSupplied) || 0;
   const fillPercent = Math.min((totalSupplied / maxLiq) * 100, 100);
 
-  // User position amounts
-  const userSupplied = userPosition ? parseFloat(userPosition.supplied) : 0;
+  // User position amounts - withdrawable = montant réellement retirable (prend en compte la dette)
+  const userWithdrawable = userPosition ? parseFloat(userPosition.withdrawable) : 0;
   const userBorrowed = userPosition ? parseFloat(userPosition.borrowed) : 0;
 
   return (
@@ -143,32 +143,32 @@ function VaultRow({ vault, index, mode, userPosition }: { vault: VaultData; inde
         <div className="col-span-2 flex justify-end gap-1">
           {mode === 'lend' ? (
             <>
-              {/* Withdraw - toujours visible, enabled si supply > 0 */}
+              {/* Supply - toujours enabled */}
+              <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
+                Supply
+              </span>
+              {/* Withdraw - enabled si montant retirable > 0 */}
               <span className={`text-xs px-3 py-1.5 rounded-lg ${
-                userSupplied > 0
+                userWithdrawable > 0
                   ? 'bg-accent text-white cursor-pointer hover:bg-accent/90'
                   : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
               }`}>
                 Withdraw
               </span>
-              {/* Supply - toujours enabled */}
-              <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
-                Supply
-              </span>
             </>
           ) : (
             <>
-              {/* Repay - toujours visible, enabled si borrowed > 0 */}
+              {/* Borrow - toujours enabled */}
+              <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
+                Borrow
+              </span>
+              {/* Repay - enabled si dette > 0 */}
               <span className={`text-xs px-3 py-1.5 rounded-lg ${
                 userBorrowed > 0
                   ? 'bg-accent text-white cursor-pointer hover:bg-accent/90'
                   : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
               }`}>
                 Repay
-              </span>
-              {/* Borrow - toujours enabled */}
-              <span className="btn-primary text-xs px-4 py-1.5 cursor-pointer">
-                Borrow
               </span>
             </>
           )}
@@ -180,8 +180,8 @@ function VaultRow({ vault, index, mode, userPosition }: { vault: VaultData; inde
 
 // Mobile Vault Card
 function VaultCardMobile({ vault, index, mode, userPosition }: { vault: VaultData; index: number; mode: 'lend' | 'borrow'; userPosition?: UserPosition }) {
-  // User position amounts
-  const userSupplied = userPosition ? parseFloat(userPosition.supplied) : 0;
+  // User position amounts - withdrawable = montant réellement retirable
+  const userWithdrawable = userPosition ? parseFloat(userPosition.withdrawable) : 0;
   const userBorrowed = userPosition ? parseFloat(userPosition.borrowed) : 0;
 
   return (
@@ -219,28 +219,28 @@ function VaultCardMobile({ vault, index, mode, userPosition }: { vault: VaultDat
         <div className="flex gap-2">
           {mode === 'lend' ? (
             <>
+              <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
+                Supply
+              </span>
               <span className={`text-sm py-2 flex-1 text-center rounded-lg ${
-                userSupplied > 0
+                userWithdrawable > 0
                   ? 'bg-accent text-white cursor-pointer hover:bg-accent/90'
                   : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
               }`}>
                 Withdraw
               </span>
-              <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
-                Supply
-              </span>
             </>
           ) : (
             <>
+              <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
+                Borrow
+              </span>
               <span className={`text-sm py-2 flex-1 text-center rounded-lg ${
                 userBorrowed > 0
                   ? 'bg-accent text-white cursor-pointer hover:bg-accent/90'
                   : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
               }`}>
                 Repay
-              </span>
-              <span className="btn-primary text-sm py-2 flex-1 text-center cursor-pointer">
-                Borrow
               </span>
             </>
           )}

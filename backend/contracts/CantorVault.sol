@@ -1236,7 +1236,7 @@ contract CantorVault is
     }
 
     /**
-     * @notice Get user's available withdrawal amount (considering borrow)
+     * @notice Get user's available withdrawal amount (considering borrow AND CVT balance)
      * @param user User address
      * @return withdrawable Amount that can be withdrawn
      */
@@ -1244,14 +1244,31 @@ contract CantorVault is
         Position storage pos = positions[user];
         if (pos.amount == 0) return 0;
 
+        // 1. Check user's actual CVT balance (not staked = available to burn)
+        uint256 userCVTBalance = cvtToken.balanceOf(user);
+        if (userCVTBalance == 0) return 0; // No CVT = can't withdraw anything
+
+        // Convert CVT balance to underlying amount
+        uint256 maxFromCVT = _scaleFromCVT(userCVTBalance);
+
+        // 2. Calculate debt-based limit
         uint256 totalDebt = pos.borrowedAmount + pos.borrowInterestAccumulated;
-        if (totalDebt == 0) return pos.amount;
+        uint256 maxFromDebt;
 
-        // Required collateral = debt / maxLTV
-        uint256 requiredCollateral = (totalDebt * 10000) / vaultInfo.maxBorrowRatio;
-        if (pos.amount <= requiredCollateral) return 0;
+        if (totalDebt == 0) {
+            maxFromDebt = pos.amount;
+        } else {
+            // Required collateral = debt / maxLTV
+            uint256 requiredCollateral = (totalDebt * 10000) / vaultInfo.maxBorrowRatio;
+            if (pos.amount <= requiredCollateral) {
+                maxFromDebt = 0;
+            } else {
+                maxFromDebt = pos.amount - requiredCollateral;
+            }
+        }
 
-        return pos.amount - requiredCollateral;
+        // 3. Return the minimum of both limits
+        return maxFromCVT < maxFromDebt ? maxFromCVT : maxFromDebt;
     }
 
     /**
@@ -1288,8 +1305,8 @@ contract CantorVault is
      * @return interest Accumulated interest
      * @return healthFactor Position health (10000 = 100%)
      * @return maxBorrow Maximum additional borrow
-     * @return withdrawable Available for withdrawal
-     * @return cvtBalance User's CVT token balance
+     * @return withdrawable Available for withdrawal (considers CVT balance!)
+     * @return cvtBalance User's actual CVT token balance (what they can burn)
      * @dev Fixed precision: multiply before divide
      */
     function getUserSummary(address user) external view returns (
@@ -1305,7 +1322,9 @@ contract CantorVault is
         supplied = pos.amount;
         borrowed = pos.borrowedAmount;
         interest = pos.borrowInterestAccumulated;
-        cvtBalance = pos.cvtBalance;
+
+        // Real CVT balance (not staked = available to burn for withdrawal)
+        cvtBalance = cvtToken.balanceOf(user);
 
         uint256 totalDebt = borrowed + interest;
         uint256 maxBorrowValue = (supplied * vaultInfo.maxBorrowRatio) / 10000;
@@ -1313,19 +1332,24 @@ contract CantorVault is
         // Users with staked CVT cannot borrow - their collateral backs the protocol
         bool hasStaked = stakedAmounts[user] > 0;
 
+        // Calculate debt-based withdrawable limit
+        uint256 maxFromDebt;
         if (totalDebt == 0) {
             healthFactor = type(uint256).max;
             maxBorrow = hasStaked ? 0 : maxBorrowValue;
-            withdrawable = supplied;
+            maxFromDebt = supplied;
         } else {
             // Fixed precision: (supplied * maxBorrowRatio) / totalDebt
-            // No double division - direct calculation
             healthFactor = (supplied * vaultInfo.maxBorrowRatio) / totalDebt;
             maxBorrow = hasStaked ? 0 : (totalDebt >= maxBorrowValue ? 0 : maxBorrowValue - totalDebt);
 
             uint256 requiredCollateral = (totalDebt * 10000) / vaultInfo.maxBorrowRatio;
-            withdrawable = supplied <= requiredCollateral ? 0 : supplied - requiredCollateral;
+            maxFromDebt = supplied <= requiredCollateral ? 0 : supplied - requiredCollateral;
         }
+
+        // Withdrawable = minimum of (debt-based limit, CVT-based limit)
+        uint256 maxFromCVT = cvtBalance > 0 ? _scaleFromCVT(cvtBalance) : 0;
+        withdrawable = maxFromCVT < maxFromDebt ? maxFromCVT : maxFromDebt;
     }
 
     // ============== ADMIN CONFIG ==============
