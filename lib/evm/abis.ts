@@ -183,6 +183,7 @@ export const VAULT_ABI = [
       { internalType: 'uint256', name: 'borrowSlope', type: 'uint256' },
       { internalType: 'uint256', name: 'maxBorrowRatio', type: 'uint256' },
       { internalType: 'uint256', name: 'liquidationBonus', type: 'uint256' },
+      { internalType: 'uint256', name: 'liquidationThreshold', type: 'uint256' },
       { internalType: 'bool', name: 'isActive', type: 'bool' },
       { internalType: 'uint256', name: 'createdAt', type: 'uint256' },
       { internalType: 'address', name: 'treasury', type: 'address' },

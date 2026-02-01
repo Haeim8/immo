@@ -931,6 +931,14 @@ contract CantorVault is
         _updateUtilization();
 
         // ===== INTERACTIONS (external calls AFTER state updates) =====
+        // Sync CollateralManager for cross-vault accounting
+        if (crossCollateralEnabled && address(collateralManager) != address(0)) {
+            collateralManager.recordCollateralWithdrawal(borrower, vaultInfo.vaultId, collateral);
+            if (principal > 0) {
+                collateralManager.recordDebtRepayment(borrower, vaultInfo.vaultId, principal);
+            }
+        }
+
         // Burn CVT tokens (scaled to 18 decimals)
         uint256 cvtToBurn = _scaleToCVT(collateral);
         cvtToken.burn(borrower, cvtToBurn);

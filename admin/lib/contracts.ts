@@ -1,18 +1,18 @@
 // Contract addresses sur Base Sepolia (alignés avec lib/evm/constants.ts)
-// Mise à jour : 2025-12-15
+// Mise à jour : 2026-02-01
 export const CONTRACTS = {
   network: "baseSepolia",
   chainId: 84532,
   deployer: "0x222fD66bbfc6808e123aB51f5FB21644731dFDE2",
   usdc: "0x45f591C36B3506a881eD54638a9456607c2Eed84",
-  protocol: "0x019A6562e7966Da17C1EE3ec4A3d0c79E079CeA5",
-  feeCollector: "0x677674bA37100898dd51BEE1c09ad8b23d526513",
-  priceOracle: "0xc77C80C64093c64a0E4f3a9096F54e55028A6D69",
-  collateralManager: "0x27d524D2f8f3373FF270F023941cdd1036175c49",
-  vaultImplementation: "0x2c597B9e5B0517F9EB2d5fCE489826661B71D787",
-  factory: "0x2079Cd6B84b91dd23dcD412bA260f205d64601DE",
-  reader: "0x031F4f4e6f2d1715908b3497F4Debc6a9633aC04",
-  cvtToken: "0x4A539C79C9cB592F545Bb5b09296929a46898dfc",
+  protocol: "0xF38DfC53Fffe57EbBba5f83E16F7a53774650660",
+  feeCollector: "0xd1D803008EfFc980f57D88Ea7d7Ba15149614ce7",
+  priceOracle: "0xfEe66D72AF156E8b1e31F84e6e40a3cFb0CD9801",
+  collateralManager: "0x75896Ebb9719037E8cD3C8DDdA8c237E68C7FbB7",
+  vaultImplementation: "0x383fFE3a7e908240021747b5775b625B441a299e",
+  factory: "0x10809d5E79C77D93c2cA9b75f2715FEEcC00282D",
+  reader: "0xF73C6E3c7eE0F1CF0A9dC0D37b7B0Ca42D25d8Ad",
+  cvtToken: "0x41f7f3F48Af49d68e24999F3FE5D831a64ac2DBF",
   // staking: fetched dynamically from vault.stakingContract()
 } as const;
 
@@ -213,6 +213,7 @@ export const READER_ABI = [
           { internalType: "uint256", name: "borrowBaseRate", type: "uint256" },
           { internalType: "uint256", name: "borrowSlope", type: "uint256" },
           { internalType: "uint256", name: "maxBorrowRatio", type: "uint256" },
+          { internalType: "uint256", name: "liquidationThreshold", type: "uint256" },
           { internalType: "uint256", name: "liquidationBonus", type: "uint256" },
           { internalType: "uint256", name: "expectedReturn", type: "uint256" },
           { internalType: "uint256", name: "currentBorrowRate", type: "uint256" },
@@ -325,7 +326,7 @@ export const FEE_COLLECTOR_ABI = [
 ] as const;
 
 // ============== FACTORY ABI (UPDATED) ==============
-// CreateVaultParams: { token, maxLiquidity, borrowBaseRate, borrowSlope, maxBorrowRatio, liquidationBonus }
+// CreateVaultParams: { token, maxLiquidity, borrowBaseRate, borrowSlope, maxBorrowRatio, liquidationThreshold, liquidationBonus }
 export const FACTORY_ABI = [
   {
     inputs: [
@@ -336,8 +337,8 @@ export const FACTORY_ABI = [
           { internalType: "uint256", name: "borrowBaseRate", type: "uint256" },
           { internalType: "uint256", name: "borrowSlope", type: "uint256" },
           { internalType: "uint256", name: "maxBorrowRatio", type: "uint256" },
-          { internalType: "uint256", name: "liquidationBonus", type: "uint256" },
           { internalType: "uint256", name: "liquidationThreshold", type: "uint256" },
+          { internalType: "uint256", name: "liquidationBonus", type: "uint256" },
         ],
         internalType: "struct CantorAssetFactory.CreateVaultParams",
         name: "params",
@@ -384,7 +385,7 @@ export const FACTORY_ABI = [
 
 // ============== VAULT ABI (UPDATED) ==============
 export const VAULT_ABI = [
-  // VaultInfo struct getter
+  // VaultInfo struct getter (10 fields including liquidationThreshold)
   {
     inputs: [],
     name: "vaultInfo",

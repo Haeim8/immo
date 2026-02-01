@@ -1,32 +1,21 @@
 {
-  "timestamp": "2025-12-15T12:26:46.408Z",
+  "timestamp": "2026-02-01T08:32:40.380Z",
   "network": "baseSepolia",
   "chainId": 84532,
   "deployer": "0x222fD66bbfc6808e123aB51f5FB21644731dFDE2",
-  "cvt": "0x4A539C79C9cB592F545Bb5b09296929a46898dfc",
-  "protocol": "0x019A6562e7966Da17C1EE3ec4A3d0c79E079CeA5",
-  "feeCollector": "0x677674bA37100898dd51BEE1c09ad8b23d526513",
-  "priceOracle": "0xc77C80C64093c64a0E4f3a9096F54e55028A6D69",
-  "collateralManager": "0x27d524D2f8f3373FF270F023941cdd1036175c49",
-  "vaultImplementation": "0x2c597B9e5B0517F9EB2d5fCE489826661B71D787",
-  "factory": "0x2079Cd6B84b91dd23dcD412bA260f205d64601DE",
-  "reader": "0x43160000C1Ef1FDe467F46ECB295BC1d3627C32E",
+  "cvt": "0x41f7f3F48Af49d68e24999F3FE5D831a64ac2DBF",
+  "protocol": "0xF38DfC53Fffe57EbBba5f83E16F7a53774650660",
+  "feeCollector": "0xd1D803008EfFc980f57D88Ea7d7Ba15149614ce7",
+  "priceOracle": "0xfEe66D72AF156E8b1e31F84e6e40a3cFb0CD9801",
+  "collateralManager": "0x75896Ebb9719037E8cD3C8DDdA8c237E68C7FbB7",
+  "vaultImplementation": "0x383fFE3a7e908240021747b5775b625B441a299e",
+  "factory": "0x10809d5E79C77D93c2cA9b75f2715FEEcC00282D",
+  "reader": "0xF73C6E3c7eE0F1CF0A9dC0D37b7B0Ca42D25d8Ad",
   "usdc": "0x45f591C36B3506a881eD54638a9456607c2Eed84",
-  "staking": "0xA904668d6C364Dfc19335E4458bd1B35557fadc5",
-  "stakingDeployedAt": "2025-12-15T14:38:47.496Z",
   "vaults": [
     {
       "vaultId": 0,
-      "vaultAddress": "0x5Ce6A19e0c76aB47d7974960BCC2c2e56F100B4D"
-    },
-    {
-      "vaultId": 1,
-      "vaultAddress": "0x6C1a0a84A25A2742B16a1C18b7627E134F22Afab"
-    },
-    {
-      "vaultId": 2,
-      "vaultAddress": "0x018D19A7b5a2c295Ca137bb3b2dEd993d6525E46"
+      "vaultAddress": "0x746510B26e10f924a1fD5f813f2F158f9Ca3776f"
     }
-  ],
-  "vaultImplUpdatedAt": "2026-02-01T02:09:08.749Z"
+  ]
 }
