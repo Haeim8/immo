@@ -97,7 +97,8 @@ describe("Admin Functions, Data Interface & Treasury Tests", function () {
       borrowBaseRate: 500,
       borrowSlope: 1000,
       maxBorrowRatio: 7000,
-      liquidationBonus: 500
+      liquidationBonus: 500,
+      liquidationThreshold: 8000
     });
     const receipt = await tx.wait();
     const event = receipt.logs.find(log => {
@@ -396,7 +397,7 @@ describe("Admin Functions, Data Interface & Treasury Tests", function () {
       const CVTStaking = await ethers.getContractFactory("CVTStaking");
       staking = await upgrades.deployProxy(
         CVTStaking,
-        [await cvt.getAddress(), await weth.getAddress(), vaultAddress, admin.address, 6000],
+        [await cvt.getAddress(), await weth.getAddress(), vaultAddress, admin.address],
         { kind: "uups" }
       );
       await staking.waitForDeployment();

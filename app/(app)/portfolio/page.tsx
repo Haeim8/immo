@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUserPositions, useAllVaults, BLOCK_EXPLORER_URL, formatUsd } from "@/lib/evm/hooks";
 import { useTranslations } from "@/components/providers/IntlProvider";
+import TransactionHistory from "@/components/TransactionHistory";
 
 export const dynamic = 'force-dynamic';
 
@@ -308,10 +309,9 @@ export default function PortfolioPage() {
                           </div>
                           <div className="mt-2 flex items-center justify-between text-[10px]">
                             <span className="text-muted-foreground">{portfolioT("health") || "Health"}</span>
-                            <span className={`font-medium ${
-                              position.healthFactor >= 100 ? 'text-success' :
+                            <span className={`font-medium ${position.healthFactor >= 100 ? 'text-success' :
                               position.healthFactor >= 50 ? 'text-warning' : 'text-destructive'
-                            }`}>
+                              }`}>
                               {position.healthFactor >= 1000 ? '∞' : `${position.healthFactor.toFixed(0)}%`}
                             </span>
                           </div>
@@ -401,6 +401,9 @@ export default function PortfolioPage() {
                   </div>
                 )}
               </div>
+
+              {/* History Explorer */}
+              <TransactionHistory />
 
               {/* Explorer Link */}
               <div className="card-vault p-4">

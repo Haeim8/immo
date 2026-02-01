@@ -64,8 +64,7 @@ async function main() {
       cvtAddress,           // Global CVT token
       underlyingToken,      // Underlying token for rewards (USDC)
       vaultAddress,         // Vault for protocol borrowing
-      deployer.address,     // Admin
-      6000                  // maxProtocolBorrowRatio: 60%
+      deployer.address     // Admin
     ],
     { initializer: "initialize", kind: "uups" }
   );

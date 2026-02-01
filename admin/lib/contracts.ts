@@ -9,9 +9,9 @@ export const CONTRACTS = {
   feeCollector: "0x677674bA37100898dd51BEE1c09ad8b23d526513",
   priceOracle: "0xc77C80C64093c64a0E4f3a9096F54e55028A6D69",
   collateralManager: "0x27d524D2f8f3373FF270F023941cdd1036175c49",
-  vaultImplementation: "0xe294753071FdCE1cf7C587160470818e1592aBAf",
+  vaultImplementation: "0x2c597B9e5B0517F9EB2d5fCE489826661B71D787",
   factory: "0x2079Cd6B84b91dd23dcD412bA260f205d64601DE",
-  reader: "0x1b81A180802d61Ecf317e15EeF36691af39C468b",
+  reader: "0x031F4f4e6f2d1715908b3497F4Debc6a9633aC04",
   cvtToken: "0x4A539C79C9cB592F545Bb5b09296929a46898dfc",
   // staking: fetched dynamically from vault.stakingContract()
 } as const;
@@ -337,6 +337,7 @@ export const FACTORY_ABI = [
           { internalType: "uint256", name: "borrowSlope", type: "uint256" },
           { internalType: "uint256", name: "maxBorrowRatio", type: "uint256" },
           { internalType: "uint256", name: "liquidationBonus", type: "uint256" },
+          { internalType: "uint256", name: "liquidationThreshold", type: "uint256" },
         ],
         internalType: "struct CantorAssetFactory.CreateVaultParams",
         name: "params",
@@ -394,6 +395,7 @@ export const VAULT_ABI = [
       { internalType: "uint256", name: "borrowSlope", type: "uint256" },
       { internalType: "uint256", name: "maxBorrowRatio", type: "uint256" },
       { internalType: "uint256", name: "liquidationBonus", type: "uint256" },
+      { internalType: "uint256", name: "liquidationThreshold", type: "uint256" },
       { internalType: "bool", name: "isActive", type: "bool" },
       { internalType: "uint256", name: "createdAt", type: "uint256" },
       { internalType: "address", name: "treasury", type: "address" },

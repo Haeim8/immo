@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn create:*)",
+      "Bash(yarn init:*)",
+      "Bash(yarn add:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(yarn tailwindcss init:*)",
+      "Bash(yarn dev)",
+      "Bash(yarn build)",
+      "Bash(yarn install)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(awk:*)",
+      "Bash(anchor:*)",
+      "Bash(export PATH=\"/Users/mathieu/.local/share/solana/install/active_release/bin:$PATH\")",
+      "Bash(solana config set:*)",
+      "Read(//Users/mathieu/Desktop/**)",
+      "Read(///**)",
+      "Bash(cat:*)",
+      "Bash(node -e:*)",
+      "Bash(mkdir:*)",
+      "WebSearch",
+      "Bash(slither . --hardhat-ignore-compile --filter-paths \"node_modules\")",
+      "Bash(slither . --hardhat-ignore-compile --filter-paths \"node_modules\" --print human-summary)",
+      "Bash(slither . --hardhat-ignore-compile --filter-paths \"node_modules\" --detect pragma)",
+      "Bash(npx hardhat run scripts/upgrade-testnet.js --network baseSepolia)",
+      "Bash(npx hardhat run:*)",
+      "Bash(tree:*)",
+      "Bash(npx hardhat test)",
+      "WebFetch(domain:www.mockplus.com)",
+      "Bash(npx eslint:*)",
+      "Bash(npx hardhat test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "outputStyle": "default"
+}

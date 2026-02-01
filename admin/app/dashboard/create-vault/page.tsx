@@ -65,6 +65,7 @@ export default function CreateVaultPage() {
     maxBorrowRatio: "70", // LTV
 
     // Liquidation
+    liquidationThreshold: "80", // 80% default
     liquidationBonus: "5", // 5% bonus for liquidators
   })
 
@@ -114,6 +115,7 @@ export default function CreateVaultPage() {
     const borrowBaseRate = BigInt(Math.round(Number(formData.borrowBaseRate) * 100))
     const borrowSlope = BigInt(Math.round(Number(formData.borrowSlope) * 100))
     const maxBorrowRatio = BigInt(Math.round(Number(formData.maxBorrowRatio) * 100))
+    const liquidationThreshold = BigInt(Math.round(Number(formData.liquidationThreshold) * 100))
     const liquidationBonus = BigInt(Math.round(Number(formData.liquidationBonus) * 100))
 
     const params = {
@@ -123,6 +125,7 @@ export default function CreateVaultPage() {
       borrowSlope,
       maxBorrowRatio,
       liquidationBonus,
+      liquidationThreshold,
     } as const
 
     console.log("Creating vault with params:", params)
@@ -224,11 +227,10 @@ export default function CreateVaultPage() {
                       <div
                         key={token.value}
                         onClick={() => handleChange("tokenType", token.value)}
-                        className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
-                          formData.tokenType === token.value
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
+                        className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${formData.tokenType === token.value
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                          }`}
                       >
                         <p className="font-medium">{token.label}</p>
                         <p className="text-xs text-muted-foreground mt-1">{token.description}</p>
@@ -404,6 +406,21 @@ export default function CreateVaultPage() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Bonus given to liquidators as incentive (max 20%)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="liquidationThreshold">Liquidation Threshold (%)</Label>
+                  <Input
+                    id="liquidationThreshold"
+                    type="number"
+                    min="0"
+                    max="95"
+                    step="0.5"
+                    value={formData.liquidationThreshold}
+                    onChange={(e) => handleChange("liquidationThreshold", e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Position remains healthy if Debt &lt; Collateral * Threshold%
                   </p>
                 </div>
               </CardContent>

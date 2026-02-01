@@ -21,7 +21,8 @@ describe("CantorFi Protocol", function () {
     borrowBaseRate: 500, // 5%
     borrowSlope: 1000, // 10%
     maxBorrowRatio: 7000, // 70%
-    liquidationBonus: 500 // 5%
+    liquidationBonus: 500, // 5%
+    liquidationThreshold: 8000 // 80%
   };
 
   // Vault parameters - Car: 15M USDC
@@ -30,7 +31,8 @@ describe("CantorFi Protocol", function () {
     borrowBaseRate: 500, // 5%
     borrowSlope: 1000, // 10%
     maxBorrowRatio: 7000, // 70%
-    liquidationBonus: 500 // 5%
+    liquidationBonus: 500, // 5%
+    liquidationThreshold: 8000 // 80%
   };
 
   let cvt;

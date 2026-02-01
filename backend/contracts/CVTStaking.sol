@@ -55,7 +55,7 @@ contract CVTStaking is
     mapping(address => bool) private isStaker;
 
     uint256 public totalStaked;
-    uint256 public maxProtocolBorrowRatio; // In basis points (6000 = 60%)
+
 
     // Reward distribution via index (O(1))
     uint256 public rewardIndex;
@@ -76,7 +76,7 @@ contract CVTStaking is
     event Unstaked(address indexed user, uint256 amount);
     event RewardsClaimed(address indexed user, uint256 amount);
     event RewardsDistributed(uint256 amount);
-    event MaxProtocolBorrowRatioUpdated(uint256 oldRatio, uint256 newRatio);
+
 
     // ============== ERRORS ==============
 
@@ -104,14 +104,12 @@ contract CVTStaking is
         address _cvtToken,
         address _underlyingToken,
         address _vault,
-        address _admin,
-        uint256 _maxProtocolBorrowRatio
+        address _admin
     ) external initializer {
         if (_cvtToken == address(0)) revert InvalidAddress();
         if (_underlyingToken == address(0)) revert InvalidAddress();
         if (_vault == address(0)) revert InvalidAddress();
         if (_admin == address(0)) revert InvalidAddress();
-        if (_maxProtocolBorrowRatio > 10000) revert InvalidAmount();
 
         __AccessControl_init();
         __Pausable_init();
@@ -124,7 +122,6 @@ contract CVTStaking is
         cvtToken = IERC20(_cvtToken);
         underlyingToken = IERC20(_underlyingToken);
         vault = ICantorVault(_vault);
-        maxProtocolBorrowRatio = _maxProtocolBorrowRatio;
     }
 
     // ============== STAKING ==============
@@ -273,30 +270,9 @@ contract CVTStaking is
         pos.rewardIndexSnapshot = rewardIndex;
     }
 
-    // ============== ADMIN ==============
 
-    /**
-     * @notice Update max protocol borrow ratio
-     * @param newRatio New ratio in basis points
-     */
-    function setMaxProtocolBorrowRatio(uint256 newRatio) external onlyAdmin {
-        if (newRatio > 10000) revert InvalidAmount();
 
-        uint256 oldRatio = maxProtocolBorrowRatio;
-        maxProtocolBorrowRatio = newRatio;
 
-        emit MaxProtocolBorrowRatioUpdated(oldRatio, newRatio);
-    }
-
-    // ============== VIEW ==============
-
-    /**
-     * @notice Get max amount protocol can borrow
-     * @return maxBorrow Maximum borrowable amount
-     */
-    function getMaxProtocolBorrow() external view returns (uint256) {
-        return (totalStaked * maxProtocolBorrowRatio) / 10000;
-    }
 
     /**
      * @notice Get user's stake position

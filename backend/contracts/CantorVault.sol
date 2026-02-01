@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -14,8 +15,7 @@ import "./interfaces/IFeeCollector.sol";
 
 interface ICVTStaking {
     function totalStaked() external view returns (uint256);
-    function maxProtocolBorrowRatio() external view returns (uint256);
-    function getMaxProtocolBorrow() external view returns (uint256);
+
     function distributeRewards(uint256 amount) external;
 }
 
@@ -39,7 +39,8 @@ contract CantorVault is
     Initializable,
     AccessControlUpgradeable,
     PausableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
     using CantorVaultInterestModel for uint256;
@@ -58,6 +59,7 @@ contract CantorVault is
         uint256 borrowSlope;
         uint256 maxBorrowRatio;
         uint256 liquidationBonus;
+        uint256 liquidationThreshold;
         bool isActive;
         uint256 createdAt;
         address treasury;
@@ -119,7 +121,6 @@ contract CantorVault is
 
     ICVTStaking public stakingContract;
     uint256 public totalStakedLiquidity; // Total liquidity from staked CVT
-    uint256 public protocolDebt; // Amount borrowed by protocol
     mapping(address => uint256) public stakedAmounts; // User's staked underlying amount
 
     // ============== CROSS-COLLATERAL VARIABLES ==============
@@ -148,8 +149,6 @@ contract CantorVault is
     event StakingContractSet(address indexed stakingContract);
     event StakeNotified(address indexed user, uint256 amount);
     event UnstakeNotified(address indexed user, uint256 amount);
-    event ProtocolBorrowed(uint256 amount);
-    event ProtocolRepaid(uint256 principal, uint256 interest, uint256 stakerRewards);
     event CollateralManagerSet(address indexed collateralManager);
     event CrossCollateralToggled(bool enabled);
     event CrossCollateralBorrow(address indexed borrower, uint256 amount);
@@ -167,8 +166,6 @@ contract CantorVault is
     error PositionSolvent();
     error VaultNotActive();
     error NothingToClaim();
-    error ExceedsMaxProtocolBorrow();
-    error NoProtocolDebt();
     error OnlyStakingContract();
     error UserHasStakedCVT();
     error UtilizationTooHigh();
@@ -256,6 +253,7 @@ contract CantorVault is
         uint256 _borrowBaseRate,
         uint256 _borrowSlope,
         uint256 _maxBorrowRatio,
+        uint256 _liquidationThreshold,
         uint256 _liquidationBonus,
         uint256 _setupFee,
         uint256 _performanceFee,
@@ -287,6 +285,7 @@ contract CantorVault is
             borrowBaseRate: _borrowBaseRate,
             borrowSlope: _borrowSlope,
             maxBorrowRatio: _maxBorrowRatio,
+            liquidationThreshold: _liquidationThreshold,
             liquidationBonus: _liquidationBonus,
             isActive: true,
             createdAt: block.timestamp,
@@ -636,94 +635,6 @@ contract CantorVault is
         emit UnstakeNotified(user, amount);
     }
 
-    /**
-     * @notice Protocol borrows from staked liquidity (admin only)
-     * @param amount Amount to borrow
-     * @dev Can only borrow up to maxProtocolBorrowRatio% of totalStakedLiquidity
-     */
-    function protocolBorrow(uint256 amount) external onlyAdmin nonReentrant whenNotPaused {
-        if (amount == 0) revert InvalidAmount();
-
-        // Check max borrow limit from staking contract
-        uint256 maxBorrow = stakingContract.getMaxProtocolBorrow();
-        if (protocolDebt + amount > maxBorrow) {
-            revert ExceedsMaxProtocolBorrow();
-        }
-
-        // Check available liquidity
-        if (vaultState.availableLiquidity < amount) {
-            revert InsufficientLiquidity();
-        }
-
-        // Update protocol debt
-        protocolDebt += amount;
-
-        // Update vault state
-        vaultState.availableLiquidity -= amount;
-        _updateUtilization();
-
-        // Transfer to admin
-        token.safeTransfer(msg.sender, amount);
-
-        emit ProtocolBorrowed(amount);
-    }
-
-    /**
-     * @notice Protocol repays borrowed amount (like a bank loan repayment)
-     * @param amount Total amount to repay (principal + interest)
-     * @dev If amount > protocolDebt, surplus is treated as interest for stakers
-     *      If amount <= protocolDebt, everything goes to principal reduction
-     */
-    function protocolRepay(uint256 amount) external onlyAdmin nonReentrant whenNotPaused {
-        if (amount == 0) revert InvalidAmount();
-
-        // Calculate principal and interest automatically
-        uint256 principal;
-        uint256 interest;
-
-        if (amount > protocolDebt) {
-            // Surplus = interest
-            principal = protocolDebt;
-            interest = amount - protocolDebt;
-        } else {
-            // No interest, only partial/full principal repayment
-            principal = amount;
-            interest = 0;
-        }
-
-        // Transfer from admin to vault
-        token.safeTransferFrom(msg.sender, address(this), amount);
-
-        // Update protocol debt
-        protocolDebt -= principal;
-
-        // Update vault state (principal returns to liquidity)
-        vaultState.availableLiquidity += principal;
-        _updateUtilization();
-
-        // Distribute interest to stakers via staking contract
-        uint256 stakerRewards = 0;
-        if (interest > 0 && address(stakingContract) != address(0) && totalStakedLiquidity > 0) {
-            // Protocol takes borrowFeeRate% of interest
-            uint256 protocolFee = (interest * borrowFeeRate) / 10000;
-            stakerRewards = interest - protocolFee;
-
-            // Send protocol fee to FeeCollector
-            if (protocolFee > 0 && feeCollector != address(0)) {
-                token.safeTransfer(feeCollector, protocolFee);
-                IFeeCollector(feeCollector).notifyFeeReceived(address(token), protocolFee);
-            }
-
-            // Send staker rewards to staking contract
-            if (stakerRewards > 0) {
-                token.approve(address(stakingContract), stakerRewards);
-                stakingContract.distributeRewards(stakerRewards);
-            }
-        }
-
-        emit ProtocolRepaid(principal, interest, stakerRewards);
-    }
-
     // ============== CROSS-COLLATERAL FUNCTIONS ==============
 
     /**
@@ -932,11 +843,10 @@ contract CantorVault is
         uint256 accumulatedInterest = pos.borrowInterestAccumulated;
         uint256 totalDebt = principal + accumulatedInterest;
 
-        // Check if position is insolvent
         if (CantorVaultInterestModel.isSolvent(
             pos.amount,
             totalDebt,
-            vaultInfo.maxBorrowRatio
+            vaultInfo.liquidationThreshold
         )) {
             revert PositionSolvent();
         }
@@ -1179,9 +1089,9 @@ contract CantorVault is
 
         // Calculate debt with interest
         uint256 totalDebt = pos.borrowedAmount + pos.borrowInterestAccumulated;
-        uint256 maxBorrow = (pos.amount * vaultInfo.maxBorrowRatio) / 10000;
+        uint256 maxLiquidatable = (pos.amount * vaultInfo.liquidationThreshold) / 10000;
 
-        return totalDebt > maxBorrow;
+        return totalDebt > maxLiquidatable;
     }
 
     // ============== CLIENT VIEW FUNCTIONS ==============
@@ -1199,10 +1109,10 @@ contract CantorVault is
         uint256 totalDebt = pos.borrowedAmount + pos.borrowInterestAccumulated;
         if (totalDebt == 0) return type(uint256).max;
 
-        // Health = (collateral * maxLTV * 10000) / (debt * 10000)
-        // Multiply first to preserve precision: (collateral * maxBorrowRatio) / totalDebt
+        // Health = (collateral * liquidationThreshold * 10000) / (debt * 10000)
+        // Multiply first to preserve precision: (collateral * liquidationThreshold) / totalDebt
         // This gives healthFactor directly in basis points
-        healthFactor = (pos.amount * vaultInfo.maxBorrowRatio) / totalDebt;
+        healthFactor = (pos.amount * vaultInfo.liquidationThreshold) / totalDebt;
     }
 
     /**
@@ -1339,8 +1249,8 @@ contract CantorVault is
             maxBorrow = hasStaked ? 0 : maxBorrowValue;
             maxFromDebt = supplied;
         } else {
-            // Fixed precision: (supplied * maxBorrowRatio) / totalDebt
-            healthFactor = (supplied * vaultInfo.maxBorrowRatio) / totalDebt;
+            // Fixed precision: (supplied * liquidationThreshold) / totalDebt
+            healthFactor = (supplied * vaultInfo.liquidationThreshold) / totalDebt;
             maxBorrow = hasStaked ? 0 : (totalDebt >= maxBorrowValue ? 0 : maxBorrowValue - totalDebt);
 
             uint256 requiredCollateral = (totalDebt * 10000) / vaultInfo.maxBorrowRatio;
@@ -1386,6 +1296,17 @@ contract CantorVault is
     }
 
     /**
+     * @notice Update liquidation threshold
+     * @param newLiquidationThreshold New liquidation threshold (bps, e.g. 8000 = 80%)
+     */
+    function setLiquidationThreshold(uint256 newLiquidationThreshold) external onlyAdmin {
+        require(newLiquidationThreshold <= 9500, "Threshold too high");
+        require(newLiquidationThreshold >= vaultInfo.maxBorrowRatio, "Must be >= maxBorrowRatio");
+        vaultInfo.liquidationThreshold = newLiquidationThreshold;
+        emit VaultConfigUpdated("liquidationThreshold", newLiquidationThreshold);
+    }
+
+    /**
      * @notice Update liquidation bonus
      * @param newLiquidationBonus New bonus (bps, e.g. 500 = 5%)
      */
@@ -1404,4 +1325,8 @@ contract CantorVault is
     function unpause() external onlyAdmin {
         _unpause();
     }
+
+    // ============== UPGRADE ==============
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 }

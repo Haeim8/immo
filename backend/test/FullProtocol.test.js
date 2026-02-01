@@ -143,7 +143,8 @@ describe("CantorFi Full Protocol Tests", function () {
       borrowBaseRate: overrides.borrowBaseRate || 500,
       borrowSlope: overrides.borrowSlope || 1000,
       maxBorrowRatio: overrides.maxBorrowRatio || 7000,
-      liquidationBonus: overrides.liquidationBonus || 500
+      liquidationBonus: overrides.liquidationBonus || 500,
+      liquidationThreshold: overrides.liquidationThreshold || 8000
     };
 
     const tx = await factory.connect(creator).createVault(params);
@@ -169,12 +170,12 @@ describe("CantorFi Full Protocol Tests", function () {
   }
 
   // Helper: Deploy staking for a vault (using global CVT)
-  async function deployStaking(vault, maxBorrowRatio = MAX_PROTOCOL_BORROW_RATIO) {
+  async function deployStaking(vault) {
     const CVTStaking = await ethers.getContractFactory("CVTStaking");
     const underlyingToken = await vault.token();
     const staking = await upgrades.deployProxy(
       CVTStaking,
-      [await cvt.getAddress(), underlyingToken, await vault.getAddress(), admin.address, maxBorrowRatio],
+      [await cvt.getAddress(), underlyingToken, await vault.getAddress(), admin.address],
       { kind: "uups" }
     );
     await staking.waitForDeployment();
@@ -499,98 +500,9 @@ describe("CantorFi Full Protocol Tests", function () {
     });
 
     describe("Protocol borrow and repay with interest", function () {
-      it("should distribute interest to stakers on protocolRepay", async function () {
-        const supplyAmount = ethers.parseUnits("10000", 18);
+      // Removed test: should distribute interest to stakers on protocolRepay (protocolBorrow deprecated)
 
-        // User supplies and stakes
-        await weth.connect(user1).approve(vaultAddress, supplyAmount);
-        await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-        const cvtBalance = await cvtToken.balanceOf(user1.address);
-        await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-        await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-        // Admin borrows from protocol
-        const borrowAmount = ethers.parseUnits("5000", 18);
-        await vault.connect(admin).protocolBorrow(borrowAmount);
-
-        expect(await vault.protocolDebt()).to.equal(borrowAmount);
-
-        // Admin repays with interest (5000 + 500 interest)
-        const repayAmount = ethers.parseUnits("5500", 18);
-        await weth.connect(admin).approve(vaultAddress, repayAmount);
-        await vault.connect(admin).protocolRepay(repayAmount);
-
-        // Check protocol debt cleared
-        expect(await vault.protocolDebt()).to.equal(0);
-
-        // Check staker has pending rewards
-        // Interest = 500, protocol fee = 15% = 75, staker rewards = 425
-        const pendingRewards = await staking.getPendingRewards(user1.address);
-        const expectedRewards = ethers.parseUnits("425", 18);
-        expect(pendingRewards).to.equal(expectedRewards);
-      });
-
-      it("should allow staker to claim rewards", async function () {
-        const supplyAmount = ethers.parseUnits("10000", 18);
-
-        await weth.connect(user1).approve(vaultAddress, supplyAmount);
-        await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-        const cvtBalance = await cvtToken.balanceOf(user1.address);
-        await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-        await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-        // Admin borrows and repays with interest
-        const borrowAmount = ethers.parseUnits("5000", 18);
-        await vault.connect(admin).protocolBorrow(borrowAmount);
-
-        const repayAmount = ethers.parseUnits("5500", 18);
-        await weth.connect(admin).approve(vaultAddress, repayAmount);
-        await vault.connect(admin).protocolRepay(repayAmount);
-
-        // Claim rewards
-        const balanceBefore = await weth.balanceOf(user1.address);
-        await staking.connect(user1).claimRewards();
-        const balanceAfter = await weth.balanceOf(user1.address);
-
-        const expectedRewards = ethers.parseUnits("425", 18);
-        expect(balanceAfter - balanceBefore).to.equal(expectedRewards);
-      });
-
-      it("should distribute rewards proportionally to multiple stakers", async function () {
-        const supplyAmount = ethers.parseUnits("10000", 18);
-
-        // User1 stakes 10000
-        await weth.connect(user1).approve(vaultAddress, supplyAmount);
-        await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-        let cvtBalance = await cvtToken.balanceOf(user1.address);
-        await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-        await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-        // User2 stakes 10000
-        await weth.connect(user2).approve(vaultAddress, supplyAmount);
-        await vault.connect(user2).supply(supplyAmount, NO_LOCK);
-        cvtBalance = await cvtToken.balanceOf(user2.address);
-        await cvtToken.connect(user2).approve(await staking.getAddress(), cvtBalance);
-        await staking.connect(user2).stake(cvtBalance, ONE_MONTH);
-
-        // Admin borrows and repays with 1000 interest
-        const borrowAmount = ethers.parseUnits("10000", 18);
-        await vault.connect(admin).protocolBorrow(borrowAmount);
-
-        const repayAmount = ethers.parseUnits("11000", 18);
-        await weth.connect(admin).approve(vaultAddress, repayAmount);
-        await vault.connect(admin).protocolRepay(repayAmount);
-
-        // Interest = 1000, protocol fee = 150, staker rewards = 850
-        // Each staker gets 50% = 425
-        const rewards1 = await staking.getPendingRewards(user1.address);
-        const rewards2 = await staking.getPendingRewards(user2.address);
-
-        expect(rewards1).to.equal(ethers.parseUnits("425", 18));
-        expect(rewards2).to.equal(ethers.parseUnits("425", 18));
-      });
+      // Removed tests: Protocol Borrow functionality removed for security.
     });
 
     describe("User borrow interest distribution to suppliers", function () {
@@ -637,98 +549,31 @@ describe("CantorFi Full Protocol Tests", function () {
   // ============== PROTOCOL BORROW INFO TESTS ==============
 
   describe("Admin Protocol Borrow Info", function () {
-    let vault, vaultAddress, staking, cvtToken;
-
-    beforeEach(async function () {
-      const result = await createVault(weth);
-      vault = result.vault;
-      vaultAddress = result.vaultAddress;
-      staking = await deployStaking(vault);
-      cvtToken = await ethers.getContractAt("CVT", await vault.cvtToken());
-    });
-
-    it("should track protocolDebt correctly", async function () {
-      const supplyAmount = ethers.parseUnits("10000", 18);
-
-      await weth.connect(user1).approve(vaultAddress, supplyAmount);
-      await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-      const cvtBalance = await cvtToken.balanceOf(user1.address);
-      await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-      await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-      // Borrow 3000
-      await vault.connect(admin).protocolBorrow(ethers.parseUnits("3000", 18));
-      expect(await vault.protocolDebt()).to.equal(ethers.parseUnits("3000", 18));
-
-      // Borrow 2000 more
-      await vault.connect(admin).protocolBorrow(ethers.parseUnits("2000", 18));
-      expect(await vault.protocolDebt()).to.equal(ethers.parseUnits("5000", 18));
-
-      // Partial repay 2000 (no interest)
-      await weth.connect(admin).approve(vaultAddress, ethers.parseUnits("2000", 18));
-      await vault.connect(admin).protocolRepay(ethers.parseUnits("2000", 18));
-      expect(await vault.protocolDebt()).to.equal(ethers.parseUnits("3000", 18));
-    });
-
-    it("should respect maxProtocolBorrowRatio", async function () {
-      const supplyAmount = ethers.parseUnits("10000", 18);
-
-      await weth.connect(user1).approve(vaultAddress, supplyAmount);
-      await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-      const cvtBalance = await cvtToken.balanceOf(user1.address);
-      await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-      await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-      // Max borrow = 60% of 10000 = 6000
-      const maxBorrow = await staking.getMaxProtocolBorrow();
-      expect(maxBorrow).to.equal(ethers.parseUnits("6000", 18));
-
-      // Try to borrow more than max
-      await expect(
-        vault.connect(admin).protocolBorrow(ethers.parseUnits("7000", 18))
-      ).to.be.revertedWithCustomError(vault, "ExceedsMaxProtocolBorrow");
-
-      // Borrow exactly max should work
-      await vault.connect(admin).protocolBorrow(ethers.parseUnits("6000", 18));
-      expect(await vault.protocolDebt()).to.equal(ethers.parseUnits("6000", 18));
-    });
-
-    it("should allow admin to update maxProtocolBorrowRatio", async function () {
-      await staking.connect(admin).setMaxProtocolBorrowRatio(8000); // 80%
-
-      const supplyAmount = ethers.parseUnits("10000", 18);
-      await weth.connect(user1).approve(vaultAddress, supplyAmount);
-      await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-      const cvtBalance = await cvtToken.balanceOf(user1.address);
-      await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-      await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-      const maxBorrow = await staking.getMaxProtocolBorrow();
-      expect(maxBorrow).to.equal(ethers.parseUnits("8000", 18));
-    });
-
-    it("should calculate variable APY based on utilization", async function () {
-      const supplyAmount = ethers.parseUnits("100000", 18);
-
-      await weth.connect(user1).approve(vaultAddress, supplyAmount);
-      await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-      // No borrows = base rate
-      let borrowRate = await vault.calculateBorrowRate();
-      expect(borrowRate).to.equal(500); // 5% base
-
-      // Borrow 50% = base + slope * 50%
-      await vault.connect(user1).borrow(ethers.parseUnits("50000", 18));
-
-      borrowRate = await vault.calculateBorrowRate();
-      // Aave-style: utilization = 50%, rate = baseRate + (slope × utilization / OPTIMAL)
-      // rate = 500 + (1000 × 5000 / 8000) = 500 + 625 = 1125 bps (11.25%)
-      expect(borrowRate).to.equal(1125);
-    });
+    // Tests removed as Protocol Borrowing has been deprecated.
   });
+
+  it("should calculate variable APY based on utilization", async function () {
+    const result = await createVault(weth);
+    const vault = result.vault;
+    const vaultAddress = result.vaultAddress;
+    const supplyAmount = ethers.parseUnits("100000", 18);
+
+    await weth.connect(user1).approve(vaultAddress, supplyAmount);
+    await vault.connect(user1).supply(supplyAmount, NO_LOCK);
+
+    // No borrows = base rate
+    let borrowRate = await vault.calculateBorrowRate();
+    expect(borrowRate).to.equal(500); // 5% base
+
+    // Borrow 50% = base + slope * 50%
+    await vault.connect(user1).borrow(ethers.parseUnits("50000", 18));
+
+    borrowRate = await vault.calculateBorrowRate();
+    // Aave-style: utilization = 50%, rate = baseRate + (slope × utilization / OPTIMAL)
+    // rate = 500 + (1000 × 5000 / 8000) = 500 + 625 = 1125 bps (11.25%)
+    expect(borrowRate).to.equal(1125);
+  });
+
 
   // ============== LIQUIDATION TESTS ==============
 
@@ -819,132 +664,13 @@ describe("CantorFi Full Protocol Tests", function () {
       expect(vaultCountAfter).to.equal(vaultCountBefore + 1n);
     });
 
-    it("should send protocol fee to FeeCollector on protocol repay", async function () {
-      const supplyAmount = ethers.parseUnits("10000", 18);
-
-      await weth.connect(user1).approve(vaultAddress, supplyAmount);
-      await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-      const cvtBalance = await cvtToken.balanceOf(user1.address);
-      await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-      await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-      await vault.connect(admin).protocolBorrow(ethers.parseUnits("5000", 18));
-
-      const feeCollectorAddress = await feeCollector.getAddress();
-      const balanceBefore = await weth.balanceOf(feeCollectorAddress);
-
-      // Repay with 500 interest
-      await weth.connect(admin).approve(vaultAddress, ethers.parseUnits("5500", 18));
-      await vault.connect(admin).protocolRepay(ethers.parseUnits("5500", 18));
-
-      const balanceAfter = await weth.balanceOf(feeCollectorAddress);
-
-      // Protocol fee = 15% of 500 = 75
-      expect(balanceAfter - balanceBefore).to.equal(ethers.parseUnits("75", 18));
-    });
-
-    it("should send staker rewards to staking contract on protocol repay", async function () {
-      const supplyAmount = ethers.parseUnits("10000", 18);
-
-      await weth.connect(user1).approve(vaultAddress, supplyAmount);
-      await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-      const cvtBalance = await cvtToken.balanceOf(user1.address);
-      await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-      await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-      await vault.connect(admin).protocolBorrow(ethers.parseUnits("5000", 18));
-
-      const stakingAddress = await staking.getAddress();
-      const balanceBefore = await weth.balanceOf(stakingAddress);
-
-      await weth.connect(admin).approve(vaultAddress, ethers.parseUnits("5500", 18));
-      await vault.connect(admin).protocolRepay(ethers.parseUnits("5500", 18));
-
-      const balanceAfter = await weth.balanceOf(stakingAddress);
-
-      // Staker rewards = 85% of 500 = 425
-      expect(balanceAfter - balanceBefore).to.equal(ethers.parseUnits("425", 18));
-    });
-
-    it("should track borrow fee statistics in FeeCollector", async function () {
-      // Supply, borrow, and repay to generate fees
-      const supplyAmount = ethers.parseUnits("10000", 18);
-
-      await weth.connect(user1).approve(vaultAddress, supplyAmount);
-      await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-      const cvtBalance = await cvtToken.balanceOf(user1.address);
-      await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-      await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-      await vault.connect(admin).protocolBorrow(ethers.parseUnits("5000", 18));
-
-      await weth.connect(admin).approve(vaultAddress, ethers.parseUnits("5500", 18));
-      await vault.connect(admin).protocolRepay(ethers.parseUnits("5500", 18));
-
-      const stats = await feeCollector.getFeeStats(await weth.getAddress());
-      expect(stats.collected).to.be.gt(0);
-    });
-
-    it("should verify complete flow: supply -> stake -> protocolBorrow -> protocolRepay -> claim", async function () {
-      const supplyAmount = ethers.parseUnits("10000", 18);
-
-      // 1. User supplies
-      const user1BalanceStart = await weth.balanceOf(user1.address);
-      await weth.connect(user1).approve(vaultAddress, supplyAmount);
-      await vault.connect(user1).supply(supplyAmount, NO_LOCK);
-
-      expect(await weth.balanceOf(user1.address)).to.equal(user1BalanceStart - supplyAmount);
-      expect(await weth.balanceOf(vaultAddress)).to.be.gte(supplyAmount);
-
-      // 2. User stakes CVT
-      const cvtBalance = await cvtToken.balanceOf(user1.address);
-      await cvtToken.connect(user1).approve(await staking.getAddress(), cvtBalance);
-      await staking.connect(user1).stake(cvtBalance, ONE_MONTH);
-
-      expect(await cvtToken.balanceOf(await staking.getAddress())).to.equal(cvtBalance);
-
-      // 3. Admin borrows
-      const borrowAmount = ethers.parseUnits("5000", 18);
-      const adminBalanceBefore = await weth.balanceOf(admin.address);
-      await vault.connect(admin).protocolBorrow(borrowAmount);
-
-      expect(await weth.balanceOf(admin.address)).to.equal(adminBalanceBefore + borrowAmount);
-      expect(await vault.protocolDebt()).to.equal(borrowAmount);
-
-      // 4. Admin repays with interest
-      const repayAmount = ethers.parseUnits("5500", 18);
-      await weth.connect(admin).approve(vaultAddress, repayAmount);
-      await vault.connect(admin).protocolRepay(repayAmount);
-
-      expect(await vault.protocolDebt()).to.equal(0);
-
-      // 5. User claims rewards
-      const pendingRewards = await staking.getPendingRewards(user1.address);
-      expect(pendingRewards).to.be.gt(0);
-
-      const user1BalanceBeforeClaim = await weth.balanceOf(user1.address);
-      await staking.connect(user1).claimRewards();
-      const user1BalanceAfterClaim = await weth.balanceOf(user1.address);
-
-      expect(user1BalanceAfterClaim - user1BalanceBeforeClaim).to.equal(pendingRewards);
-
-      // 6. User unstakes after lock
-      await time.increase(ONE_MONTH + 1);
-      await staking.connect(user1).unstake();
-
-      expect(await cvtToken.balanceOf(user1.address)).to.equal(cvtBalance);
-
-      // 7. User withdraws
-      await vault.connect(user1).withdraw(supplyAmount);
-
-      // User should have original amount + rewards
-      const finalBalance = await weth.balanceOf(user1.address);
-      expect(finalBalance).to.be.gt(user1BalanceStart);
-    });
+    // Removed: protocol fee tests (relied on protocolBorrow)
+    // Removed: staker rewards tests (relied on protocolBorrow)
+    // Removed: global flow tests (relied on protocolBorrow)
   });
+
+
+
 
   // ============== MULTIPLE STAKING POSITIONS ==============
 
@@ -1220,3 +946,4 @@ describe("CantorFi Full Protocol Tests", function () {
     });
   });
 });
+

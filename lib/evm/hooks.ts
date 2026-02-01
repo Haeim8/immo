@@ -33,6 +33,7 @@ export interface VaultData {
   borrowSlope: number;
   maxBorrowRatio: number;
   liquidationBonus: number;
+  liquidationThreshold: number;
   isActive: boolean;
   createdAt: number;
   totalSupplied: string;
@@ -287,6 +288,7 @@ export function useAllVaults() {
         borrowSlope: Number(v.borrowSlope || 0) / 100,
         maxBorrowRatio: Number(v.maxBorrowRatio || 0) / 100,
         liquidationBonus: Number(v.liquidationBonus || 0) / 100,
+        liquidationThreshold: Number(v.liquidationThreshold || 0) / 100,
         isActive: v.isActive,
         createdAt: Number(v.createdAt || 0) * 1000,
         totalSupplied: formatUnits(BigInt(v.totalSupplied || 0), decimals),

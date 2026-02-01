@@ -155,7 +155,8 @@ describe("Cross-Collateral System", function () {
       borrowBaseRate: VAULT_PARAMS.borrowBaseRate,
       borrowSlope: VAULT_PARAMS.borrowSlope,
       maxBorrowRatio: VAULT_PARAMS.maxBorrowRatio,
-      liquidationBonus: VAULT_PARAMS.liquidationBonus
+      liquidationBonus: VAULT_PARAMS.liquidationBonus,
+      liquidationThreshold: LIQUIDATION_THRESHOLD
     };
 
     const tx = await factory.connect(admin).createVault(params);

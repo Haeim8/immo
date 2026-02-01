@@ -107,21 +107,19 @@ function ModeToggle({ mode, setMode }: { mode: 'lend' | 'borrow'; setMode: (m: '
     <div className="flex items-center p-1 rounded-lg bg-secondary/50 border border-border/50 w-full">
       <button
         onClick={() => setMode('lend')}
-        className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-          mode === 'lend'
-            ? 'bg-card text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        }`}
+        className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'lend'
+          ? 'bg-card text-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground'
+          }`}
       >
         Lend
       </button>
       <button
         onClick={() => setMode('borrow')}
-        className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-          mode === 'borrow'
-            ? 'bg-card text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        }`}
+        className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'borrow'
+          ? 'bg-card text-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground'
+          }`}
       >
         Borrow
       </button>
@@ -168,11 +166,10 @@ function TokenSelectorModal({
                 onSelect(token.symbol);
                 onClose();
               }}
-              className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
-                selectedToken === token.symbol
-                  ? 'bg-primary/10 border border-primary/30'
-                  : 'hover:bg-secondary/50 border border-transparent'
-              }`}
+              className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${selectedToken === token.symbol
+                ? 'bg-primary/10 border border-primary/30'
+                : 'hover:bg-secondary/50 border border-transparent'
+                }`}
             >
               <div className="flex items-center gap-3">
                 <TokenIcon symbol={token.symbol} size="sm" />
@@ -239,11 +236,10 @@ function SettingsModal({
               <button
                 key={option}
                 onClick={() => setSlippage(option)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  slippage === option
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${slippage === option
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+                  }`}
               >
                 {option}%
               </button>
@@ -548,11 +544,10 @@ export default function VaultPage() {
                 </div>
                 <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                   <span>Vault #{vault.vaultId}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    vault.isActive
-                      ? 'bg-success/20 text-success'
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${vault.isActive
+                    ? 'bg-success/20 text-success'
+                    : 'bg-muted text-muted-foreground'
+                    }`}>
                     {vault.isActive ? 'Active' : 'Paused'}
                   </span>
                 </div>
@@ -635,7 +630,7 @@ export default function VaultPage() {
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                       Liquidation Threshold <Info className="w-3 h-3" />
                     </div>
-                    <span className="font-bold">{(vault.maxBorrowRatio + 5).toFixed(0)}%</span>
+                    <span className="font-bold">{vault.liquidationThreshold.toFixed(0)}%</span>
                   </div>
                   <div className="bg-secondary/30 rounded-lg p-3">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
@@ -930,13 +925,12 @@ export default function VaultPage() {
                           e.stopPropagation();
                           handleAction();
                         }}
-                        className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 ${
-                          isActionDisabled
-                            ? 'bg-secondary text-muted-foreground cursor-not-allowed'
-                            : mode === 'lend'
-                              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                              : 'bg-accent text-white hover:bg-accent/90'
-                        }`}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 ${isActionDisabled
+                          ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                          : mode === 'lend'
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'bg-accent text-white hover:bg-accent/90'
+                          }`}
                       >
                         {actionLoading ? 'Transaction...' : mode === 'lend' ? 'Supply' : 'Borrow'}
                       </button>
@@ -950,11 +944,10 @@ export default function VaultPage() {
                           e.stopPropagation();
                           handleRepay();
                         }}
-                        className={`w-full py-3 rounded-xl font-semibold transition-all relative z-10 mt-2 ${
-                          userBorrowedAmount <= 0 || actionLoading
-                            ? 'bg-secondary text-muted-foreground cursor-not-allowed opacity-50'
-                            : 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
-                        }`}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all relative z-10 mt-2 ${userBorrowedAmount <= 0 || actionLoading
+                          ? 'bg-secondary text-muted-foreground cursor-not-allowed opacity-50'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
+                          }`}
                       >
                         {actionLoading ? 'Transaction...' : `Repay (${formatTokenAmount(userBorrowedAmount)} ${vault?.tokenSymbol || ''})`}
                       </button>
@@ -968,11 +961,10 @@ export default function VaultPage() {
                           e.stopPropagation();
                           handleWithdraw();
                         }}
-                        className={`w-full py-3 rounded-xl font-semibold transition-all relative z-10 mt-2 ${
-                          userWithdrawableAmount <= 0 || actionLoading
-                            ? 'bg-secondary text-muted-foreground cursor-not-allowed opacity-50'
-                            : 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
-                        }`}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all relative z-10 mt-2 ${userWithdrawableAmount <= 0 || actionLoading
+                          ? 'bg-secondary text-muted-foreground cursor-not-allowed opacity-50'
+                          : 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
+                          }`}
                       >
                         {actionLoading ? 'Transaction...' : `Withdraw (${formatTokenAmount(userWithdrawableAmount)} ${vault?.tokenSymbol || ''})`}
                       </button>
@@ -987,11 +979,10 @@ export default function VaultPage() {
                             e.stopPropagation();
                             claimInterest();
                           }}
-                          className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 mt-2 ${
-                            isClaimPending || actionLoading
-                              ? 'bg-secondary text-muted-foreground cursor-not-allowed'
-                              : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                          }`}
+                          className={`w-full py-3 rounded-xl font-semibold transition-all cursor-pointer relative z-10 mt-2 ${isClaimPending || actionLoading
+                            ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            }`}
                         >
                           {isClaimPending ? 'Claiming...' : `Claim interest (${formatTokenAmount(parseFloat(userPosition.interestPending))} ${vault.tokenSymbol})`}
                         </button>
@@ -1027,11 +1018,56 @@ export default function VaultPage() {
                           valueColor={mode === 'lend' ? 'text-success' : 'text-accent'}
                         />
                         {userPosition && parseFloat(userPosition.borrowed) > 0 && (
-                          <InfoRow
-                            label="Health Factor"
-                            value={userPosition.healthFactor >= 1000 ? '∞' : `${userPosition.healthFactor.toFixed(0)}%`}
-                            valueColor={userPosition.healthFactor >= 100 ? 'text-success' : 'text-warning'}
-                          />
+                          <>
+                            <InfoRow
+                              label="Health Factor"
+                              value={userPosition.healthFactor >= 1000 ? '∞' : `${userPosition.healthFactor.toFixed(0)}%`}
+                              valueColor={userPosition.healthFactor >= 100 ? 'text-success' : 'text-warning'}
+                            />
+
+                            {/* Risk Meter */}
+                            <div className="mt-4 pt-4 border-t border-border/50">
+                              <div className="flex justify-between items-end mb-2">
+                                <span className="text-xs font-semibold uppercase text-muted-foreground">Risk Level</span>
+                                <span className="text-xs font-medium">
+                                  {(parseFloat(userPosition.borrowedUsd.toString()) / parseFloat(userPosition.suppliedUsd.toString()) * 100).toFixed(1)}% LTV
+                                </span>
+                              </div>
+                              <div className="relative h-4 bg-secondary/50 rounded-full overflow-hidden w-full">
+                                {/* Success Zone (0 -> MaxBorrow) */}
+                                <div
+                                  className="absolute top-0 bottom-0 left-0 bg-success/20 border-r border-success/30"
+                                  style={{ width: `${vault.maxBorrowRatio}%` }}
+                                ></div>
+                                {/* Warning Zone (MaxBorrow -> LiquidThreshold) */}
+                                <div
+                                  className="absolute top-0 bottom-0 bg-warning/20 border-r border-warning/30"
+                                  style={{ left: `${vault.maxBorrowRatio}%`, width: `${vault.liquidationThreshold - vault.maxBorrowRatio}%` }}
+                                ></div>
+                                {/* Danger Zone (LiquidThreshold -> 100) */}
+                                <div
+                                  className="absolute top-0 bottom-0 right-0 bg-destructive/10"
+                                  style={{ left: `${vault.liquidationThreshold}%`, right: 0 }}
+                                ></div>
+
+                                {/* User Cursor */}
+                                <div
+                                  className={`absolute top-0 bottom-0 w-1 shadow-lg transition-all duration-500 ${(parseFloat(userPosition.borrowedUsd.toString()) / parseFloat(userPosition.suppliedUsd.toString()) * 100) > vault.liquidationThreshold
+                                      ? 'bg-destructive'
+                                      : (parseFloat(userPosition.borrowedUsd.toString()) / parseFloat(userPosition.suppliedUsd.toString()) * 100) > vault.maxBorrowRatio
+                                        ? 'bg-warning'
+                                        : 'bg-success'
+                                    }`}
+                                  style={{ left: `${Math.min((parseFloat(userPosition.borrowedUsd.toString()) / parseFloat(userPosition.suppliedUsd.toString()) * 100), 100)}%` }}
+                                ></div>
+                              </div>
+                              <div className="flex justify-between text-[10px] text-muted-foreground mt-1 relative h-4">
+                                <span>0%</span>
+                                <span className="absolute transform -translate-x-1/2" style={{ left: `${vault.maxBorrowRatio}%` }}>Max {vault.maxBorrowRatio}%</span>
+                                <span className="absolute transform -translate-x-1/2 text-destructive font-medium" style={{ left: `${vault.liquidationThreshold}%` }}>Liq {vault.liquidationThreshold}%</span>
+                              </div>
+                            </div>
+                          </>
                         )}
                         <InfoRow label="Pool size" value={formatUsd(totalDepositsUsd)} />
                         <InfoRow label="Utilization" value={`${vault.utilizationRate.toFixed(1)}%`} />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useSignMessage } from 'wagmi';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { useTranslations } from '@/components/providers/IntlProvider';
 
@@ -11,25 +11,40 @@ interface BuyCryptoButtonProps {
 
 export function BuyCryptoButton({ className }: BuyCryptoButtonProps) {
   const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const t = useTranslations('common');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleBuy = async () => {
+    if (!isConnected || !address) {
+      alert("Veuillez connecter votre wallet");
+      return;
+    }
+
     setIsLoading(true);
     try {
+      // 1. Sign message for authentication
+      const timestamp = Date.now().toString();
+      const message = `CantorFi Onramp Session Request\nNonce: ${timestamp}`;
+
+      const signature = await signMessageAsync({ message, account: address });
+
+      // 2. Call API with signature
       const response = await fetch('/api/onramp/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          address: isConnected ? address : undefined,
+          address,
           blockchains: ['base'],
+          signature,
+          timestamp,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
         console.error('Failed to get session token:', error);
-        alert('Erreur lors de la connexion au service d\'achat');
+        alert(error.error || 'Erreur lors de la connexion au service d\'achat');
         return;
       }
 
@@ -41,7 +56,8 @@ export function BuyCryptoButton({ className }: BuyCryptoButtonProps) {
 
     } catch (error) {
       console.error('Error opening onramp:', error);
-      alert('Erreur lors de l\'ouverture du service d\'achat');
+      // alert('Erreur lors de l\'ouverture du service d\'achat');
+      // User might have rejected signature
     } finally {
       setIsLoading(false);
     }

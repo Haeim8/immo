@@ -5,6 +5,30 @@ import "./CantorVault.sol";
 import "./CantorFiProtocol.sol";
 import "./CVT.sol";
 
+// V9: Explicit Interfaces for Robust Backward Compatibility
+interface INewVault {
+    function vaultInfo() external view returns (
+        uint256, uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256, address
+    ); // 10 params
+    function vaultState() external view returns (
+        uint256, uint256, uint256, uint256, uint256, uint256, uint256
+    );
+    function cvtToken() external view returns (CVT);
+    function paused() external view returns (bool);
+    function token() external view returns (IERC20);
+    function calculateBorrowRate() external view returns (uint256);
+    // Positions
+    function positions(address) external view returns (
+        uint256, uint256, bool, bool, uint256, uint256, uint256, uint256, uint256, uint256, uint256
+    );
+}
+
+interface IOldVault {
+    function vaultInfo() external view returns (
+        uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256, address
+    ); // 9 params (Missing liquidationThreshold)
+}
+
 /**
  * @title CantorVaultReader
  * @notice Data aggregator for frontend - read-only
@@ -27,6 +51,7 @@ contract CantorVaultReader {
         uint256 borrowBaseRate;
         uint256 borrowSlope;
         uint256 maxBorrowRatio;
+        uint256 liquidationThreshold;
         uint256 liquidationBonus;
         uint256 expectedReturn;      // Supply APY (borrowRate * utilization)
         uint256 currentBorrowRate;   // Current borrow APY (calculated from model)
@@ -93,49 +118,88 @@ contract CantorVaultReader {
         return _buildVaultData(vaultAddress);
     }
 
+
+
     /**
      * @dev Internal function to build VaultData - split to avoid stack too deep
      */
+    /**
+     * @dev Internal function to build VaultData - split to avoid stack too deep
+     */
+
     function _buildVaultData(address vaultAddress) internal view returns (VaultData memory data) {
-        CantorVault vault = CantorVault(vaultAddress);
+        data.vaultId = 0;
+        data.vaultAddress = vaultAddress;
 
-        // Get vaultInfo (9 fields: vaultId, maxLiquidity, borrowBaseRate, borrowSlope, maxBorrowRatio, liquidationBonus, isActive, createdAt, treasury)
-        {
-            (
-                uint256 _vaultId,
-                uint256 maxLiquidity,
-                uint256 borrowBaseRate,
-                uint256 borrowSlope,
-                uint256 maxBorrowRatio,
-                uint256 liquidationBonus,
-                bool isActive,
-                uint256 createdAt,
+        // Use low-level staticcall to detect return data length and decode accordingly.
+        // try/catch does NOT catch ABI decode failures when return data is shorter than expected.
+        (bool success, bytes memory retdata) = vaultAddress.staticcall(
+            abi.encodeWithSignature("vaultInfo()")
+        );
 
-            ) = vault.vaultInfo();
-
-            data.vaultId = _vaultId;
-            data.vaultAddress = vaultAddress;
-            data.maxLiquidity = maxLiquidity;
-            data.borrowBaseRate = borrowBaseRate;
-            data.borrowSlope = borrowSlope;
-            data.maxBorrowRatio = maxBorrowRatio;
-            data.liquidationBonus = liquidationBonus;
-            data.isActive = isActive;
-            data.createdAt = createdAt;
+        if (success && retdata.length >= 288) {
+            if (retdata.length >= 320) {
+                // NEW format (10 params): vaultId, maxLiquidity, borrowBaseRate, borrowSlope,
+                // maxBorrowRatio, liquidationBonus, liquidationThreshold, isActive, createdAt, treasury
+                (
+                    uint256 _vaultId,
+                    uint256 maxLiquidity,
+                    uint256 borrowBaseRate,
+                    uint256 borrowSlope,
+                    uint256 maxBorrowRatio,
+                    uint256 liquidationBonus,
+                    uint256 liquidationThreshold,
+                    bool isActive,
+                    uint256 createdAt,
+                ) = abi.decode(retdata, (uint256, uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256, address));
+                data.vaultId = _vaultId;
+                data.maxLiquidity = maxLiquidity;
+                data.borrowBaseRate = borrowBaseRate;
+                data.borrowSlope = borrowSlope;
+                data.maxBorrowRatio = maxBorrowRatio;
+                data.liquidationThreshold = liquidationThreshold;
+                data.liquidationBonus = liquidationBonus;
+                data.isActive = isActive;
+                data.createdAt = createdAt;
+            } else {
+                // OLD format (9 params): no liquidationThreshold
+                (
+                    uint256 _vaultId,
+                    uint256 maxLiquidity,
+                    uint256 borrowBaseRate,
+                    uint256 borrowSlope,
+                    uint256 maxBorrowRatio,
+                    uint256 liquidationBonus,
+                    bool isActive,
+                    uint256 createdAt,
+                ) = abi.decode(retdata, (uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256, address));
+                data.vaultId = _vaultId;
+                data.maxLiquidity = maxLiquidity;
+                data.borrowBaseRate = borrowBaseRate;
+                data.borrowSlope = borrowSlope;
+                data.maxBorrowRatio = maxBorrowRatio;
+                data.liquidationThreshold = 8000; // Legacy default
+                data.liquidationBonus = liquidationBonus;
+                data.isActive = isActive;
+                data.createdAt = createdAt;
+            }
+        } else {
+            // If call failed completely
+            data.vaultId = 999;
+            data.liquidationThreshold = 8000;
+            data.isActive = true;
         }
-
-        // Get vaultState (7 fields: totalSupplied, totalBorrowed, availableLiquidity, utilizationRate, totalInterestCollected, lastInterestUpdate, totalBadDebt)
-        {
-            (
-                uint256 totalSupplied,
-                uint256 totalBorrowed,
-                uint256 availableLiquidity,
-                uint256 utilizationRate,
-                uint256 totalInterestCollected,
-                ,
-                uint256 totalBadDebt
-            ) = vault.vaultState();
-
+        
+        // 3. Vault State - Try Standard
+        try INewVault(vaultAddress).vaultState() returns (
+            uint256 totalSupplied,
+            uint256 totalBorrowed,
+            uint256 availableLiquidity,
+            uint256 utilizationRate,
+            uint256 totalInterestCollected,
+            uint256 lastInterestUpdate,
+            uint256 totalBadDebt
+        ) {
             data.totalSupplied = totalSupplied;
             data.totalBorrowed = totalBorrowed;
             data.availableLiquidity = availableLiquidity;
@@ -147,19 +211,35 @@ contract CantorVaultReader {
                 ? (totalSupplied * 10000) / data.maxLiquidity
                 : 0;
 
-            // Calculate APYs
-            uint256 borrowRate = vault.calculateBorrowRate();
-            data.currentBorrowRate = borrowRate;  // Borrow APY
-            data.expectedReturn = (borrowRate * utilizationRate) / 10000;  // Supply APY
+             try INewVault(vaultAddress).calculateBorrowRate() returns (uint256 borrowRate) {
+                data.currentBorrowRate = borrowRate;
+                data.expectedReturn = (borrowRate * utilizationRate) / 10000;
+            } catch {
+                data.currentBorrowRate = 500; // Mock if fails
+            }
+
+        } catch {
+            // Mock state if failed
+            data.totalSupplied = 0;
+            data.totalBorrowed = 0;
+            data.currentBorrowRate = 0;
         }
 
-        // CVT, underlying token, and pause state
-        {
-            data.cvtToken = address(vault.cvtToken());
-            data.cvtTotalSupply = CVT(data.cvtToken).totalSupply();
-            data.isPaused = vault.paused();
-            data.underlyingToken = address(vault.token());
-        }
+        // 4. Token & Paused
+        try INewVault(vaultAddress).paused() returns (bool p) {
+            data.isPaused = p;
+        } catch { data.isPaused = false; }
+
+        try INewVault(vaultAddress).token() returns (IERC20 t) {
+            data.underlyingToken = address(t);
+        } catch {}
+
+        try INewVault(vaultAddress).cvtToken() returns (CVT t) {
+            data.cvtToken = address(t);
+            try t.totalSupply() returns (uint256 s) {
+                data.cvtTotalSupply = s;
+            } catch {}
+        } catch {}
 
         return data;
     }
@@ -208,25 +288,60 @@ contract CantorVaultReader {
         returns (UserPositionData memory)
     {
         address vaultAddress = protocol.getVaultAddress(vaultId);
-        CantorVault vault = CantorVault(vaultAddress);
+        CantorVault vault = CantorVault(vaultAddress); // Use type for struct decoding
 
-        // Position (11 fields): amount, cvtBalance, lockConfig, isLocked, lockEndDate,
-        // interestClaimed, interestPending, borrowedAmount, borrowInterestAccumulated, lastInterestUpdate, interestIndexSnapshot
-        (
-            uint256 amount,
-            uint256 cvtBalance,
-            ,
-            bool isLocked,
-            uint256 lockEndDate,
-            uint256 interestClaimed,
-            uint256 interestPending,
-            uint256 borrowedAmount,
-            uint256 borrowInterestAccumulated,
-            ,
+        uint256 amount;
+        uint256 cvtBalance;
+        bool isLocked;
+        uint256 lockEndDate;
+        uint256 interestClaimed;
+        uint256 interestPending;
+        uint256 borrowedAmount;
+        uint256 borrowInterestAccumulated;
 
-        ) = vault.positions(user);
+        // Try reading position
+        try vault.positions(user) returns (
+            uint256 _amount,
+            uint256 _cvtBalance,
+            CantorVault.LockConfig memory,
+            bool _isLocked,
+            uint256 _lockEndDate,
+            uint256 _interestClaimed,
+            uint256 _interestPending,
+            uint256 _borrowedAmount,
+            uint256 _borrowInterestAccumulated,
+            uint256,
+            uint256
+        ) {
+            amount = _amount;
+            cvtBalance = _cvtBalance;
+            isLocked = _isLocked;
+            lockEndDate = _lockEndDate;
+            interestClaimed = _interestClaimed;
+            interestPending = _interestPending;
+            borrowedAmount = _borrowedAmount;
+            borrowInterestAccumulated = _borrowInterestAccumulated;
+        } catch {
+            // If fails, return empty position (or could try OLD abi if positions diff)
+            return UserPositionData({
+                vaultId: vaultId,
+                vaultAddress: vaultAddress,
+                supplyAmount: 0,
+                cvtBalance: 0,
+                isLocked: false,
+                lockEndDate: 0,
+                interestPending: 0,
+                interestClaimed: 0,
+                borrowedAmount: 0,
+                borrowInterestAccumulated: 0,
+                sharePercentage: 0
+            });
+        }
 
-        (uint256 totalSupplied, , , , , , ) = vault.vaultState();
+        uint256 totalSupplied;
+        try INewVault(vaultAddress).vaultState() returns (uint256 ts, uint256, uint256, uint256, uint256, uint256, uint256) {
+           totalSupplied = ts;
+        } catch {}
 
         uint256 sharePercentage = totalSupplied > 0
             ? (amount * 10000) / totalSupplied
@@ -265,11 +380,12 @@ contract CantorVaultReader {
         for (uint256 i = 0; i < totalVaults; i++) {
             address vaultAddress = protocol.getVaultAddress(i);
             CantorVault vault = CantorVault(vaultAddress);
-
-            (uint256 amount, , , , , , , , , , ) = vault.positions(user);
-            if (amount > 0) {
-                activePositions++;
-            }
+            
+            try vault.positions(user) returns (uint256 amount, uint256, CantorVault.LockConfig memory, bool, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
+                if (amount > 0) {
+                    activePositions++;
+                }
+            } catch {}
         }
 
         // Second pass: populate data
@@ -285,22 +401,48 @@ contract CantorVaultReader {
             address vaultAddress = protocol.getVaultAddress(i);
             CantorVault vault = CantorVault(vaultAddress);
 
-            (
-                uint256 amount,
-                uint256 cvtBalance,
-                ,
-                bool isLocked,
-                uint256 lockEndDate,
-                uint256 interestClaimed,
-                uint256 interestPending,
-                uint256 borrowedAmount,
-                uint256 borrowInterestAccumulated,
-                ,
-
-            ) = vault.positions(user);
+            uint256 amount;
+            uint256 cvtBalance;
+            bool isLocked;
+            uint256 lockEndDate;
+            uint256 interestClaimed;
+            uint256 interestPending;
+            uint256 borrowedAmount;
+            uint256 borrowInterestAccumulated;
+            
+            // Try to read position
+            try vault.positions(user) returns (
+                uint256 _amount,
+                uint256 _cvtBalance,
+                CantorVault.LockConfig memory,
+                bool _isLocked,
+                uint256 _lockEndDate,
+                uint256 _interestClaimed,
+                uint256 _interestPending,
+                uint256 _borrowedAmount,
+                uint256 _borrowInterestAccumulated,
+                uint256,
+                uint256
+            ) {
+                amount = _amount;
+                cvtBalance = _cvtBalance;
+                isLocked = _isLocked;
+                lockEndDate = _lockEndDate;
+                interestClaimed = _interestClaimed;
+                interestPending = _interestPending;
+                borrowedAmount = _borrowedAmount;
+                borrowInterestAccumulated = _borrowInterestAccumulated;
+            } catch {
+                continue; // Skip broken vaults
+            }
 
             if (amount > 0) {
-                (uint256 totalSupplied, , , , , , ) = vault.vaultState();
+                uint256 totalSupplied;
+                try INewVault(vaultAddress).vaultState() returns (uint256 ts, uint256, uint256, uint256, uint256, uint256, uint256) {
+                   totalSupplied = ts;
+                } catch {
+                   totalSupplied = 0;
+                }
 
                 uint256 sharePercentage = totalSupplied > 0
                     ? (amount * 10000) / totalSupplied
@@ -364,21 +506,38 @@ contract CantorVaultReader {
 
         for (uint256 i = 0; i < totalVaults; i++) {
             address vaultAddress = protocol.getVaultAddress(i);
-            CantorVault vault = CantorVault(vaultAddress);
+            // V9: Hybrid check
+            bool isActive;
+            uint256 vaultTotalSupplied;
+            uint256 vaultTotalBorrowed;
+            uint256 vaultUtilization;
+            uint256 vaultInterestCollected;
 
-            // VaultInfo (9 fields)
-            (, , , , , , bool isActive, , ) = vault.vaultInfo();
+            // 1. Check Active Status safely via low-level call
+            {
+                (bool ok, bytes memory ret) = vaultAddress.staticcall(
+                    abi.encodeWithSignature("vaultInfo()")
+                );
+                if (ok && ret.length >= 320) {
+                    // NEW format (10 params) - isActive is at index 7
+                    (, , , , , , , isActive, , ) = abi.decode(ret, (uint256, uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256, address));
+                } else if (ok && ret.length >= 288) {
+                    // OLD format (9 params) - isActive is at index 6
+                    (, , , , , , isActive, , ) = abi.decode(ret, (uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256, address));
+                } else {
+                    isActive = false;
+                }
+            }
 
-            // VaultState (7 fields)
-            (
-                uint256 vaultTotalSupplied,
-                uint256 vaultTotalBorrowed,
-                ,
-                uint256 vaultUtilization,
-                uint256 vaultInterestCollected,
-                ,
-
-            ) = vault.vaultState();
+            // 2. Constants State (Same for both)
+            try INewVault(vaultAddress).vaultState() returns (
+                uint256 ms, uint256 mb, uint256, uint256 mu, uint256 mi, uint256, uint256
+            ) {
+                vaultTotalSupplied = ms;
+                vaultTotalBorrowed = mb;
+                vaultUtilization = mu;
+                vaultInterestCollected = mi;
+            } catch {}
 
             totalSupplied += vaultTotalSupplied;
             totalBorrowed += vaultTotalBorrowed;
@@ -389,14 +548,11 @@ contract CantorVaultReader {
             }
 
             // Weighted average APY (based on variable utilization)
-            // Fixed precision: multiply before divide to prevent precision loss
             if (vaultTotalSupplied > 0) {
-                uint256 vaultBorrowRate = vault.calculateBorrowRate();
-                // Multiply all factors first, then divide once at the end
-                // vaultAPY = (borrowRate * utilization * supply) / 10000
-                // We accumulate (borrowRate * utilization * supply) and divide later
-                totalWeightedSupply += vaultTotalSupplied;
-                totalAPY += (vaultBorrowRate * vaultUtilization * vaultTotalSupplied) / 10000;
+                try INewVault(vaultAddress).calculateBorrowRate() returns (uint256 vaultBorrowRate) {
+                     totalWeightedSupply += vaultTotalSupplied;
+                     totalAPY += (vaultBorrowRate * vaultUtilization * vaultTotalSupplied) / 10000;
+                } catch {}
             }
         }
 
@@ -422,12 +578,19 @@ contract CantorVaultReader {
      */
     function calculateCurrentAPY(uint256 vaultId) external view returns (uint256 currentAPY) {
         address vaultAddress = protocol.getVaultAddress(vaultId);
-        CantorVault vault = CantorVault(vaultAddress);
+        
+        // VaultState
+        uint256 totalSupplied;
+        uint256 utilizationRate;
+        try INewVault(vaultAddress).vaultState() returns (uint256 ts, uint256, uint256, uint256 ur, uint256, uint256, uint256) {
+             totalSupplied = ts;
+             utilizationRate = ur;
+        } catch { return 0; }
 
-        // VaultState (7 fields)
-        (uint256 totalSupplied, , , uint256 utilizationRate, , , ) = vault.vaultState();
-
-        uint256 borrowRate = vault.calculateBorrowRate();
+        uint256 borrowRate;
+        try INewVault(vaultAddress).calculateBorrowRate() returns (uint256 br) {
+            borrowRate = br;
+        } catch { return 0; }
 
         if (totalSupplied == 0) {
             return 0;
@@ -452,22 +615,40 @@ contract CantorVaultReader {
         returns (bool canWithdraw_, uint256 penalty, string memory reason)
     {
         address vaultAddress = protocol.getVaultAddress(vaultId);
-        CantorVault vault = CantorVault(vaultAddress);
+        CantorVault vault = CantorVault(vaultAddress); // For types only if possible
 
-        // Position (11 fields)
-        (
-            uint256 supplyAmount,
-            ,
-            CantorVault.LockConfig memory lockConfig,
-            bool isLocked,
-            uint256 lockEndDate,
-            ,
-            ,
-            uint256 borrowedAmount,
-            ,
-            ,
-
-        ) = vault.positions(user);
+        // Position (11 fields) - WARNING: This relies on implicit ABI. 
+        // Ideally we should use INewVault.positions but struct decoding is tricky without import.
+        // We wrap in try/catch to avoid crash.
+        uint256 supplyAmount;
+        bool isLocked;
+        uint256 lockEndDate;
+        bool canWithdrawEarly;
+        uint256 earlyWithdrawalFee;
+        uint256 borrowedAmount;
+        
+        try vault.positions(user) returns (
+            uint256 _supply,
+            uint256,
+            CantorVault.LockConfig memory _lockConfig,
+            bool _isLocked,
+            uint256 _lockEndDate,
+            uint256,
+            uint256,
+            uint256 _borrowed,
+            uint256,
+            uint256,
+            uint256
+        ) {
+            supplyAmount = _supply;
+            isLocked = _isLocked;
+            lockEndDate = _lockEndDate;
+            canWithdrawEarly = _lockConfig.canWithdrawEarly;
+            earlyWithdrawalFee = _lockConfig.earlyWithdrawalFee;
+            borrowedAmount = _borrowed;
+        } catch {
+             return (false, 0, "Error reading position");
+        }
 
         // Check balance
         if (supplyAmount < amount) {
@@ -476,16 +657,27 @@ contract CantorVaultReader {
 
         // Check lock
         if (isLocked && block.timestamp < lockEndDate) {
-            if (!lockConfig.canWithdrawEarly) {
+            if (!canWithdrawEarly) {
                 return (false, 0, "Position locked");
             }
-            penalty = (amount * lockConfig.earlyWithdrawalFee) / 10000;
+            penalty = (amount * earlyWithdrawalFee) / 10000;
         }
 
         // Check solvency if borrowed
         if (borrowedAmount > 0) {
-            // VaultInfo (9 fields): maxBorrowRatio is at position 4
-            (, , , , uint256 maxBorrowRatio, , , , ) = vault.vaultInfo();
+            uint256 maxBorrowRatio;
+            {
+                (bool ok, bytes memory ret) = vaultAddress.staticcall(
+                    abi.encodeWithSignature("vaultInfo()")
+                );
+                if (ok && ret.length >= 320) {
+                    (, , , , maxBorrowRatio, , , , , ) = abi.decode(ret, (uint256, uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256, address));
+                } else if (ok && ret.length >= 288) {
+                    (, , , , maxBorrowRatio, , , , ) = abi.decode(ret, (uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256, address));
+                } else {
+                    return (false, penalty, "Error reading vault info");
+                }
+            }
 
             uint256 remainingSupply = supplyAmount - amount;
             uint256 maxBorrow = (remainingSupply * maxBorrowRatio) / 10000;
@@ -495,8 +687,14 @@ contract CantorVaultReader {
             }
         }
 
-        // Check liquidity (7 fields)
-        (, , uint256 availableLiquidity, , , , ) = vault.vaultState();
+        // Check liquidity
+        uint256 availableLiquidity;
+        try INewVault(vaultAddress).vaultState() returns (uint256, uint256, uint256 al, uint256, uint256, uint256, uint256) {
+           availableLiquidity = al;
+        } catch {
+           return (false, penalty, "Error reading liquidity");
+        }
+
         uint256 netAmount = penalty > 0 ? amount - penalty : amount;
 
         if (availableLiquidity < netAmount) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
+import { verifyMessage } from 'viem';
 
 const CDP_API_KEY_NAME = process.env.CDP_API_KEY_NAME || '';
 const CDP_API_KEY_PRIVATE_KEY = process.env.CDP_API_KEY_PRIVATE_KEY || '';
@@ -67,7 +68,47 @@ async function generateJWT(): Promise<string> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { address, blockchains = ['base'] } = body;
+    const { address, blockchains = ['base'], signature, timestamp } = body;
+
+    // 1. Validate Auth Params
+    if (!address || !signature || !timestamp) {
+      return NextResponse.json(
+        { error: 'Authentication required (signature/timestamp missing)' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Validate Timestamp (5 minute window)
+    const now = Date.now();
+    const requestTime = Number(timestamp);
+    if (isNaN(requestTime) || Math.abs(now - requestTime) > 5 * 60 * 1000) {
+      return NextResponse.json(
+        { error: 'Session request expired' },
+        { status: 401 }
+      );
+    }
+
+    // 3. Verify Signature
+    try {
+      const message = `CantorFi Onramp Session Request\nNonce: ${timestamp}`;
+      const isValid = await verifyMessage({
+        address,
+        message,
+        signature,
+      });
+
+      if (!isValid) {
+        return NextResponse.json(
+          { error: 'Invalid signature' },
+          { status: 401 }
+        );
+      }
+    } catch (err) {
+      return NextResponse.json(
+        { error: 'Signature verification failed' },
+        { status: 401 }
+      );
+    }
 
     if (!CDP_API_KEY_NAME || !CDP_API_KEY_PRIVATE_KEY) {
       console.error('CDP credentials missing');

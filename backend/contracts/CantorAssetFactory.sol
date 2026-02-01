@@ -124,6 +124,7 @@ contract CantorAssetFactory is
         uint256 borrowBaseRate;
         uint256 borrowSlope;
         uint256 maxBorrowRatio;
+        uint256 liquidationThreshold;
         uint256 liquidationBonus;
     }
 
@@ -145,6 +146,8 @@ contract CantorAssetFactory is
         if (params.borrowBaseRate > 10000) revert InvalidAmount();
         if (params.borrowSlope > 50000) revert InvalidAmount(); // Max 500% slope to prevent overflow
         if (params.maxBorrowRatio > 10000) revert InvalidAmount();
+        if (params.liquidationThreshold > 10000) revert InvalidAmount();
+        if (params.liquidationThreshold < params.maxBorrowRatio) revert InvalidAmount();
         if (params.liquidationBonus > 2000) revert InvalidAmount(); // Max 20% bonus
 
         // Clone vault implementation
@@ -171,6 +174,7 @@ contract CantorAssetFactory is
             params.borrowBaseRate,
             params.borrowSlope,
             params.maxBorrowRatio,
+            params.liquidationThreshold,
             params.liquidationBonus,
             setupFee,
             performanceFee,
